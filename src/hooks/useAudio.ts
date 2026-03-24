@@ -15,6 +15,8 @@ export interface PlayerAPI {
   cycleLoop: () => void
 }
 
+const MS = 'mediaSession' in navigator
+
 export function useAudio(): PlayerAPI {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   // Refs for event handler access — avoids stale closures
@@ -44,6 +46,7 @@ export function useAudio(): PlayerAPI {
     })
   }, [])
 
+  // Core audio element + Media Session action handlers (both live here to share refs)
   useEffect(() => {
     const el = new Audio()
     el.preload = 'metadata'
@@ -75,6 +78,28 @@ export function useAudio(): PlayerAPI {
     el.addEventListener('pause', onPause)
     el.addEventListener('ended', onEnded)
 
+    // Media Session API — required for iOS background / lock-screen playback.
+    // Without this, Safari suspends audio when the screen locks.
+    if (MS) {
+      navigator.mediaSession.setActionHandler('play', () => el.play().catch(console.error))
+      navigator.mediaSession.setActionHandler('pause', () => el.pause())
+      navigator.mediaSession.setActionHandler('stop', () => el.pause())
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        const q = queueRef.current
+        const qi = qiRef.current
+        const next = qi + 1
+        if (next < q.length) loadAndPlay(q[next], next, q)
+        else if (loopRef.current === 'all' && q.length > 0) loadAndPlay(q[0], 0, q)
+      })
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (el.currentTime > 3) { el.currentTime = 0; return }
+        const q = queueRef.current
+        const qi = qiRef.current
+        if (qi > 0) loadAndPlay(q[qi - 1], qi - 1, q)
+        else el.currentTime = 0
+      })
+    }
+
     return () => {
       el.pause()
       el.src = ''
@@ -86,6 +111,25 @@ export function useAudio(): PlayerAPI {
       el.removeEventListener('ended', onEnded)
     }
   }, [loadAndPlay])
+
+  // Update lock-screen Now Playing metadata when song changes
+  useEffect(() => {
+    if (!MS || !currentSong) return
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentSong.title,
+      artist: currentSong.artist ?? currentSong.album ?? '',
+      album: currentSong.album ?? '',
+      artwork: currentSong.cover
+        ? [{ src: currentSong.cover, sizes: '512x512', type: 'image/jpeg' }]
+        : [],
+    })
+  }, [currentSong])
+
+  // Keep lock-screen play/pause indicator in sync
+  useEffect(() => {
+    if (!MS) return
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+  }, [isPlaying])
 
   const playSong = useCallback((song: Song, queue?: Song[]) => {
     const q = queue ?? [song]

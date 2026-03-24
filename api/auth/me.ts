@@ -1,0 +1,19 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import sql from '../_db'
+import { requireAuth } from '../_auth'
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') return res.status(405).end()
+
+  const userId = requireAuth(req, res)
+  if (!userId) return
+
+  try {
+    const rows = await sql`SELECT id, email FROM users WHERE id = ${userId}`
+    if (!rows[0]) return res.status(401).json({ error: 'User not found' })
+    res.json({ user: rows[0] })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
+  }
+}

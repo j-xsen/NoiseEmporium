@@ -1,3 +1,98 @@
+/* ── Auth screen ────────────────────────────────────────────────────────────── */
+
+.auth-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+  padding: calc(var(--safe-top) + 40px) 24px calc(var(--safe-bottom) + 40px);
+  background: var(--bg);
+  gap: 40px;
+}
+
+.auth-top {
+  text-align: center;
+}
+
+.auth-wordmark {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--text-bright);
+  letter-spacing: -1px;
+  margin: 0;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.auth-tab--active {
+  color: var(--text-bright);
+  border-bottom-color: var(--accent);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.auth-input {
+  width: 100%;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: 16px; /* 16px prevents iOS zoom on focus */
+  color: var(--text-bright);
+  transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--accent-border); }
+
+.auth-error {
+  font-size: 13px;
+  color: var(--danger);
+  text-align: center;
+}
+
+.auth-submit {
+  margin-top: 4px;
+  background: var(--accent);
+  color: #160d00;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 14px;
+  width: 100%;
+  transition: opacity 0.15s;
+}
+.auth-submit:disabled { opacity: 0.5; }
+
 /* ── Loading / error splash ─────────────────────────────────────────────────── */
 
 .splash {
@@ -278,6 +373,33 @@
   50% { transform: scaleY(1); }
 }
 
+/* ── Download button ────────────────────────────────────────────────────────── */
+
+.dl-btn {
+  width: 40px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.dl-btn--none { color: var(--text-dim); }
+.dl-btn--downloading { color: var(--text-dim); pointer-events: none; }
+.dl-btn--done { color: var(--accent); }
+.dl-btn--error { color: var(--danger); }
+
+.dl-spinner {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--text-dim);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: block;
+}
+
 /* ── Now Playing ────────────────────────────────────────────────────────────── */
 
 .now-playing {
@@ -288,6 +410,21 @@
   padding: calc(var(--safe-top) + 20px) 28px 24px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.np-topbar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -8px;
+  flex-shrink: 0;
+}
+
+.np-logout {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-dim);
+  padding: 4px 0;
 }
 
 .now-playing--empty {

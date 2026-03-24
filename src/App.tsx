@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
 import { useAudio } from './hooks/useAudio'
 import { usePlaylists } from './hooks/usePlaylists'
+import { useDownloads } from './hooks/useDownloads'
+import { useAuth } from './hooks/useAuth'
+import AuthScreen from './components/AuthScreen'
 import Library from './components/Library'
 import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
@@ -10,7 +13,7 @@ import PlaylistDetail from './components/PlaylistDetail'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import { XIcon, PlusIcon } from './components/Icons'
-import type { Tab, Playlist } from './types'
+import type { Song, Tab, Playlist } from './types'
 
 // ── Loading / Error screens ───────────────────────────────────────────────────
 
@@ -18,7 +21,7 @@ function LoadingScreen() {
   return (
     <div className="splash">
       <div className="splash-spinner" />
-      <p className="splash-text">Loading library…</p>
+      <p className="splash-text">Loading…</p>
     </div>
   )
 }
@@ -28,7 +31,7 @@ function ErrorScreen({ message }: { message: string | null }) {
     <div className="splash">
       <div className="empty-icon" style={{ fontSize: 40 }}>⚠</div>
       <p className="empty-title">Couldn't load songs</p>
-      <p className="empty-hint">{message ?? 'Check your Contentful credentials in .env.local'}</p>
+      <p className="empty-hint">{message ?? 'Check your Contentful credentials'}</p>
     </div>
   )
 }
@@ -36,20 +39,19 @@ function ErrorScreen({ message }: { message: string | null }) {
 // ── Add-to-playlist bottom sheet ─────────────────────────────────────────────
 
 interface SheetProps {
-  songId: string
   playlists: Playlist[]
-  onAdd: (playlistId: string) => void
-  onCreate: (name: string) => void
+  onAdd: (playlistId: string) => Promise<void>
+  onCreate: (name: string) => Promise<void>
   onClose: () => void
 }
 
-function AddToPlaylistSheet({ songId: _songId, playlists, onAdd, onCreate, onClose }: SheetProps) {
+function AddToPlaylistSheet({ playlists, onAdd, onCreate, onClose }: SheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!name.trim()) return
-    onCreate(name.trim())
+    await onCreate(name.trim())
     setName('')
     setCreating(false)
   }
@@ -75,7 +77,6 @@ function AddToPlaylistSheet({ songId: _songId, playlists, onAdd, onCreate, onClo
               ))}
             </ul>
           )}
-
           {creating ? (
             <div className="sheet-create">
               <input
@@ -109,22 +110,41 @@ function AddToPlaylistSheet({ songId: _songId, playlists, onAdd, onCreate, onClo
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const auth = useAuth()
   const { songs, status, error } = useSongs()
   const player = useAudio()
-  const pm = usePlaylists()
+  const pm = usePlaylists(auth.token)
+  const dl = useDownloads()
   const [tab, setTab] = useState<Tab>('library')
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [addSongId, setAddSongId] = useState<string | null>(null)
+
+  const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
+    const q = queue ?? [song]
+    const resolved = await Promise.all(q.map(async s => {
+      const localSrc = await dl.getLocalSrc(s.id)
+      return localSrc ? { ...s, src: localSrc } : s
+    }))
+    const target = resolved.find(s => s.id === song.id) ?? resolved[0]
+    player.playSong(target, resolved)
+  }, [dl.getLocalSrc, player.playSong])
 
   function changeTab(t: Tab) {
     setSelectedPlaylistId(null)
     setTab(t)
   }
 
-  const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
+  // Auth loading
+  if (auth.loading) return <LoadingScreen />
+
+  // Not logged in → show auth screen
+  if (!auth.user) return <AuthScreen onLogin={auth.login} onRegister={auth.register} />
+
+  // Songs loading / error
   if (status === 'loading') return <LoadingScreen />
   if (status === 'error') return <ErrorScreen message={error} />
 
+  const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
   const miniPlayerVisible = !!player.currentSong && tab !== 'player'
   const progress = player.duration > 0 ? player.currentTime / player.duration : 0
 
@@ -136,12 +156,15 @@ export default function App() {
             songs={songs}
             currentSongId={player.currentSong?.id}
             isPlaying={player.isPlaying}
-            onPlay={s => player.playSong(s, songs)}
+            dlStatuses={dl.statuses}
+            onPlay={s => handlePlay(s, songs)}
+            onDownload={dl.download}
+            onRemoveDownload={dl.remove}
             onAddToPlaylist={setAddSongId}
           />
         )}
         {tab === 'player' && (
-          <NowPlaying player={player} />
+          <NowPlaying player={player} onLogout={auth.logout} />
         )}
         {tab === 'playlists' && !selectedPlaylist && (
           <Playlists
@@ -157,8 +180,11 @@ export default function App() {
             playlist={selectedPlaylist}
             songs={songs}
             player={player}
+            dlStatuses={dl.statuses}
+            onPlay={handlePlay}
             onBack={() => setSelectedPlaylistId(null)}
-            onRemoveSong={pm.removeFromPlaylist}
+            onDownload={dl.download}
+            onRemoveDownload={dl.remove}
             onAddToPlaylist={setAddSongId}
           />
         )}
@@ -178,12 +204,11 @@ export default function App() {
 
       {addSongId && (
         <AddToPlaylistSheet
-          songId={addSongId}
           playlists={pm.playlists}
           onAdd={playlistId => pm.addToPlaylist(playlistId, addSongId)}
-          onCreate={name => {
-            const p = pm.createPlaylist(name)
-            pm.addToPlaylist(p.id, addSongId)
+          onCreate={async name => {
+            const p = await pm.createPlaylist(name)
+            await pm.addToPlaylist(p.id, addSongId)
           }}
           onClose={() => setAddSongId(null)}
         />

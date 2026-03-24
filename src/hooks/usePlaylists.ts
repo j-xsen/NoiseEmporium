@@ -1,52 +1,63 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Playlist } from '../types'
 
-const STORAGE_KEY = 'noise-emporium-playlists'
+export function usePlaylists(token: string | null) {
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
 
-function load(): Playlist[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token ?? ''}`,
+  }), [token])
 
-export function usePlaylists() {
-  const [playlists, setPlaylists] = useState<Playlist[]>(load)
-
+  // Fetch playlists whenever the token changes (login / logout)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(playlists))
-  }, [playlists])
+    if (!token) { setPlaylists([]); return }
+    fetch('/api/playlists', { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => setPlaylists(d.playlists ?? []))
+      .catch(console.error)
+  }, [token, authHeaders])
 
-  const createPlaylist = useCallback((name: string): Playlist => {
-    const p: Playlist = { id: Date.now().toString(), name: name.trim() || 'Untitled', songIds: [], createdAt: Date.now() }
-    setPlaylists(ps => [...ps, p])
-    return p
-  }, [])
+  const createPlaylist = useCallback(async (name: string): Promise<Playlist> => {
+    const r = await fetch('/api/playlists', {
+      method: 'POST', headers: authHeaders, body: JSON.stringify({ name }),
+    })
+    const { playlist } = await r.json()
+    setPlaylists(ps => [...ps, playlist])
+    return playlist
+  }, [authHeaders])
 
-  const deletePlaylist = useCallback((id: string) => {
+  const deletePlaylist = useCallback(async (id: string) => {
     setPlaylists(ps => ps.filter(p => p.id !== id))
-  }, [])
+    await fetch(`/api/playlists/${id}`, { method: 'DELETE', headers: authHeaders })
+  }, [authHeaders])
 
-  const renamePlaylist = useCallback((id: string, name: string) => {
+  const renamePlaylist = useCallback(async (id: string, name: string) => {
     setPlaylists(ps => ps.map(p => p.id === id ? { ...p, name } : p))
-  }, [])
+    await fetch(`/api/playlists/${id}`, {
+      method: 'PATCH', headers: authHeaders, body: JSON.stringify({ name }),
+    })
+  }, [authHeaders])
 
-  const addToPlaylist = useCallback((playlistId: string, songId: string) => {
+  const addToPlaylist = useCallback(async (playlistId: string, songId: string) => {
     setPlaylists(ps => ps.map(p =>
       p.id === playlistId && !p.songIds.includes(songId)
         ? { ...p, songIds: [...p.songIds, songId] }
         : p
     ))
-  }, [])
+    await fetch(`/api/playlists/${playlistId}/songs`, {
+      method: 'POST', headers: authHeaders, body: JSON.stringify({ songId }),
+    })
+  }, [authHeaders])
 
-  const removeFromPlaylist = useCallback((playlistId: string, songId: string) => {
+  const removeFromPlaylist = useCallback(async (playlistId: string, songId: string) => {
     setPlaylists(ps => ps.map(p =>
-      p.id === playlistId
-        ? { ...p, songIds: p.songIds.filter(id => id !== songId) }
-        : p
+      p.id === playlistId ? { ...p, songIds: p.songIds.filter(id => id !== songId) } : p
     ))
-  }, [])
+    await fetch(`/api/playlists/${playlistId}/songs/${songId}`, {
+      method: 'DELETE', headers: authHeaders,
+    })
+  }, [authHeaders])
 
   return { playlists, createPlaylist, deletePlaylist, renamePlaylist, addToPlaylist, removeFromPlaylist }
 }

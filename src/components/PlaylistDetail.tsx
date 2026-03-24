@@ -1,6 +1,8 @@
 import CoverArt from './CoverArt'
+import DownloadButton from './DownloadButton'
 import { ChevronLeftIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
+import type { DlStatus } from '../hooks/useDownloads'
 import type { Playlist, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
 
@@ -8,21 +10,21 @@ interface PlaylistDetailProps {
   playlist: Playlist
   songs: Song[]
   player: PlayerAPI
+  dlStatuses: Record<string, DlStatus>
+  onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
-  onRemoveSong: (playlistId: string, songId: string) => void
+  onDownload: (song: Song) => void
+  onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
 }
 
 export default function PlaylistDetail({
-  playlist, songs, player, onBack, onAddToPlaylist,
+  playlist, songs, player, dlStatuses,
+  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
 }: PlaylistDetailProps) {
   const playlistSongs = playlist.songIds
     .map(id => songs.find(s => s.id === id))
     .filter(Boolean) as Song[]
-
-  function playAll() {
-    if (playlistSongs.length > 0) player.playSong(playlistSongs[0], playlistSongs)
-  }
 
   return (
     <div className="screen-layout">
@@ -35,7 +37,7 @@ export default function PlaylistDetail({
           <span className="screen-subtitle">{playlistSongs.length} {playlistSongs.length === 1 ? 'song' : 'songs'}</span>
         </div>
         {playlistSongs.length > 0 && (
-          <button className="header-action" onClick={playAll} aria-label="Play all">
+          <button className="header-action" onClick={() => onPlay(playlistSongs[0], playlistSongs)} aria-label="Play all">
             <PlayIcon size={18} />
           </button>
         )}
@@ -54,10 +56,7 @@ export default function PlaylistDetail({
               const isActive = song.id === player.currentSong?.id
               return (
                 <li key={song.id} className={`song-row ${isActive ? 'song-row--active' : ''}`}>
-                  <button
-                    className="song-row__play"
-                    onClick={() => player.playSong(song, playlistSongs)}
-                  >
+                  <button className="song-row__play" onClick={() => onPlay(song, playlistSongs)}>
                     <span className="song-row__index">
                       {isActive && player.isPlaying ? (
                         <span className="song-row__bars"><span /><span /><span /></span>
@@ -71,12 +70,15 @@ export default function PlaylistDetail({
                       {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
                     </div>
                   </button>
+                  <DownloadButton
+                    song={song}
+                    status={dlStatuses[song.id] ?? 'none'}
+                    onDownload={onDownload}
+                    onRemove={onRemoveDownload}
+                  />
                   <button
                     className="song-row__more"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onAddToPlaylist(song.id)
-                    }}
+                    onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
                     aria-label="More options"
                   >
                     <MoreIcon size={18} />

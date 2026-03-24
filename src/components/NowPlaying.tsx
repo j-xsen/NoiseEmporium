@@ -5,11 +5,12 @@ import type { PlayerAPI } from '../hooks/useAudio'
 
 interface NowPlayingProps {
   player: PlayerAPI
+  onLogout: () => void
 }
 
 const loopLabel: Record<string, string> = { off: 'Off', one: '1×', all: 'All' }
 
-export default function NowPlaying({ player }: NowPlayingProps) {
+export default function NowPlaying({ player, onLogout }: NowPlayingProps) {
   const { currentSong, isPlaying, currentTime, duration, loopMode } = player
   const progress = duration > 0 ? currentTime / duration : 0
 
@@ -25,6 +26,9 @@ export default function NowPlaying({ player }: NowPlayingProps) {
 
   return (
     <div className="now-playing">
+      <div className="np-topbar">
+        <button className="np-logout" onClick={onLogout}>Sign out</button>
+      </div>
       <div className="np-art-wrap">
         <CoverArt song={currentSong} className="np-art" />
       </div>

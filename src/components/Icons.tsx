@@ -86,6 +86,26 @@ export const TrashIcon = ({ size = 18, className }: IconProps) => (
   </svg>
 )
 
+export const DownloadIcon = ({ size = 18, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <path d="M12 3v13M7 11l5 5 5-5" />
+    <path d="M3 19h18" strokeLinecap="round" />
+  </svg>
+)
+
+export const CheckIcon = ({ size = 18, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={2}>
+    <path d="M5 12l5 5L20 7" />
+  </svg>
+)
+
+export const RetryIcon = ({ size = 18, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <path d="M1 4v6h6M23 20v-6h-6" />
+    <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
+  </svg>
+)
+
 export const MoreIcon = ({ size = 20, className }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
     <circle cx="5" cy="12" r="1.5" />

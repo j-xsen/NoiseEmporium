@@ -1,17 +1,25 @@
 import CoverArt from './CoverArt'
+import DownloadButton from './DownloadButton'
 import { MoreIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
+import type { DlStatus } from '../hooks/useDownloads'
 import type { Song } from '../types'
 
 interface LibraryProps {
   songs: Song[]
   currentSongId: string | undefined
   isPlaying: boolean
+  dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song) => void
+  onDownload: (song: Song) => void
+  onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
 }
 
-export default function Library({ songs, currentSongId, isPlaying, onPlay, onAddToPlaylist }: LibraryProps) {
+export default function Library({
+  songs, currentSongId, isPlaying, dlStatuses,
+  onPlay, onDownload, onRemoveDownload, onAddToPlaylist,
+}: LibraryProps) {
   return (
     <div className="screen-layout">
       <div className="screen-header">
@@ -24,10 +32,7 @@ export default function Library({ songs, currentSongId, isPlaying, onPlay, onAdd
           <div className="empty-state">
             <div className="empty-icon">♪</div>
             <p className="empty-title">No songs yet</p>
-            <p className="empty-hint">
-              Add audio files to <code>public/music/</code><br />
-              then edit <code>src/data/songs.ts</code>
-            </p>
+            <p className="empty-hint">Add songs to your Contentful space</p>
           </div>
         ) : (
           <ul className="song-list">
@@ -38,9 +43,7 @@ export default function Library({ songs, currentSongId, isPlaying, onPlay, onAdd
                   <button className="song-row__play" onClick={() => onPlay(song)}>
                     <span className="song-row__index">
                       {isActive && isPlaying ? (
-                        <span className="song-row__bars">
-                          <span /><span /><span />
-                        </span>
+                        <span className="song-row__bars"><span /><span /><span /></span>
                       ) : (
                         <span className="song-row__num">{i + 1}</span>
                       )}
@@ -51,6 +54,12 @@ export default function Library({ songs, currentSongId, isPlaying, onPlay, onAdd
                       {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
                     </div>
                   </button>
+                  <DownloadButton
+                    song={song}
+                    status={dlStatuses[song.id] ?? 'none'}
+                    onDownload={onDownload}
+                    onRemove={onRemoveDownload}
+                  />
                   <button
                     className="song-row__more"
                     onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}

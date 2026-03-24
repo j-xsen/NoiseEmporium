@@ -1,6 +1,6 @@
 import CoverArt from './CoverArt'
 import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, LoopIcon } from './Icons'
-import { formatTime } from '../utils/format'
+import { formatTime, songSubtitle } from '../utils/format'
 import type { PlayerAPI } from '../hooks/useAudio'
 
 interface NowPlayingProps {
@@ -30,9 +30,8 @@ export default function NowPlaying({ player }: NowPlayingProps) {
       </div>
 
       <div className="np-meta">
-        {currentSong.artist && <p className="np-artist">{currentSong.artist}</p>}
+        {songSubtitle(currentSong) && <p className="np-artist">{songSubtitle(currentSong)}</p>}
         <h2 className="np-title">{currentSong.title}</h2>
-        {currentSong.album && <p className="np-album">{currentSong.album}</p>}
       </div>
 
       <div className="np-progress-wrap">

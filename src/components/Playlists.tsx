@@ -78,8 +78,13 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
                       <span className="playlist-row__meta">
                         {count} {count === 1 ? 'song' : 'songs'}
                         {count > 0 && (() => {
-                          const artists = songs.filter(s => p.songIds.includes(s.id)).map(s => s.artist).filter((a): a is string => !!a).filter((a, i, arr) => arr.indexOf(a) === i).slice(0, 2)
-                          return artists.length ? ` · ${artists.join(', ')}` : ''
+                          const labels = songs
+                            .filter(s => p.songIds.includes(s.id))
+                            .map(s => s.artist ?? s.album)
+                            .filter((a): a is string => !!a)
+                            .filter((a, i, arr) => arr.indexOf(a) === i)
+                            .slice(0, 2)
+                          return labels.length ? ` · ${labels.join(', ')}` : ''
                         })()}
                       </span>
                     </div>

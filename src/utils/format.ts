@@ -13,6 +13,11 @@ export function hashStr(s: string): number {
   return Math.abs(h)
 }
 
+/** Returns the best available subtitle: artist, then album, then empty string. */
+export function songSubtitle(song: { artist?: string; album?: string }): string {
+  return song.artist ?? song.album ?? ''
+}
+
 export function songGradient(title: string, artist?: string): string {
   const h = hashStr(title + (artist ?? ''))
   const hue1 = h % 360

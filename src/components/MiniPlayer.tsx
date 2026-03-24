@@ -1,5 +1,6 @@
 import CoverArt from './CoverArt'
 import { PlayIcon, PauseIcon } from './Icons'
+import { songSubtitle } from '../utils/format'
 import type { Song } from '../types'
 
 interface MiniPlayerProps {
@@ -17,7 +18,7 @@ export default function MiniPlayer({ song, isPlaying, progress, onToggle, onExpa
       <CoverArt song={song} size={42} className="mini-player__art" />
       <div className="mini-player__info">
         <span className="mini-player__title">{song.title}</span>
-        {song.artist && <span className="mini-player__artist">{song.artist}</span>}
+        {songSubtitle(song) && <span className="mini-player__artist">{songSubtitle(song)}</span>}
       </div>
       <button
         className="mini-player__toggle"

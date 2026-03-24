@@ -1,5 +1,6 @@
 import CoverArt from './CoverArt'
 import { MoreIcon } from './Icons'
+import { songSubtitle } from '../utils/format'
 import type { Song } from '../types'
 
 interface LibraryProps {
@@ -47,7 +48,7 @@ export default function Library({ songs, currentSongId, isPlaying, onPlay, onAdd
                     <CoverArt song={song} size={44} className="song-row__art" />
                     <div className="song-row__info">
                       <span className="song-row__title">{song.title}</span>
-                      {song.artist && <span className="song-row__artist">{song.artist}</span>}
+                      {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
                     </div>
                   </button>
                   <button

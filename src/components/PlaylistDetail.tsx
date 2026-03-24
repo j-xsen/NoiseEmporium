@@ -1,5 +1,6 @@
 import CoverArt from './CoverArt'
 import { ChevronLeftIcon, MoreIcon, PlayIcon } from './Icons'
+import { songSubtitle } from '../utils/format'
 import type { Playlist, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
 
@@ -67,7 +68,7 @@ export default function PlaylistDetail({
                     <CoverArt song={song} size={44} className="song-row__art" />
                     <div className="song-row__info">
                       <span className="song-row__title">{song.title}</span>
-                      {song.artist && <span className="song-row__artist">{song.artist}</span>}
+                      {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
                     </div>
                   </button>
                   <button

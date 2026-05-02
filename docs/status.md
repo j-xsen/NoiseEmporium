@@ -15,7 +15,7 @@
 
 ## Immediate Next Steps
 
-1. **Implement play count tracking** — record plays in `song_plays` table, display on song cards
+1. **Wire up play count API** — endpoint to record a play, hook into the player, display counts on song cards
 2. **Open registration** — remove single-user gate
 3. **Membership UI** — free vs paid tier display
 4. **Stripe integration** — paid memberships

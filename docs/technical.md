@@ -71,7 +71,7 @@ All mutating playlist endpoints verify JWT and ownership (`WHERE user_id = $user
 | Song metadata (title, artist, album, audio URL, cover art) | Contentful CMS |
 | Users | Neon `users` table |
 | Playlists | Neon `playlists` + `playlist_songs` tables |
-| Play counts | Neon `song_plays` table *(planned)* |
+| Play counts | Neon `song_plays` table + `song_play_counts` view |
 | Memberships / subscriptions | Neon *(planned)* |
 | Payments | Stripe *(planned)* |
 

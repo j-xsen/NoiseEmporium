@@ -46,4 +46,4 @@ Key differentiators from Spotify:
 | Music content/metadata | Contentful CMS |
 | Domain | Porkbun → `*.jaxsenville.com` |
 
-Initial traffic is expected to be very low. Supabase free tier + Vercel hobby plan are sufficient to start. Both scale without re-architecting.
+Initial traffic is expected to be very low. Neon free tier + Vercel hobby plan are sufficient to start. Both scale without re-architecting.

@@ -86,7 +86,7 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 - `src/components/Library.tsx` — displays song list
 
 ### Planned
-- **Play count** — track how many times each song has been played (stored in Supabase)
+- **Play count** — track how many times each song has been played (stored in Neon `song_plays`)
 - Play count display on song cards
 - "Most played" sort/filter
 - Artist pages (when multi-artist platform opens)

@@ -7,7 +7,6 @@ Users authenticate with email + password. JWT tokens are issued on login (30-day
 ### Current state
 - Registration and login endpoints exist (`api/auth/register.ts`, `api/auth/login.ts`, `api/auth/me.ts`)
 - Frontend auth screen exists (`src/components/AuthScreen.tsx`)
-- **Bug:** Login currently errors — needs investigation
 - **Restriction:** Currently gated so only Jaxsen can log in (Phase 1 intent)
 
 ### Planned
@@ -87,7 +86,7 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 - `src/components/Library.tsx` — displays song list
 
 ### Planned
-- **Play count** — track how many times each song has been played (stored in Supabase)
+- **Play count** — track how many times each song has been played (stored in Neon `song_plays`)
 - Play count display on song cards
 - "Most played" sort/filter
 - Artist pages (when multi-artist platform opens)

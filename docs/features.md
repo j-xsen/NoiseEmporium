@@ -7,7 +7,6 @@ Users authenticate with email + password. JWT tokens are issued on login (30-day
 ### Current state
 - Registration and login endpoints exist (`api/auth/register.ts`, `api/auth/login.ts`, `api/auth/me.ts`)
 - Frontend auth screen exists (`src/components/AuthScreen.tsx`)
-- **Bug:** Login currently errors — needs investigation
 - **Restriction:** Currently gated so only Jaxsen can log in (Phase 1 intent)
 
 ### Planned

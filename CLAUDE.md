@@ -1,6 +1,6 @@
 # Noise Emporium — LLM Quick Reference
 
-Noise Emporium is a **browser-based music streaming platform** — the third building in the fictional city of Jaxsenville. Think Spotify in the browser, scoped initially to Jaxsen Honeycutt's music with a path to onboarding Louisville-area artists.
+Noise Emporium is a **browser-based music platform** (streaming + store) — the third building in the fictional city of Jaxsenville. Think Spotify meets Bandcamp in the browser, scoped initially to Jaxsen Honeycutt's music. The store sells physical CDs and offers name-your-price digital downloads. Long-term goal: onboard Louisville-area artists for both streaming and store sales.
 
 ## Docs Index
 

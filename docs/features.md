@@ -119,6 +119,34 @@ The player is the core UX — it should feel as close to the Spotify desktop/mob
 
 ---
 
+## Music Store
+
+The store lets listeners buy physical CDs and download music — all from within the same app. The model is Bandcamp-inspired: downloads are free but buyers can pay more if they want to support the artist.
+
+### Physical CDs
+- Browse and purchase physical CD releases
+- Orders fulfilled manually (Phase 2) or via a print/ship partner (Phase 3)
+- Each CD listing tied to a Contentful release entry (same cover art, tracklist)
+
+### Digital Downloads
+- Every release available as a free download
+- **Name-your-price** — $0 minimum; buyers can choose to pay more
+- Buyer enters an email address to receive the download link (no account required to purchase)
+- Payments via Stripe (for paid amounts); free downloads skip payment entirely
+
+### Artist Storefronts (Phase 3)
+- When other artists join the platform, they get their own store section
+- Artists set their own CD prices and download minimums
+- Revenue from store sales goes directly to the artist (minus a small platform fee — TBD)
+
+### Not Yet Implemented
+- Store UI
+- Stripe Checkout integration for CDs and name-your-price downloads
+- Order management and fulfillment tracking
+- Artist storefront configuration
+
+---
+
 ## Offline / Downloads
 
 Songs can be downloaded to the browser's IndexedDB for offline playback.

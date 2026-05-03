@@ -2,9 +2,9 @@
 
 ## What It Is
 
-Noise Emporium is a **browser-based music streaming platform** inspired by Spotify. It is the third and final building in Jaxsenville — a fictional city that Jaxsen Honeycutt is building across the web.
+Noise Emporium is a **browser-based music platform** — part streaming service, part music store. It is the third and final building in Jaxsenville — a fictional city that Jaxsen Honeycutt is building across the web.
 
-The platform starts as a personal music hub for Jaxsen's own music, then opens up a paid tier that lets Louisville-area artists get their music on the platform and earn revenue from listener subscriptions.
+The platform starts as a personal hub for Jaxsen's music, then expands to let Louisville-area artists stream their music, sell physical CDs, and offer name-your-price digital downloads through the same storefront.
 
 ## The Jaxsenville Context
 
@@ -20,13 +20,14 @@ Domain is registered at **Porkbun**. Subdomains are free, so the final URL is TB
 
 ## Core Concept
 
-> Spotify in the browser — but for Jaxsenville.
+> Spotify meets Bandcamp — but for Jaxsenville.
 
-Key differentiators from Spotify:
+Key differentiators:
 - **No app required** — runs entirely in the browser
 - **Hyperlocal** — curated Louisville artists, not a global catalog
 - **Artist-first revenue model** — 90% of subscription revenue goes directly to the music being listened to
-- **Low barrier to entry** — $1/month minimum for access to the full catalog
+- **Low barrier to entry** — $1/month minimum for access to the full streaming catalog
+- **Music store built in** — buy physical CDs or download music for free (pay what you want)
 
 ## Audience
 

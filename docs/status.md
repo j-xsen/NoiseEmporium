@@ -26,17 +26,22 @@
 - [x] Fix login bug
 - [x] Deploy to Vercel with domain
 
-### Phase 2 — Open to Users
+### Phase 2 — Open to Users + Store
 - [ ] Play count recording + display
 - [ ] Open registration (remove single-user gate)
 - [ ] Free tier: Jaxsen's music only
 - [ ] Membership UI (free vs paid)
 - [ ] Stripe integration for paid memberships
+- [ ] Music store UI (browse releases)
+- [ ] CD purchasing via Stripe Checkout
+- [ ] Name-your-price digital downloads (free minimum, Stripe for paid amounts)
+- [ ] Download delivery (email link to buyer)
 
 ### Phase 3 — Artist Platform
 - [ ] Invite Louisville artists to the platform
 - [ ] Artist onboarding flow
-- [ ] Revenue distribution calculations
+- [ ] Artist storefronts (their own CDs + downloads in the store)
+- [ ] Revenue distribution calculations (streaming subscriptions)
 - [ ] Artist payout dashboard
 - [ ] Shuffle mode
 - [ ] "Add to queue" action

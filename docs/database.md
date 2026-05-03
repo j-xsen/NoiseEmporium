@@ -64,6 +64,35 @@ CREATE TABLE memberships (
 );
 ```
 
+### Music Store (future)
+```sql
+-- A purchasable item: either a physical CD or a digital download
+CREATE TYPE product_type AS ENUM ('cd', 'download');
+
+CREATE TABLE products (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contentful_id   TEXT NOT NULL,     -- links to a Contentful release entry
+  type            product_type NOT NULL,
+  title           TEXT NOT NULL,
+  price_cents     INTEGER NOT NULL DEFAULT 0,  -- base price; 0 = free/name-your-price
+  active          BOOLEAN NOT NULL DEFAULT true,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE orders (
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                UUID REFERENCES users(id) ON DELETE SET NULL,  -- null = guest
+  buyer_email            TEXT NOT NULL,
+  product_id             UUID NOT NULL REFERENCES products(id),
+  amount_cents           INTEGER NOT NULL DEFAULT 0,   -- actual amount paid (>= price_cents)
+  stripe_payment_intent  TEXT,                         -- null for free downloads
+  status                 TEXT NOT NULL DEFAULT 'pending',  -- pending | complete | refunded
+  download_token         TEXT,                         -- signed token for download link
+  created_at             TIMESTAMPTZ DEFAULT NOW(),
+  fulfilled_at           TIMESTAMPTZ
+);
+```
+
 ### Revenue distribution (future)
 ```sql
 CREATE TABLE revenue_distributions (

@@ -13,10 +13,16 @@ Neon is chosen for:
 
 ```sql
 CREATE TABLE users (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  created_at    TIMESTAMPTZ DEFAULT NOW()
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         TEXT        NOT NULL,
+  -- bcrypt embeds a random salt inside the hash value; no separate salt column is needed
+  password_hash TEXT        NOT NULL,
+  tier          TEXT        NOT NULL DEFAULT 'free',  -- 'free' | 'premium'
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT users_email_lower  CHECK (email = lower(email)),
+  CONSTRAINT users_email_unique UNIQUE (email),
+  CONSTRAINT users_tier_valid   CHECK (tier IN ('free', 'premium'))
 );
 
 CREATE TABLE playlists (
@@ -48,19 +54,19 @@ CREATE VIEW song_play_counts AS
 
 ## Planned Schema Additions
 
-### Memberships
-```sql
-CREATE TYPE membership_tier AS ENUM ('free', 'paid');
+### Memberships (billing detail)
+The authoritative tier is `users.tier`. This table holds Stripe billing detail and is updated
+by webhooks, which then flip `users.tier` accordingly.
 
+```sql
 CREATE TABLE memberships (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-  tier                   membership_tier NOT NULL DEFAULT 'free',
-  monthly_amount         NUMERIC(5,2),         -- 1.00, 3.00, or 5.00
+  monthly_amount_cents   INTEGER NOT NULL,      -- 100, 300, or 500
   stripe_subscription_id TEXT,
-  started_at             TIMESTAMPTZ DEFAULT NOW(),
+  started_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   renewed_at             TIMESTAMPTZ,
-  cancelled_at           TIMESTAMPTZ
+  cancelled_at           TIMESTAMPTZ           -- when set, webhook sets users.tier = 'free'
 );
 ```
 

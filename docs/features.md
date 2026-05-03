@@ -18,20 +18,35 @@ Users authenticate with email + password. JWT tokens are issued on login (30-day
 
 ## Memberships
 
-The membership model is the economic backbone of the platform.
+### Access Model
+
+**No account required to listen.** Anyone who visits the site can stream songs. What they can hear depends on the song's access setting (controlled per-track in Contentful):
+
+| Situation | What you hear |
+|-----------|--------------|
+| Unauthenticated or free account | Full stream if artist has marked the song as freely streamable; otherwise a short preview (first ~30s) |
+| Premium member | Full stream of everything |
+
+**Account required to download.** Any registered user (free or premium) can download songs via IndexedDB.
 
 ### Free Tier
-- Access to **Jaxsen's music only**
-- No subscription required — just create an account
-- Full playback features (queue, shuffle, repeat, etc.)
+- Create an account — no payment needed
+- Full stream of any song the artist has opted into free listening
+- Preview (~30s) of songs not opted in
+- Can download any freely streamable song
+- Full playback features (queue, skip, repeat, etc.)
 
-### Paid Tier
-- Access to the **full catalog**, including Louisville artists Jaxsen has invited to the platform
-- Three price points: **$1 / $3 / $5 per month**
-  - All tiers unlock the same catalog; higher tiers contribute more to artists
+### Premium Tier
+- Full stream of the entire catalog
+- Three price points: **$1 / $3 / $5 per month** — same access, higher tiers contribute more to artists
 - Revenue split per subscription:
   - **90%** distributed to artists proportionally based on songs listened to that month
   - **10%** goes to Noise Emporium to fund infrastructure and operations
+
+### Per-Track Access Control (Contentful)
+Each track in Contentful will have a `freeStream` boolean field (default: `false`):
+- `true` → freely streamable for everyone, no account needed
+- `false` → full stream for premium members only; everyone else gets a ~30s preview
 
 ### Revenue Distribution Logic
 Each paid subscription month:
@@ -43,8 +58,12 @@ Each paid subscription month:
 > Example: A $3/month subscriber listens to 100 songs. Song A played 20 times = 20% share = $0.54 to Song A's artist.
 
 ### Not Yet Implemented
+- `freeStream` field on Contentful Track content type
+- Preview enforcement in the player (truncate playback at ~30s for non-premium non-free-stream songs)
+- Auth gate on downloads (currently no check)
+- `users.tier` column in schema (added to `schema.sql`; needs to be deployed to Neon)
 - Stripe or payment processor integration
-- Subscription management UI
+- Subscription management UI and webhook to flip `users.tier`
 - Play-weighted revenue calculation
 - Artist payout system
 

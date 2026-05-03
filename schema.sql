@@ -6,11 +6,14 @@
 CREATE TABLE users (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   email         TEXT        NOT NULL,
+  -- bcrypt hash already embeds a per-user random salt; no separate salt column needed
   password_hash TEXT        NOT NULL,
+  tier          TEXT        NOT NULL DEFAULT 'free',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT users_email_lower CHECK (email = lower(email)),
-  CONSTRAINT users_email_unique UNIQUE (email)
+  CONSTRAINT users_email_lower  CHECK (email = lower(email)),
+  CONSTRAINT users_email_unique UNIQUE (email),
+  CONSTRAINT users_tier_valid   CHECK (tier IN ('free', 'premium'))
 );
 
 -- ─── Playlists ────────────────────────────────────────────────────────────────

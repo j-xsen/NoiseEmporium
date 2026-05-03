@@ -1,15 +1,13 @@
-import { useState } from 'react'
 import CoverArt from './CoverArt'
 import DownloadButton from './DownloadButton'
-import { ChevronLeftIcon, MoreIcon, PencilIcon, PlayIcon } from './Icons'
+import { ChevronLeftIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
-import type { Playlist, Song } from '../types'
+import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
 
-interface PlaylistDetailProps {
-  playlist: Playlist
-  songs: Song[]
+interface ReleaseDetailProps {
+  release: Release
   player: PlayerAPI
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
@@ -17,25 +15,13 @@ interface PlaylistDetailProps {
   onDownload: (song: Song) => void
   onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
-  onRename: (name: string) => void
 }
 
-export default function PlaylistDetail({
-  playlist, songs, player, dlStatuses,
-  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist, onRename,
-}: PlaylistDetailProps) {
-  const [renaming, setRenaming] = useState(false)
-  const [nameInput, setNameInput] = useState(playlist.name)
-
-  const playlistSongs = playlist.songIds
-    .map(id => songs.find(s => s.id === id))
-    .filter(Boolean) as Song[]
-
-  function commitRename() {
-    const trimmed = nameInput.trim()
-    if (trimmed && trimmed !== playlist.name) onRename(trimmed)
-    setRenaming(false)
-  }
+export default function ReleaseDetail({
+  release, player, dlStatuses,
+  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
+}: ReleaseDetailProps) {
+  const year = release.date ? new Date(release.date).getFullYear() : null
 
   return (
     <div className="screen-layout">
@@ -44,53 +30,51 @@ export default function PlaylistDetail({
           <ChevronLeftIcon size={22} />
         </button>
         <div className="screen-header__center">
-          {renaming ? (
-            <input
-              autoFocus
-              className="playlist-rename-input"
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') commitRename()
-                if (e.key === 'Escape') { setNameInput(playlist.name); setRenaming(false) }
-              }}
-              onBlur={commitRename}
-            />
-          ) : (
-            <h1 className="screen-title">{playlist.name}</h1>
-          )}
-          <span className="screen-subtitle">{playlistSongs.length} {playlistSongs.length === 1 ? 'song' : 'songs'}</span>
+          <h1 className="screen-title">{release.name}</h1>
+          <span className="screen-subtitle">
+            {year && `${year} · `}{release.songs.length} {release.songs.length === 1 ? 'track' : 'tracks'}
+          </span>
         </div>
-        <div className="header-actions">
+        {release.songs.length > 0 && (
           <button
             className="header-action"
-            onClick={() => { setNameInput(playlist.name); setRenaming(true) }}
-            aria-label="Rename playlist"
+            onClick={() => onPlay(release.songs[0], release.songs)}
+            aria-label="Play all"
           >
-            <PencilIcon size={17} />
+            <PlayIcon size={18} />
           </button>
-          {playlistSongs.length > 0 && (
-            <button className="header-action" onClick={() => onPlay(playlistSongs[0], playlistSongs)} aria-label="Play all">
-              <PlayIcon size={18} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="scroll-area">
-        {playlistSongs.length === 0 ? (
+        {release.cover && (
+          <div className="release-hero">
+            <img src={release.cover} alt={release.name} className="release-hero__img" />
+            {release.spotify && (
+              <a
+                href={release.spotify}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="release-hero__spotify"
+              >
+                Open on Spotify
+              </a>
+            )}
+          </div>
+        )}
+
+        {release.songs.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">♪</div>
-            <p className="empty-title">Empty playlist</p>
-            <p className="empty-hint">Add songs from the library using ···</p>
+            <p className="empty-title">No tracks</p>
           </div>
         ) : (
           <ul className="song-list">
-            {playlistSongs.map((song, i) => {
+            {release.songs.map((song, i) => {
               const isActive = song.id === player.currentSong?.id
               return (
                 <li key={song.id} className={`song-row ${isActive ? 'song-row--active' : ''}`}>
-                  <button className="song-row__play" onClick={() => onPlay(song, playlistSongs)}>
+                  <button className="song-row__play" onClick={() => onPlay(song, release.songs)}>
                     <span className="song-row__index">
                       {isActive && player.isPlaying ? (
                         <span className="song-row__bars"><span /><span /><span /></span>
@@ -113,7 +97,7 @@ export default function PlaylistDetail({
                   <button
                     className="song-row__more"
                     onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                    aria-label="More options"
+                    aria-label="Add to playlist"
                   >
                     <MoreIcon size={18} />
                   </button>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlusIcon, TrashIcon } from './Icons'
+import { PencilIcon, PlusIcon, TrashIcon } from './Icons'
 import type { Playlist, Song } from '../types'
 
 interface PlaylistsProps {
@@ -8,11 +8,14 @@ interface PlaylistsProps {
   onCreate: (name: string) => void
   onSelect: (id: string) => void
   onDelete: (id: string) => void
+  onRename: (id: string, name: string) => void
 }
 
-export default function Playlists({ playlists, songs, onCreate, onSelect, onDelete }: PlaylistsProps) {
+export default function Playlists({ playlists, songs, onCreate, onSelect, onDelete, onRename }: PlaylistsProps) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   function handleCreate() {
     if (!newName.trim()) return
@@ -21,9 +24,18 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
     setCreating(false)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') handleCreate()
-    if (e.key === 'Escape') { setCreating(false); setNewName('') }
+  function startRename(p: Playlist, e: React.MouseEvent) {
+    e.stopPropagation()
+    setRenamingId(p.id)
+    setRenameValue(p.name)
+  }
+
+  function commitRename(id: string) {
+    const trimmed = renameValue.trim()
+    if (trimmed && trimmed !== playlists.find(p => p.id === id)?.name) {
+      onRename(id, trimmed)
+    }
+    setRenamingId(null)
   }
 
   return (
@@ -44,7 +56,10 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
               placeholder="Playlist name…"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreate()
+                if (e.key === 'Escape') { setCreating(false); setNewName('') }
+              }}
             />
             <div className="playlist-create__actions">
               <button className="btn-ghost" onClick={() => { setCreating(false); setNewName('') }}>Cancel</button>
@@ -63,9 +78,10 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
           <ul className="playlist-list">
             {playlists.map(p => {
               const count = p.songIds.length
+              const isRenaming = renamingId === p.id
               return (
                 <li key={p.id} className="playlist-row">
-                  <button className="playlist-row__main" onClick={() => onSelect(p.id)}>
+                  <button className="playlist-row__main" onClick={() => !isRenaming && onSelect(p.id)}>
                     <div className="playlist-row__swatch">
                       {count > 0 ? (
                         <span className="playlist-row__count">{count}</span>
@@ -74,7 +90,22 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
                       )}
                     </div>
                     <div className="playlist-row__info">
-                      <span className="playlist-row__name">{p.name}</span>
+                      {isRenaming ? (
+                        <input
+                          autoFocus
+                          className="playlist-row__rename-input"
+                          value={renameValue}
+                          onChange={e => setRenameValue(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.stopPropagation(); commitRename(p.id) }
+                            if (e.key === 'Escape') { e.stopPropagation(); setRenamingId(null) }
+                          }}
+                          onBlur={() => commitRename(p.id)}
+                        />
+                      ) : (
+                        <span className="playlist-row__name">{p.name}</span>
+                      )}
                       <span className="playlist-row__meta">
                         {count} {count === 1 ? 'song' : 'songs'}
                         {count > 0 && (() => {
@@ -88,6 +119,13 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
                         })()}
                       </span>
                     </div>
+                  </button>
+                  <button
+                    className="playlist-row__action"
+                    onClick={e => startRename(p, e)}
+                    aria-label="Rename playlist"
+                  >
+                    <PencilIcon size={15} />
                   </button>
                   <button
                     className="playlist-row__delete"

@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react'
-import { fetchSongs } from '../lib/contentful'
-import type { Song } from '../types'
+import { fetchReleases } from '../lib/contentful'
+import type { Release, Song } from '../types'
 
 type Status = 'loading' | 'ready' | 'error'
 
 export function useSongs() {
+  const [releases, setReleases] = useState<Release[]>([])
   const [songs, setSongs] = useState<Song[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchSongs()
-      .then(data => { setSongs(data); setStatus('ready') })
+    fetchReleases()
+      .then(data => {
+        setReleases(data)
+        setSongs(data.flatMap(r => r.songs))
+        setStatus('ready')
+      })
       .catch(err => {
         console.error('Contentful fetch failed:', err)
         setError(err?.message ?? 'Failed to load songs')
@@ -19,5 +24,5 @@ export function useSongs() {
       })
   }, [])
 
-  return { songs, status, error }
+  return { songs, releases, status, error }
 }

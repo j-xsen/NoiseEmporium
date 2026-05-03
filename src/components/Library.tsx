@@ -1,71 +1,54 @@
 import CoverArt from './CoverArt'
-import DownloadButton from './DownloadButton'
-import { MoreIcon } from './Icons'
-import { songSubtitle } from '../utils/format'
-import type { DlStatus } from '../hooks/useDownloads'
-import type { Song } from '../types'
+import { PlayIcon } from './Icons'
+import type { Release, Song } from '../types'
 
 interface LibraryProps {
-  songs: Song[]
+  releases: Release[]
   currentSongId: string | undefined
-  isPlaying: boolean
-  dlStatuses: Record<string, DlStatus>
-  onPlay: (song: Song) => void
-  onDownload: (song: Song) => void
-  onRemoveDownload: (id: string) => void
-  onAddToPlaylist: (songId: string) => void
+  onSelectRelease: (id: string) => void
+  onPlayRelease: (release: Release) => void
 }
 
-export default function Library({
-  songs, currentSongId, isPlaying, dlStatuses,
-  onPlay, onDownload, onRemoveDownload, onAddToPlaylist,
-}: LibraryProps) {
+export default function Library({ releases, currentSongId, onSelectRelease, onPlayRelease }: LibraryProps) {
   return (
     <div className="screen-layout">
       <div className="screen-header">
         <h1 className="screen-title">Library</h1>
-        <span className="screen-subtitle">{songs.length} {songs.length === 1 ? 'song' : 'songs'}</span>
+        <span className="screen-subtitle">{releases.length} {releases.length === 1 ? 'release' : 'releases'}</span>
       </div>
 
       <div className="scroll-area">
-        {songs.length === 0 ? (
+        {releases.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">♪</div>
-            <p className="empty-title">No songs yet</p>
-            <p className="empty-hint">Add songs to your Contentful space</p>
+            <p className="empty-title">No releases yet</p>
+            <p className="empty-hint">Add releases to your Contentful space</p>
           </div>
         ) : (
-          <ul className="song-list">
-            {songs.map((song, i) => {
-              const isActive = song.id === currentSongId
+          <ul className="release-list">
+            {releases.map(release => {
+              const year = release.date ? new Date(release.date).getFullYear() : null
+              const count = release.songs.length
+              const isActive = release.songs.some(s => s.id === currentSongId)
               return (
-                <li key={song.id} className={`song-row ${isActive ? 'song-row--active' : ''}`}>
-                  <button className="song-row__play" onClick={() => onPlay(song)}>
-                    <span className="song-row__index">
-                      {isActive && isPlaying ? (
-                        <span className="song-row__bars"><span /><span /><span /></span>
-                      ) : (
-                        <span className="song-row__num">{i + 1}</span>
-                      )}
-                    </span>
-                    <CoverArt song={song} size={44} className="song-row__art" />
-                    <div className="song-row__info">
-                      <span className="song-row__title">{song.title}</span>
-                      {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
+                <li key={release.id} className={`release-row ${isActive ? 'release-row--active' : ''}`}>
+                  <button className="release-row__main" onClick={() => onSelectRelease(release.id)}>
+                    <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} size={56} className="release-row__art" />
+                    <div className="release-row__info">
+                      <span className="release-row__name">{release.name}</span>
+                      <span className="release-row__meta">
+                        {year && <span>{year}</span>}
+                        {year && <span className="release-row__dot">·</span>}
+                        <span>{count} {count === 1 ? 'track' : 'tracks'}</span>
+                      </span>
                     </div>
                   </button>
-                  <DownloadButton
-                    song={song}
-                    status={dlStatuses[song.id] ?? 'none'}
-                    onDownload={onDownload}
-                    onRemove={onRemoveDownload}
-                  />
                   <button
-                    className="song-row__more"
-                    onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                    aria-label="Add to playlist"
+                    className="release-row__play"
+                    onClick={e => { e.stopPropagation(); onPlayRelease(release) }}
+                    aria-label={`Play ${release.name}`}
                   >
-                    <MoreIcon size={18} />
+                    <PlayIcon size={16} />
                   </button>
                 </li>
               )

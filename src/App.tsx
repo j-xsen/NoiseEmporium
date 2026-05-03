@@ -10,9 +10,10 @@ import Library from './components/Library'
 import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
+import ReleaseDetail from './components/ReleaseDetail'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
-import { XIcon, PlusIcon } from './components/Icons'
+import { MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
 import type { Song, Tab, Playlist } from './types'
 
 // ── Loading / Error screens ───────────────────────────────────────────────────
@@ -36,16 +37,19 @@ function ErrorScreen({ message }: { message: string | null }) {
   )
 }
 
-// ── Add-to-playlist bottom sheet ─────────────────────────────────────────────
+// ── Song actions bottom sheet ─────────────────────────────────────────────────
+// Context-aware: shows "Remove from playlist" when opened from within a playlist.
 
-interface SheetProps {
+interface SongActionsSheetProps {
   playlists: Playlist[]
+  fromPlaylist: Playlist | null
   onAdd: (playlistId: string) => Promise<void>
   onCreate: (name: string) => Promise<void>
+  onRemove: (() => Promise<void>) | null
   onClose: () => void
 }
 
-function AddToPlaylistSheet({ playlists, onAdd, onCreate, onClose }: SheetProps) {
+function SongActionsSheet({ playlists, fromPlaylist, onAdd, onCreate, onRemove, onClose }: SongActionsSheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -56,6 +60,11 @@ function AddToPlaylistSheet({ playlists, onAdd, onCreate, onClose }: SheetProps)
     setCreating(false)
   }
 
+  // Playlists available to add to (exclude current playlist if any)
+  const addablePlaylists = fromPlaylist
+    ? playlists.filter(p => p.id !== fromPlaylist.id)
+    : playlists
+
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
@@ -65,9 +74,18 @@ function AddToPlaylistSheet({ playlists, onAdd, onCreate, onClose }: SheetProps)
           <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
         </div>
         <div className="sheet-body">
-          {playlists.length > 0 && (
+          {onRemove && (
+            <button
+              className="sheet-remove"
+              onClick={async () => { await onRemove(); onClose() }}
+            >
+              <MinusCircleIcon size={16} />
+              <span>Remove from {fromPlaylist?.name ?? 'playlist'}</span>
+            </button>
+          )}
+          {addablePlaylists.length > 0 && (
             <ul className="sheet-list">
-              {playlists.map(p => (
+              {addablePlaylists.map(p => (
                 <li key={p.id}>
                   <button className="sheet-item" onClick={() => { onAdd(p.id); onClose() }}>
                     <span className="sheet-item__name">{p.name}</span>
@@ -109,15 +127,19 @@ function AddToPlaylistSheet({ playlists, onAdd, onCreate, onClose }: SheetProps)
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
+// Tracks which song opened the sheet and from what context
+type SongSheet = { songId: string; fromPlaylistId: string | null } | null
+
 export default function App() {
   const auth = useAuth()
-  const { songs, status, error } = useSongs()
+  const { songs, releases, status, error } = useSongs()
   const player = useAudio()
   const pm = usePlaylists(auth.token)
   const dl = useDownloads()
   const [tab, setTab] = useState<Tab>('library')
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
-  const [addSongId, setAddSongId] = useState<string | null>(null)
+  const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
+  const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
     const q = queue ?? [song]
@@ -131,6 +153,7 @@ export default function App() {
 
   function changeTab(t: Tab) {
     setSelectedPlaylistId(null)
+    setSelectedReleaseId(null)
     setTab(t)
   }
 
@@ -145,22 +168,36 @@ export default function App() {
   if (status === 'error') return <ErrorScreen message={error} />
 
   const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
+  const selectedRelease = releases.find(r => r.id === selectedReleaseId) ?? null
   const miniPlayerVisible = !!player.currentSong && tab !== 'player'
   const progress = player.duration > 0 ? player.currentTime / player.duration : 0
+
+  // Sheet callbacks
+  const sheetFromPlaylist = songSheet?.fromPlaylistId
+    ? (pm.playlists.find(p => p.id === songSheet.fromPlaylistId) ?? null)
+    : null
 
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'library' && (
+        {tab === 'library' && !selectedRelease && (
           <Library
-            songs={songs}
+            releases={releases}
             currentSongId={player.currentSong?.id}
-            isPlaying={player.isPlaying}
+            onSelectRelease={setSelectedReleaseId}
+            onPlayRelease={r => handlePlay(r.songs[0], r.songs)}
+          />
+        )}
+        {tab === 'library' && selectedRelease && (
+          <ReleaseDetail
+            release={selectedRelease}
+            player={player}
             dlStatuses={dl.statuses}
-            onPlay={s => handlePlay(s, songs)}
+            onPlay={handlePlay}
+            onBack={() => setSelectedReleaseId(null)}
             onDownload={dl.download}
             onRemoveDownload={dl.remove}
-            onAddToPlaylist={setAddSongId}
+            onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
           />
         )}
         {tab === 'player' && (
@@ -173,6 +210,7 @@ export default function App() {
             onCreate={pm.createPlaylist}
             onSelect={setSelectedPlaylistId}
             onDelete={pm.deletePlaylist}
+            onRename={pm.renamePlaylist}
           />
         )}
         {tab === 'playlists' && selectedPlaylist && (
@@ -185,7 +223,8 @@ export default function App() {
             onBack={() => setSelectedPlaylistId(null)}
             onDownload={dl.download}
             onRemoveDownload={dl.remove}
-            onAddToPlaylist={setAddSongId}
+            onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: selectedPlaylist.id })}
+            onRename={name => pm.renamePlaylist(selectedPlaylist.id, name)}
           />
         )}
       </div>
@@ -202,15 +241,20 @@ export default function App() {
 
       <BottomNav tab={tab} onChange={changeTab} hasSong={!!player.currentSong} />
 
-      {addSongId && (
-        <AddToPlaylistSheet
+      {songSheet && (
+        <SongActionsSheet
           playlists={pm.playlists}
-          onAdd={playlistId => pm.addToPlaylist(playlistId, addSongId)}
+          fromPlaylist={sheetFromPlaylist}
+          onAdd={playlistId => pm.addToPlaylist(playlistId, songSheet.songId)}
           onCreate={async name => {
             const p = await pm.createPlaylist(name)
-            await pm.addToPlaylist(p.id, addSongId)
+            await pm.addToPlaylist(p.id, songSheet.songId)
           }}
-          onClose={() => setAddSongId(null)}
+          onRemove={sheetFromPlaylist
+            ? () => pm.removeFromPlaylist(sheetFromPlaylist.id, songSheet.songId)
+            : null
+          }
+          onClose={() => setSongSheet(null)}
         />
       )}
     </div>

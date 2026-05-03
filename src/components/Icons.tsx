@@ -115,3 +115,17 @@ export const MoreIcon = ({ size = 20, className }: IconProps) => (
     <circle cx="19" cy="12" r="1.5" />
   </svg>
 )
+
+export const PencilIcon = ({ size = 18, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+)
+
+export const MinusCircleIcon = ({ size = 18, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M8 12h8" />
+  </svg>
+)

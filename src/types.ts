@@ -9,6 +9,15 @@ export interface Song {
   cover?: string
 }
 
+export interface Release {
+  id: string
+  name: string
+  date: string
+  cover?: string
+  spotify?: string
+  songs: Song[]
+}
+
 export interface Playlist {
   id: string
   name: string

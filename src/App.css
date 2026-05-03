@@ -793,6 +793,17 @@
   pointer-events: none;
 }
 
+.bottom-nav::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: linear-gradient(to bottom, #1a2e20, #1a0e08);
+  pointer-events: none;
+}
+
 .nav-tab {
   flex: 1;
   display: flex;

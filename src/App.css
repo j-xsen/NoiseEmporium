@@ -775,7 +775,7 @@
 .bottom-nav {
   position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   background: linear-gradient(to bottom, #1a2e20, #1a0e08);
   border-top: 1px solid #253828;
   padding-bottom: var(--safe-bottom);
@@ -804,7 +804,7 @@
   color: #7d6248;
   transition: color 0.15s;
   position: relative;
-  min-height: 56px;
+  height: 56px;
 }
 
 .nav-tab--active {

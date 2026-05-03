@@ -34,7 +34,7 @@
 
 body {
   margin: 0;
-  background: var(--surface);
+  background: #1a0e08;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;

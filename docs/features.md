@@ -140,6 +140,10 @@ The player is the core UX — it should feel as close to the Spotify desktop/mob
 
 ## Music Store
 
+The store is the **first half of the public launch** and ships before the streaming platform opens. The primary product is physical CDs. The store section is built in **3D using React Three Fiber** — a deliberate visual callback to Jaxsenville's other two fully-3D buildings. The rest of the app stays 2D.
+
+**3D rendering constraints:** Low-poly models and low-resolution textures are used throughout the store to keep performance reasonable across mid-range hardware. This is a hard design constraint, not an afterthought.
+
 The store lets listeners buy physical CDs and download music — all from within the same app. The model is Bandcamp-inspired: downloads are free but buyers can pay more if they want to support the artist.
 
 ### Physical CDs

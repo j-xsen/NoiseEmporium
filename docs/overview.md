@@ -29,6 +29,26 @@ Key differentiators:
 - **Low barrier to entry** — $1/month minimum for access to the full streaming catalog
 - **Music store built in** — buy physical CDs or download music for free (pay what you want)
 
+## Public Release Plan
+
+Noise Emporium launches publicly in two parts, in this order:
+
+### Part 1 — Music Store
+The store ships first. The primary product is **physical CDs** — browsable, purchasable, with name-your-price digital downloads alongside them. This is the "Bandcamp" half of the platform.
+
+The store section is built in **3D using React Three Fiber**, making it visually distinct from the rest of the 2D app. This is intentional: Jaxsenville's other two buildings are both fully 3D experiences, and the store is the callback to that universe. The rest of the app (player, library, playlists) stays 2D — the gimmick there is being a genuine Spotify-competitor running in the browser. The two halves have different identities on purpose.
+
+**3D cost management:** 3D rendering in the browser is expensive. The store uses low-polygon models and low-resolution textures throughout to keep frame rates healthy across mid-range hardware without a GPU. This is a deliberate constraint, not a compromise — it's part of the aesthetic.
+
+### Part 2 — Artist Platform
+After the store is live and running for Jaxsen, the platform opens to other artists — primarily Louisville-area musicians. Artists can upload their music to the streaming catalog and list their own CDs and merch in the store.
+
+This is also when the **subscription model becomes meaningful**: with multiple artists in the catalog, the 90/10 revenue split and play-weighted royalty distribution kick in. Jaxsen's Part 1 subscriptions are simple enough to not need this machinery yet.
+
+Royalty payouts use **Stripe Connect** (see `technical.md` for the full architecture).
+
+---
+
 ## Audience
 
 **Phase 1:** Jaxsen himself — personal music app with login barrier.

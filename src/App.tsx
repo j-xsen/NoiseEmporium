@@ -133,7 +133,17 @@ type SongSheet = { songId: string; fromPlaylistId: string | null } | null
 export default function App() {
   const auth = useAuth()
   const { songs, releases, status, error } = useSongs()
-  const player = useAudio()
+
+  const recordPlay = useCallback((songId: string) => {
+    if (!auth.token) return
+    fetch('/api/plays', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+      body: JSON.stringify({ songId }),
+    }).catch(console.error)
+  }, [auth.token])
+
+  const player = useAudio(recordPlay)
   const pm = usePlaylists(auth.token)
   const dl = useDownloads()
   const [tab, setTab] = useState<Tab>('library')

@@ -16,8 +16,9 @@ export interface PlayerAPI {
 }
 
 const MS = 'mediaSession' in navigator
+const PLAY_THRESHOLD = 15 // seconds of actual listening before a play is counted
 
-export function useAudio(): PlayerAPI {
+export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   // Refs for event handler access — avoids stale closures
   const loopRef = useRef<LoopMode>('off')
@@ -25,6 +26,13 @@ export function useAudio(): PlayerAPI {
   const qiRef = useRef(-1)
   // Guards against double-advance when both 'ended' and the timeupdate fallback fire
   const endFiredRef = useRef(false)
+  // Play count tracking
+  const listenedRef = useRef(0)        // cumulative seconds listened for current song
+  const lastTimeRef = useRef(0)        // previous currentTime value
+  const countedRef = useRef(false)     // whether this song has been counted yet
+  const currentSongIdRef = useRef<string | null>(null)
+  const onCountPlayRef = useRef(onCountPlay)
+  onCountPlayRef.current = onCountPlay
 
   const [currentSong, setCurrentSong] = useState<Song | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -36,6 +44,11 @@ export function useAudio(): PlayerAPI {
     const el = audioRef.current
     if (!el) return
     endFiredRef.current = false
+    // Reset listen-time tracking for the new song
+    listenedRef.current = 0
+    lastTimeRef.current = 0
+    countedRef.current = false
+    currentSongIdRef.current = song.id
     el.src = song.src
     el.loop = loopRef.current === 'one'
     // iOS requires an explicit load() call after changing src
@@ -82,7 +95,19 @@ export function useAudio(): PlayerAPI {
 
     // iOS PWA: the 'ended' event doesn't always fire. Fall back to timeupdate.
     const onTime = () => {
-      setCurrentTime(el.currentTime)
+      const now = el.currentTime
+      // Accumulate only small forward increments — skips/seeks produce large deltas
+      const delta = now - lastTimeRef.current
+      if (delta > 0 && delta < 1.5) {
+        listenedRef.current += delta
+        if (!countedRef.current && listenedRef.current >= PLAY_THRESHOLD) {
+          countedRef.current = true
+          const id = currentSongIdRef.current
+          if (id) onCountPlayRef.current?.(id)
+        }
+      }
+      lastTimeRef.current = now
+      setCurrentTime(now)
       if (!endFiredRef.current && el.duration > 0 && (el.duration - el.currentTime) < 0.3) {
         advance()
       }

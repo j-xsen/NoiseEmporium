@@ -20,15 +20,17 @@ export const PauseIcon = ({ size = 24, className }: IconProps) => (
 
 export const SkipBackIcon = ({ size = 24, className }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={0} fill="currentColor">
-    <rect x="5" y="5" width="2.5" height="14" rx="1" />
-    <path d="M19 5.5L9 12l10 6.5V5.5z" />
+    <rect x="4" y="5" width="2.5" height="14" rx="1" />
+    <path d="M13.5 5.5L5.5 12l8 6.5V5.5z" />
+    <path d="M21 5.5l-8 6.5 8 6.5V5.5z" />
   </svg>
 )
 
 export const SkipForwardIcon = ({ size = 24, className }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={0} fill="currentColor">
-    <rect x="16.5" y="5" width="2.5" height="14" rx="1" />
-    <path d="M5 5.5l10 6.5-10 6.5V5.5z" />
+    <rect x="17.5" y="5" width="2.5" height="14" rx="1" />
+    <path d="M10.5 5.5l8 6.5-8 6.5V5.5z" />
+    <path d="M3 5.5l8 6.5-8 6.5V5.5z" />
   </svg>
 )
 

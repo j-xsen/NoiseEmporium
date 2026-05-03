@@ -23,6 +23,8 @@ export function useAudio(): PlayerAPI {
   const loopRef = useRef<LoopMode>('off')
   const queueRef = useRef<Song[]>([])
   const qiRef = useRef(-1)
+  // Guards against double-advance when both 'ended' and the timeupdate fallback fire
+  const endFiredRef = useRef(false)
 
   const [currentSong, setCurrentSong] = useState<Song | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -33,9 +35,11 @@ export function useAudio(): PlayerAPI {
   const loadAndPlay = useCallback((song: Song, qi: number, queue: Song[]) => {
     const el = audioRef.current
     if (!el) return
+    endFiredRef.current = false
     el.src = song.src
     el.loop = loopRef.current === 'one'
-    el.currentTime = 0
+    // iOS requires an explicit load() call after changing src
+    el.load()
     qiRef.current = qi
     queueRef.current = queue
     setCurrentSong(song)
@@ -52,11 +56,14 @@ export function useAudio(): PlayerAPI {
     el.preload = 'metadata'
     audioRef.current = el
 
-    const onTime = () => setCurrentTime(el.currentTime)
     const onMeta = () => setDuration(isNaN(el.duration) ? 0 : el.duration)
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
-    const onEnded = () => {
+
+    // Shared advance logic — guarded so timeupdate fallback and 'ended' can't both fire
+    const advance = () => {
+      if (endFiredRef.current) return
+      endFiredRef.current = true
       const mode = loopRef.current
       const q = queueRef.current
       const qi = qiRef.current
@@ -68,6 +75,16 @@ export function useAudio(): PlayerAPI {
         loadAndPlay(q[0], 0, q)
       } else {
         setIsPlaying(false)
+      }
+    }
+
+    const onEnded = () => advance()
+
+    // iOS PWA: the 'ended' event doesn't always fire. Fall back to timeupdate.
+    const onTime = () => {
+      setCurrentTime(el.currentTime)
+      if (!endFiredRef.current && el.duration > 0 && (el.duration - el.currentTime) < 0.3) {
+        advance()
       }
     }
 

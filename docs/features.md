@@ -87,13 +87,43 @@ Users can create named playlists and add/remove songs.
 ### Planned
 - Playlist cover art (auto-generated or user-set)
 - Collaborative playlists (Phase 3)
-- Public/shareable playlists
+
+### Shareable Playlists
+A playlist owner can make their playlist public. This generates a `share_token` (UUID) on the playlist row and produces a shareable URL: `noise.jaxsenville.com/playlist/[token]`. Anyone with the link can view and play the playlist without an account.
+
+**Save to Library:** A logged-in user who visits a shared playlist can "save" it to their library. This creates a row in `liked_playlists` linking their account to the original playlist — it does **not** fork a copy. The liker always sees the owner's current version of the playlist (additions, removals, renames). If the owner deletes or un-publishes the playlist, it disappears from the liker's library.
+
+API surface:
+- `PATCH /api/playlists/[id]/share` — owner toggles `is_public`, generates/clears `share_token`
+- `GET /api/playlists/share/[token]` — public, no auth required; returns playlist + songs
+- `POST /api/playlists/share/[token]/like` — auth required; saves to liker's library
+- `DELETE /api/playlists/share/[token]/like` — auth required; removes from liker's library
+
+---
+
+## Navigation
+
+The app has three primary tabs in the bottom navigation bar:
+
+| Tab | Screen | Description |
+|-----|---------|-------------|
+| **Home** | `HomeScreen` | Featured and recent albums; curated playlists |
+| **Library** | `LibraryScreen` | User's liked albums + owned and saved playlists |
+| **Now Playing** | `NowPlaying` | Full-screen player |
+
+### Home Screen
+Pulls content from Contentful. Shows recent releases and any featured/pinned playlists. Serves as the discovery surface — what a user sees before they've built their own library.
+
+### Library Screen
+Replaces the current all-releases view. Two sections:
+1. **Albums** — releases the user has explicitly liked (heart button on an album)
+2. **Playlists** — playlists the user owns, followed by playlists they've saved from other users
 
 ---
 
 ## Music Library
 
-All music metadata and audio files are stored in **Contentful CMS**. The database does not store song data — it only stores user-generated data (playlists, play counts).
+All music metadata and audio files are stored in **Contentful CMS**. The database does not store song data — it only stores user-generated data (playlists, play counts, likes).
 
 ### Contentful Schema
 - **Release** — an album or EP (title, cover image)
@@ -102,7 +132,15 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 ### Current state (fully implemented)
 - `src/lib/contentful.ts` — fetches releases and flattens to track list
 - `src/hooks/useSongs.ts` — loads and exposes song list
-- `src/components/Library.tsx` — displays song list
+- `src/components/Library.tsx` — displays song list (currently shows all releases; will become liked albums only)
+
+### Liked Albums
+Users can like/unlike a release. Liked releases appear in the Library screen under Albums. Liking is stored in the `liked_albums` table in Neon (keyed by user + Contentful release ID).
+
+API surface:
+- `POST /api/albums/[contentfulId]/like`
+- `DELETE /api/albums/[contentfulId]/like`
+- `GET /api/albums/liked` — returns list of liked Contentful IDs for the current user
 
 ### Planned
 - **Play count** — track how many times each song has been played (stored in Neon `song_plays`)

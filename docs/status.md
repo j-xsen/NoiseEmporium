@@ -19,6 +19,14 @@
 
 Items are ordered so each one unblocks or sets up the next. Don't skip ahead — later items have dependencies on earlier ones.
 
+### Navigation & Library Redesign
+
+- [ ] **N1. Home screen** — new `HomeScreen` component showing recent Contentful releases and featured playlists. Add "Home" tab to bottom nav, replacing the current library-as-default pattern.
+- [ ] **N2. Liked albums** — heart button on album cards; `liked_albums` table + `POST/DELETE /api/albums/[id]/like` + `GET /api/albums/liked`. Library screen shows only liked albums under an "Albums" section.
+- [ ] **N3. Library screen redesign** — restructure `Library.tsx` into two sections: liked albums (N2) and playlists (owned + saved). Remove standalone Playlists tab from bottom nav.
+- [ ] **N4. Shareable playlists** — `PATCH /api/playlists/[id]/share` generates a `share_token`; `GET /api/playlists/share/[token]` is a public endpoint. Share button in playlist header copies the link. Needs N3 first.
+- [ ] **N5. Save shared playlist to library** — `POST/DELETE /api/playlists/share/[token]/like` creates a `liked_playlists` row. Liker sees the owner's live playlist in their Library. Needs N4.
+
 ### Part 1 — Music Store (Jaxsen only)
 
 - [ ] **1. Wire up play count** — endpoint exists (`api/plays/index.ts`), needs to hook into the player and display on song cards. Do this first; play data needs to accumulate before Part 2 royalties are meaningful.

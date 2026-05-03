@@ -54,6 +54,35 @@ CREATE VIEW song_play_counts AS
 
 ## Planned Schema Additions
 
+### Shareable playlists + liked albums
+```sql
+-- Add to playlists table
+ALTER TABLE playlists
+  ADD COLUMN share_token UUID UNIQUE DEFAULT NULL,  -- null = private
+  ADD COLUMN is_public   BOOLEAN NOT NULL DEFAULT false;
+
+-- Albums a user has liked (Contentful release ID, not a DB record)
+CREATE TABLE liked_albums (
+  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  contentful_id  TEXT NOT NULL,   -- Contentful release entry ID
+  liked_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, contentful_id)
+);
+
+-- Playlists a user has saved from another owner (linked, not forked)
+CREATE TABLE liked_playlists (
+  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  playlist_id  UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+  saved_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, playlist_id)
+);
+```
+
+Notes:
+- `share_token` is generated on demand when an owner makes a playlist public; cleared when set back to private
+- `liked_playlists` rows reference the original playlist — deletions or un-publishing cascade automatically via the foreign key
+- `liked_albums.contentful_id` mirrors the Contentful entry ID used throughout the app; no separate albums table is needed
+
 ### Memberships (billing detail)
 The authoritative tier is `users.tier`. This table holds Stripe billing detail and is updated
 by webhooks, which then flip `users.tier` accordingly.

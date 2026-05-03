@@ -70,37 +70,39 @@ export default function ReleaseDetail({
           </div>
         ) : (
           <ul className="song-list">
-            {release.songs.map((song, i) => {
+            {release.songs.map((song) => {
               const isActive = song.id === player.currentSong?.id
               return (
-                <li key={song.id} className={`song-row ${isActive ? 'song-row--active' : ''}`}>
-                  <button className="song-row__play" onClick={() => onPlay(song, release.songs)}>
-                    <span className="song-row__index">
-                      {isActive && player.isPlaying ? (
-                        <span className="song-row__bars"><span /><span /><span /></span>
-                      ) : (
-                        <span className="song-row__num">{i + 1}</span>
+                <li key={song.id} className={`song-card ${isActive ? 'song-card--active' : ''}`}>
+                  <button className="song-card__play" onClick={() => onPlay(song, release.songs)}>
+                    <div className="song-card__art-wrap">
+                      <CoverArt song={song} className="song-card__art" />
+                      {isActive && player.isPlaying && (
+                        <div className="song-card__playing">
+                          <span className="song-row__bars"><span /><span /><span /></span>
+                        </div>
                       )}
-                    </span>
-                    <CoverArt song={song} size={44} className="song-row__art" />
-                    <div className="song-row__info">
-                      <span className="song-row__title">{song.title}</span>
-                      {songSubtitle(song) && <span className="song-row__artist">{songSubtitle(song)}</span>}
+                    </div>
+                    <div className="song-card__info">
+                      <span className="song-card__title">{song.title}</span>
+                      {songSubtitle(song) && <span className="song-card__subtitle">{songSubtitle(song)}</span>}
                     </div>
                   </button>
-                  <DownloadButton
-                    song={song}
-                    status={dlStatuses[song.id] ?? 'none'}
-                    onDownload={onDownload}
-                    onRemove={onRemoveDownload}
-                  />
-                  <button
-                    className="song-row__more"
-                    onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                    aria-label="Add to playlist"
-                  >
-                    <MoreIcon size={18} />
-                  </button>
+                  <div className="song-card__actions">
+                    <DownloadButton
+                      song={song}
+                      status={dlStatuses[song.id] ?? 'none'}
+                      onDownload={onDownload}
+                      onRemove={onRemoveDownload}
+                    />
+                    <button
+                      className="song-card__more"
+                      onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
+                      aria-label="Add to playlist"
+                    >
+                      <MoreIcon size={16} />
+                    </button>
+                  </div>
                 </li>
               )
             })}

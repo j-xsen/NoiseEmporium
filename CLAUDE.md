@@ -11,6 +11,7 @@ Noise Emporium is a **browser-based music platform** (streaming + store) — the
 | [docs/technical.md](docs/technical.md) | Stack, architecture, data flow |
 | [docs/database.md](docs/database.md) | Schema, Neon setup, planned additions |
 | [docs/status.md](docs/status.md) | Current state — what works, what's broken, what's next |
+| [docs/design.md](docs/design.md) | Color palette, typography, custom asset specs |
 
 ## Project Root at a Glance
 

@@ -249,6 +249,7 @@ export default function App() {
         />
       )}
 
+      <div className="grass-divider" aria-hidden="true" />
       <BottomNav tab={tab} onChange={changeTab} hasSong={!!player.currentSong} />
 
       {songSheet && (

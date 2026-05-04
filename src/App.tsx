@@ -237,6 +237,7 @@ export default function App() {
             onRename={name => pm.renamePlaylist(selectedPlaylist.id, name)}
           />
         )}
+        <div className="grass-divider" aria-hidden="true" />
       </div>
 
       {miniPlayerVisible && (
@@ -249,7 +250,6 @@ export default function App() {
         />
       )}
 
-      <div className="grass-divider" aria-hidden="true" />
       <BottomNav tab={tab} onChange={changeTab} hasSong={!!player.currentSong} />
 
       {songSheet && (

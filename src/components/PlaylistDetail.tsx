@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import CoverArt from './CoverArt'
 import DownloadButton from './DownloadButton'
 import { ChevronLeftIcon, MoreIcon, PencilIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
@@ -85,26 +84,24 @@ export default function PlaylistDetail({
             <p className="empty-hint">Add songs from the library using ···</p>
           </div>
         ) : (
-          <ul className="song-list">
-            {playlistSongs.map((song) => {
+          <ul className="song-track-list">
+            {playlistSongs.map((song, i) => {
               const isActive = song.id === player.currentSong?.id
               return (
-                <li key={song.id} className={`song-card ${isActive ? 'song-card--active' : ''}`}>
-                  <button className="song-card__play" onClick={() => onPlay(song, playlistSongs)}>
-                    <div className="song-card__art-wrap">
-                      <CoverArt song={song} className="song-card__art" />
-                      {isActive && player.isPlaying && (
-                        <div className="song-card__playing">
-                          <span className="song-row__bars"><span /><span /><span /></span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="song-card__info">
-                      <span className="song-card__title">{song.title}</span>
-                      {songSubtitle(song) && <span className="song-card__subtitle">{songSubtitle(song)}</span>}
+                <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''}`}>
+                  <button className="song-track__main" onClick={() => onPlay(song, playlistSongs)}>
+                    <span className="song-track__num">
+                      {isActive && player.isPlaying
+                        ? <span className="song-row__bars"><span /><span /><span /></span>
+                        : i + 1
+                      }
+                    </span>
+                    <div className="song-track__info">
+                      <span className="song-track__title">{song.title}</span>
+                      {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
                     </div>
                   </button>
-                  <div className="song-card__actions">
+                  <div className="song-track__actions">
                     <DownloadButton
                       song={song}
                       status={dlStatuses[song.id] ?? 'none'}
@@ -112,7 +109,7 @@ export default function PlaylistDetail({
                       onRemove={onRemoveDownload}
                     />
                     <button
-                      className="song-card__more"
+                      className="song-track__more"
                       onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
                       aria-label="More options"
                     >

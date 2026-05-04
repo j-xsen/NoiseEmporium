@@ -25,30 +25,30 @@ export default function Library({ releases, currentSongId, onSelectRelease, onPl
             <p className="empty-hint">Add releases to your Contentful space</p>
           </div>
         ) : (
-          <ul className="release-list">
+          <ul className="release-grid">
             {releases.map(release => {
               const year = release.date ? new Date(release.date).getFullYear() : null
               const count = release.songs.length
               const isActive = release.songs.some(s => s.id === currentSongId)
               return (
-                <li key={release.id} className={`release-row ${isActive ? 'release-row--active' : ''}`}>
-                  <button className="release-row__main" onClick={() => onSelectRelease(release.id)}>
-                    <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} size={56} className="release-row__art" />
-                    <div className="release-row__info">
-                      <span className="release-row__name">{release.name}</span>
-                      <span className="release-row__meta">
-                        {year && <span>{year}</span>}
-                        {year && <span className="release-row__dot">·</span>}
-                        <span>{count} {count === 1 ? 'track' : 'tracks'}</span>
+                <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
+                  <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
+                    <div className="release-card__art-wrap">
+                      <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                    </div>
+                    <div className="release-card__info">
+                      <span className="release-card__name">{release.name}</span>
+                      <span className="release-card__meta">
+                        {year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
                       </span>
                     </div>
                   </button>
                   <button
-                    className="release-row__play"
-                    onClick={e => { e.stopPropagation(); onPlayRelease(release) }}
+                    className="release-card__play"
+                    onClick={() => onPlayRelease(release)}
                     aria-label={`Play ${release.name}`}
                   >
-                    <PlayIcon size={16} />
+                    <PlayIcon size={14} />
                   </button>
                 </li>
               )

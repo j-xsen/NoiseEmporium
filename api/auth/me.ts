@@ -9,7 +9,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!userId) return
 
   try {
-    const rows = await sql`SELECT id, email FROM users WHERE id = ${userId}`
+    const rows = await sql`SELECT id, email, tier FROM users WHERE id = ${userId}`
     if (!rows[0]) return res.status(401).json({ error: 'User not found' })
     res.json({ user: rows[0] })
   } catch (err) {

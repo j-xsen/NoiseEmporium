@@ -202,6 +202,7 @@ export default function App() {
           <ReleaseDetail
             release={selectedRelease}
             player={player}
+            isPremium={auth.user?.tier === 'premium'}
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
             onBack={() => setSelectedReleaseId(null)}

@@ -1,5 +1,5 @@
 import DownloadButton from './DownloadButton'
-import { ChevronLeftIcon, MoreIcon, PlayIcon } from './Icons'
+import { ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
@@ -8,6 +8,7 @@ import type { PlayerAPI } from '../hooks/useAudio'
 interface ReleaseDetailProps {
   release: Release
   player: PlayerAPI
+  isPremium: boolean
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
@@ -17,10 +18,57 @@ interface ReleaseDetailProps {
 }
 
 export default function ReleaseDetail({
-  release, player, dlStatuses,
+  release, player, isPremium, dlStatuses,
   onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
 }: ReleaseDetailProps) {
   const year = release.date ? new Date(release.date).getFullYear() : null
+  const publicSongs = release.songs.filter(s => !s.memberOnly)
+  const memberSongs = release.songs.filter(s => s.memberOnly)
+  // Queue for "play all" only includes songs the user can actually play
+  const playableSongs = isPremium ? release.songs : publicSongs
+
+  function renderTrack(song: Song, displayNum: number, locked: boolean) {
+    const isActive = song.id === player.currentSong?.id
+    return (
+      <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${locked ? 'song-track--locked' : ''}`}>
+        <button
+          className="song-track__main"
+          onClick={() => !locked && onPlay(song, playableSongs)}
+          disabled={locked}
+        >
+          <span className="song-track__num">
+            {locked
+              ? <LockIcon size={13} />
+              : isActive && player.isPlaying
+                ? <span className="song-row__bars"><span /><span /><span /></span>
+                : displayNum
+            }
+          </span>
+          <div className="song-track__info">
+            <span className="song-track__title">{song.title}</span>
+            {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
+          </div>
+        </button>
+        {!locked && (
+          <div className="song-track__actions">
+            <DownloadButton
+              song={song}
+              status={dlStatuses[song.id] ?? 'none'}
+              onDownload={onDownload}
+              onRemove={onRemoveDownload}
+            />
+            <button
+              className="song-track__more"
+              onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
+              aria-label="Add to playlist"
+            >
+              <MoreIcon size={16} />
+            </button>
+          </div>
+        )}
+      </li>
+    )
+  }
 
   return (
     <div className="screen-layout">
@@ -34,10 +82,10 @@ export default function ReleaseDetail({
             {year && `${year} · `}{release.songs.length} {release.songs.length === 1 ? 'track' : 'tracks'}
           </span>
         </div>
-        {release.songs.length > 0 && (
+        {playableSongs.length > 0 && (
           <button
             className="header-action"
-            onClick={() => onPlay(release.songs[0], release.songs)}
+            onClick={() => onPlay(playableSongs[0], playableSongs)}
             aria-label="Play all"
           >
             <PlayIcon size={18} />
@@ -69,40 +117,19 @@ export default function ReleaseDetail({
           </div>
         ) : (
           <ul className="song-track-list">
-            {release.songs.map((song, i) => {
-              const isActive = song.id === player.currentSong?.id
-              return (
-                <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''}`}>
-                  <button className="song-track__main" onClick={() => onPlay(song, release.songs)}>
-                    <span className="song-track__num">
-                      {isActive && player.isPlaying
-                        ? <span className="song-row__bars"><span /><span /><span /></span>
-                        : i + 1
-                      }
-                    </span>
-                    <div className="song-track__info">
-                      <span className="song-track__title">{song.title}</span>
-                      {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
-                    </div>
-                  </button>
-                  <div className="song-track__actions">
-                    <DownloadButton
-                      song={song}
-                      status={dlStatuses[song.id] ?? 'none'}
-                      onDownload={onDownload}
-                      onRemove={onRemoveDownload}
-                    />
-                    <button
-                      className="song-track__more"
-                      onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                      aria-label="Add to playlist"
-                    >
-                      <MoreIcon size={16} />
-                    </button>
-                  </div>
+            {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
+
+            {memberSongs.length > 0 && (
+              <>
+                <li className="song-track-section">
+                  <LockIcon size={12} />
+                  <span>Members Only</span>
                 </li>
-              )
-            })}
+                {memberSongs.map((song, i) =>
+                  renderTrack(song, publicSongs.length + i + 1, !isPremium)
+                )}
+              </>
+            )}
           </ul>
         )}
       </div>

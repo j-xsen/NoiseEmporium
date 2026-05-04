@@ -7,6 +7,8 @@ export interface Song {
   src: string
   /** Optional cover image path, e.g. '/covers/album.jpg'. Falls back to generated art. */
   cover?: string
+  /** If true, only premium members can play this track. */
+  memberOnly?: boolean
 }
 
 export interface Release {

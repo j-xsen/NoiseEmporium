@@ -9,16 +9,17 @@ export const contentfulClient = createClient({
 // Contentful schema:
 //
 // Release (content type: "release")
-//   name    — Symbol   (album/release title, display field)
-//   date    — Date
-//   cover   — Asset    (image — shared cover art for all tracks)
-//   spotify — Symbol
-//   tracks  — Array of Links → Song entries (ordered)
+//   name       — Symbol   (album/release title, display field)
+//   date       — Date
+//   cover      — Asset    (image — shared cover art for all tracks)
+//   spotify    — Symbol
+//   tracks     — Array of Links → Song entries (ordered)
 //
 // Song (content type: "song")
-//   pos     — Integer  (sort order within release)
-//   name    — Symbol   (track title, display field)
-//   file    — Asset    (audio)
+//   pos        — Integer  (sort order within release)
+//   name       — Symbol   (track title, display field)
+//   file       — Asset    (audio)
+//   memberOnly — Boolean  (if true, only premium members can stream)
 
 function assetUrl(url: string | undefined): string | undefined {
   if (!url) return undefined
@@ -60,6 +61,7 @@ export async function fetchReleases(): Promise<Release[]> {
         album: name,
         cover: coverUrl,
         src,
+        memberOnly: tf.memberOnly === true,
       })
     }
 

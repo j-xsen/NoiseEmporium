@@ -5,6 +5,7 @@ const TOKEN_KEY = 'ne-token'
 export interface AuthUser {
   id: string
   email: string
+  tier: 'free' | 'premium'
 }
 
 export function useAuth() {

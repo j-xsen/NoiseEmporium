@@ -74,6 +74,8 @@ export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
           </button>
         </form>
       </div>
+
+      <div className="grass-divider" aria-hidden="true" />
     </div>
   )
 }

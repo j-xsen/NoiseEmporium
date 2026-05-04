@@ -310,7 +310,7 @@
 .song-track__num {
   font-size: 14px;
   font-weight: 300;
-  color: var(--text-dim);
+  color: var(--text);
   width: 24px;
   text-align: center;
   flex-shrink: 0;
@@ -341,7 +341,7 @@
 .song-track__subtitle {
   font-size: 12px;
   font-weight: 300;
-  color: var(--text-dim);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

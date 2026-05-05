@@ -1,4 +1,4 @@
-import { LibraryIcon, PlayerIcon, PlaylistsIcon } from './Icons'
+import { HomeIcon, PlayerIcon, LibraryIcon } from './Icons'
 import type { Tab } from '../types'
 
 interface BottomNavProps {
@@ -8,9 +8,9 @@ interface BottomNavProps {
 }
 
 const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-  { id: 'library', label: 'Library', Icon: LibraryIcon },
+  { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'player', label: 'Now Playing', Icon: PlayerIcon },
-  { id: 'playlists', label: 'Playlists', Icon: PlaylistsIcon },
+  { id: 'library', label: 'Library', Icon: LibraryIcon },
 ]
 
 export default function BottomNav({ tab, onChange, hasSong }: BottomNavProps) {

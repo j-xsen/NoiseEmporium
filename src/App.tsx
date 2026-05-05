@@ -146,7 +146,7 @@ export default function App() {
   const player = useAudio(recordPlay)
   const pm = usePlaylists(auth.token)
   const dl = useDownloads()
-  const [tab, setTab] = useState<Tab>('library')
+  const [tab, setTab] = useState<Tab>('home')
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
@@ -190,7 +190,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'library' && !selectedRelease && (
+        {tab === 'home' && !selectedRelease && (
           <Library
             releases={releases}
             currentSongId={player.currentSong?.id}
@@ -198,7 +198,7 @@ export default function App() {
             onPlayRelease={r => handlePlay(r.songs[0], r.songs)}
           />
         )}
-        {tab === 'library' && selectedRelease && (
+        {tab === 'home' && selectedRelease && (
           <ReleaseDetail
             release={selectedRelease}
             player={player}
@@ -214,7 +214,7 @@ export default function App() {
         {tab === 'player' && (
           <NowPlaying player={player} onLogout={auth.logout} />
         )}
-        {tab === 'playlists' && !selectedPlaylist && (
+        {tab === 'library' && !selectedPlaylist && (
           <Playlists
             playlists={pm.playlists}
             songs={songs}
@@ -224,7 +224,7 @@ export default function App() {
             onRename={pm.renamePlaylist}
           />
         )}
-        {tab === 'playlists' && selectedPlaylist && (
+        {tab === 'library' && selectedPlaylist && (
           <PlaylistDetail
             playlist={selectedPlaylist}
             songs={songs}

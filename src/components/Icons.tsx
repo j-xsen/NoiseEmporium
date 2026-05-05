@@ -43,6 +43,13 @@ export const LoopIcon = ({ size = 20, className }: IconProps) => (
   </svg>
 )
 
+export const HomeIcon = ({ size = 22, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+)
+
 export const LibraryIcon = ({ size = 22, className }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
     <path d="M9 18V8l12-3v10" />

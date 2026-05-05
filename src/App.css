@@ -1053,10 +1053,12 @@
 }
 
 .release-card__info {
-  padding: 8px 10px 28px;
+  padding: 8px 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-align: center;
+  align-items: center;
 }
 
 .release-card__name {

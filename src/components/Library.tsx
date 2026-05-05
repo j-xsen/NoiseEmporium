@@ -1,5 +1,4 @@
 import CoverArt from './CoverArt'
-import { PlayIcon } from './Icons'
 import type { Release, Song } from '../types'
 
 interface LibraryProps {
@@ -13,7 +12,7 @@ export default function Library({ releases, currentSongId, onSelectRelease, onPl
   return (
     <div className="screen-layout">
       <div className="screen-header">
-        <h1 className="screen-title">Library</h1>
+        <h1 className="screen-title">Home</h1>
         <span className="screen-subtitle">{releases.length} {releases.length === 1 ? 'release' : 'releases'}</span>
       </div>
 
@@ -42,13 +41,6 @@ export default function Library({ releases, currentSongId, onSelectRelease, onPl
                         {year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
                       </span>
                     </div>
-                  </button>
-                  <button
-                    className="release-card__play"
-                    onClick={() => onPlayRelease(release)}
-                    aria-label={`Play ${release.name}`}
-                  >
-                    <PlayIcon size={14} />
                   </button>
                 </li>
               )

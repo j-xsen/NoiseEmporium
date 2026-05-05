@@ -30,7 +30,7 @@ export async function fetchReleases(): Promise<Release[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const res = await contentfulClient.getEntries<any>({
     content_type: 'release',
-    order: ['fields.date'],
+    order: ['-fields.date'],
     include: 2,
     limit: 200,
   })

@@ -28,4 +28,4 @@ export interface Playlist {
 }
 
 export type LoopMode = 'off' | 'one' | 'all'
-export type Tab = 'library' | 'player' | 'playlists'
+export type Tab = 'home' | 'player' | 'library'

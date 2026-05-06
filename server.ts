@@ -18,6 +18,9 @@ async function handle(
   await handler(req, res)
 }
 
+// ── Plays ─────────────────────────────────────────────────────────────────────
+app.post('/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res))
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 app.post('/api/auth/register', (req, res) => handle('./api/auth/register.ts', {}, req, res))
 app.post('/api/auth/login',    (req, res) => handle('./api/auth/login.ts',    {}, req, res))

@@ -195,7 +195,6 @@ export default function App() {
             releases={releases}
             currentSongId={player.currentSong?.id}
             onSelectRelease={setSelectedReleaseId}
-            onPlayRelease={r => handlePlay(r.songs[0], r.songs)}
           />
         )}
         {tab === 'home' && selectedRelease && (

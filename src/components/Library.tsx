@@ -5,10 +5,9 @@ interface LibraryProps {
   releases: Release[]
   currentSongId: string | undefined
   onSelectRelease: (id: string) => void
-  onPlayRelease: (release: Release) => void
 }
 
-export default function Library({ releases, currentSongId, onSelectRelease, onPlayRelease }: LibraryProps) {
+export default function Library({ releases, currentSongId, onSelectRelease }: LibraryProps) {
   return (
     <div className="screen-layout">
       <div className="screen-header">

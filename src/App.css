@@ -393,6 +393,11 @@
   color: var(--text);
 }
 
+.song-track__dl-check {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 .song-track--locked {
   opacity: 0.45;
 }

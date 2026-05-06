@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import DownloadButton from './DownloadButton'
-import { ChevronLeftIcon, MoreIcon, PencilIcon, PlayIcon } from './Icons'
+import { CheckIcon, ChevronLeftIcon, MoreIcon, PencilIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Playlist, Song } from '../types'
@@ -13,15 +12,13 @@ interface PlaylistDetailProps {
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
-  onDownload: (song: Song) => void
-  onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
   onRename?: (name: string) => void
 }
 
 export default function PlaylistDetail({
   playlist, songs, player, dlStatuses,
-  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist, onRename,
+  onPlay, onBack, onAddToPlaylist, onRename,
 }: PlaylistDetailProps) {
   const [renaming, setRenaming] = useState(false)
   const [nameInput, setNameInput] = useState(playlist.name)
@@ -104,12 +101,7 @@ export default function PlaylistDetail({
                     </div>
                   </button>
                   <div className="song-track__actions">
-                    <DownloadButton
-                      song={song}
-                      status={dlStatuses[song.id] ?? 'none'}
-                      onDownload={onDownload}
-                      onRemove={onRemoveDownload}
-                    />
+                    {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
                     <button
                       className="song-track__more"
                       onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}

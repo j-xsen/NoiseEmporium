@@ -10,6 +10,7 @@ export const contentfulClient = createClient({
 //
 // Release (content type: "release")
 //   name       — Symbol   (album/release title, display field)
+//   artist     — Symbol   (optional; defaults to "Jaxsen Honeycutt" if absent)
 //   date       — Date
 //   cover      — Asset    (image — shared cover art for all tracks)
 //   spotify    — Symbol
@@ -50,6 +51,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const rf = release.fields as any
     const coverUrl = assetUrl(rf.cover?.fields?.file?.url as string | undefined)
     const name: string = (rf.name as string | undefined) ?? 'Untitled'
+    const artist: string = (rf.artist as string | undefined) ?? 'jaxsen'
     const date: string = (rf.date as string | undefined) ?? ''
     const spotify: string | undefined = rf.spotify as string | undefined
 
@@ -66,6 +68,7 @@ export async function fetchReleases(): Promise<Release[]> {
       songs.push({
         id: track.sys.id,
         title: tf.name ?? 'Untitled',
+        artist,
         album: name,
         cover: coverUrl,
         src,
@@ -100,6 +103,7 @@ export async function fetchCollections(): Promise<Collection[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const f = entry.fields as any
     const title: string = (f.title as string | undefined) ?? 'Untitled'
+    const collectionArtist: string = (f.artist as string | undefined) ?? 'jaxsen'
     const description: string | undefined = f.description as string | undefined
     const coverUrl = assetUrl(f.coverImage?.fields?.file?.url as string | undefined)
     const premiumOnly: boolean = f.premiumOnly === true
@@ -116,6 +120,7 @@ export async function fetchCollections(): Promise<Collection[]> {
       tracks.push({
         id: track.sys.id,
         title: tf.name ?? 'Untitled',
+        artist: (tf.artist as string | undefined) ?? collectionArtist,
         src,
         cover: coverUrl,
         memberOnly: tf.memberOnly === true,

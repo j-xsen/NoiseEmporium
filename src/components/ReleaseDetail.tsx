@@ -1,5 +1,4 @@
-import DownloadButton from './DownloadButton'
-import { ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
+import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
@@ -12,14 +11,12 @@ interface ReleaseDetailProps {
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
-  onDownload: (song: Song) => void
-  onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
 }
 
 export default function ReleaseDetail({
   release, player, isPremium, dlStatuses,
-  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
+  onPlay, onBack, onAddToPlaylist,
 }: ReleaseDetailProps) {
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
@@ -53,16 +50,11 @@ export default function ReleaseDetail({
         </button>
         {!locked && (
           <div className="song-track__actions">
-            <DownloadButton
-              song={song}
-              status={dlStatuses[song.id] ?? 'none'}
-              onDownload={onDownload}
-              onRemove={onRemoveDownload}
-            />
+            {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
             <button
               className="song-track__more"
               onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-              aria-label="Add to playlist"
+              aria-label="More options"
             >
               <MoreIcon size={16} />
             </button>

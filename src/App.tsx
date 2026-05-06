@@ -16,7 +16,8 @@ import CollectionDetail from './components/CollectionDetail'
 import LyricsView from './components/LyricsView'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
-import { MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
+import { CheckIcon, DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
+import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist } from './types'
 
 // ── Loading / Error screens ───────────────────────────────────────────────────
@@ -46,13 +47,16 @@ function ErrorScreen({ message }: { message: string | null }) {
 interface SongActionsSheetProps {
   playlists: Playlist[]
   fromPlaylist: Playlist | null
+  dlStatus: DlStatus
   onAdd: (playlistId: string) => Promise<void>
   onCreate: (name: string) => Promise<void>
   onRemove: (() => Promise<void>) | null
+  onDownload: () => void
+  onRemoveDownload: () => void
   onClose: () => void
 }
 
-function SongActionsSheet({ playlists, fromPlaylist, onAdd, onCreate, onRemove, onClose }: SongActionsSheetProps) {
+function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onClose }: SongActionsSheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -77,6 +81,21 @@ function SongActionsSheet({ playlists, fromPlaylist, onAdd, onCreate, onRemove, 
           <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
         </div>
         <div className="sheet-body">
+          {dlStatus === 'done' ? (
+            <button className="sheet-remove" onClick={() => { onRemoveDownload(); onClose() }}>
+              <XIcon size={16} />
+              <span>Remove Download</span>
+            </button>
+          ) : (
+            <button
+              className="sheet-new"
+              onClick={() => { onDownload(); onClose() }}
+              disabled={dlStatus === 'downloading'}
+            >
+              <DownloadIcon size={16} />
+              <span>{dlStatus === 'downloading' ? 'Downloading…' : 'Download'}</span>
+            </button>
+          )}
           {onRemove && (
             <button
               className="sheet-remove"
@@ -232,8 +251,6 @@ export default function App() {
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
             onBack={() => setSelectedFeaturedPlaylistId(null)}
-            onDownload={dl.download}
-            onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: selectedFeaturedPlaylist.id })}
             onRename={userOwnsFeaturedPlaylist
               ? name => pm.renamePlaylist(selectedFeaturedPlaylist.id, name)
@@ -248,8 +265,6 @@ export default function App() {
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
             onBack={() => setSelectedReleaseId(null)}
-            onDownload={dl.download}
-            onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
           />
         )}
@@ -262,8 +277,6 @@ export default function App() {
             onPlay={handlePlay}
             onOpenLyrics={song => { if (isPremium || !song.memberOnly) setLyricsSong(song) }}
             onBack={() => setSelectedCollectionId(null)}
-            onDownload={dl.download}
-            onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
           />
         )}
@@ -296,8 +309,6 @@ export default function App() {
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
             onBack={() => setSelectedPlaylistId(null)}
-            onDownload={dl.download}
-            onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: selectedPlaylist.id })}
             onRename={name => pm.renamePlaylist(selectedPlaylist.id, name)}
           />
@@ -323,6 +334,7 @@ export default function App() {
         <SongActionsSheet
           playlists={pm.playlists}
           fromPlaylist={sheetFromPlaylist}
+          dlStatus={dl.statuses[songSheet.songId] ?? 'none'}
           onAdd={playlistId => pm.addToPlaylist(playlistId, songSheet.songId)}
           onCreate={async name => {
             const p = await pm.createPlaylist(name)
@@ -332,6 +344,11 @@ export default function App() {
             ? () => pm.removeFromPlaylist(sheetFromPlaylist.id, songSheet.songId)
             : null
           }
+          onDownload={() => {
+            const song = songs.find(s => s.id === songSheet.songId)
+            if (song) dl.download(song)
+          }}
+          onRemoveDownload={() => dl.remove(songSheet.songId)}
           onClose={() => setSongSheet(null)}
         />
       )}

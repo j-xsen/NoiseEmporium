@@ -1,5 +1,4 @@
-import DownloadButton from './DownloadButton'
-import { ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
+import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Collection, Song } from '../types'
@@ -13,14 +12,12 @@ interface CollectionDetailProps {
   onPlay: (song: Song, queue: Song[]) => void
   onOpenLyrics: (song: Song) => void
   onBack: () => void
-  onDownload: (song: Song) => void
-  onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
 }
 
 export default function CollectionDetail({
   collection, player, isPremium, dlStatuses,
-  onPlay, onOpenLyrics, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
+  onPlay, onOpenLyrics, onBack, onAddToPlaylist,
 }: CollectionDetailProps) {
   const locked = collection.premiumOnly && !isPremium
 
@@ -94,12 +91,7 @@ export default function CollectionDetail({
                   </button>
                   {!trackLocked && (
                     <div className="song-track__actions">
-                      <DownloadButton
-                        song={song}
-                        status={dlStatuses[song.id] ?? 'none'}
-                        onDownload={onDownload}
-                        onRemove={onRemoveDownload}
-                      />
+                      {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
                       <button
                         className="song-track__more"
                         onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}

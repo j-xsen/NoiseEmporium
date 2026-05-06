@@ -224,7 +224,7 @@
 
 .screen-title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 400;
   color: var(--text-bright);
   letter-spacing: -0.5px;
@@ -552,7 +552,7 @@
 .np-title {
   font-family: 'Playfair Display', Georgia, serif;
   font-style: italic;
-  font-size: clamp(22px, 6vw, 30px);
+  font-size: clamp(24px, 6vw, 32px);
   font-weight: 400;
   color: var(--text-bright);
   letter-spacing: -0.5px;
@@ -777,7 +777,7 @@
 }
 
 .mini-player__title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
   color: var(--text-bright);
   white-space: nowrap;
@@ -795,9 +795,52 @@
 }
 
 .mini-player__volume {
+  -webkit-appearance: none;
+  appearance: none;
   flex: 1;
   min-width: 0;
-  accent-color: var(--accent);
+  cursor: pointer;
+  background: transparent;
+}
+
+.mini-player__volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--vol, 100%),
+    var(--border) var(--vol, 100%)
+  );
+}
+
+.mini-player__volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: -5px;
+  cursor: pointer;
+}
+
+.mini-player__volume::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.mini-player__volume::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.mini-player__volume::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
   cursor: pointer;
 }
 
@@ -1110,7 +1153,7 @@
 }
 
 .release-card__name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   color: var(--text-bright);
   white-space: nowrap;
@@ -1123,7 +1166,7 @@
 .release-card--active .release-card__name { color: var(--accent); }
 
 .release-card__meta {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 300;
   color: var(--text-dim);
   white-space: nowrap;
@@ -1168,7 +1211,7 @@
 
 .home-section__title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 400;
   color: color-mix(in srgb, var(--text-bright) 55%, var(--text));
   padding: 20px 16px 8px;

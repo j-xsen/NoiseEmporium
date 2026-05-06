@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import CoverArt from './CoverArt'
 import { PlayIcon, PauseIcon, VolumeIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
@@ -16,6 +16,20 @@ interface MiniPlayerProps {
 
 export default function MiniPlayer({ song, isPlaying, progress, volume, onToggle, onExpand, onVolumeChange }: MiniPlayerProps) {
   const [volumeOpen, setVolumeOpen] = useState(false)
+  const volBtnRef = useRef<HTMLButtonElement>(null)
+  const sliderRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!volumeOpen) return
+    function handleOutside(e: MouseEvent) {
+      const target = e.target as Node
+      if (!volBtnRef.current?.contains(target) && !sliderRef.current?.contains(target)) {
+        setVolumeOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [volumeOpen])
 
   return (
     <div className="mini-player" onClick={onExpand}>
@@ -24,6 +38,7 @@ export default function MiniPlayer({ song, isPlaying, progress, volume, onToggle
 
       {volumeOpen ? (
         <input
+          ref={sliderRef}
           className="mini-player__volume"
           type="range"
           min={0}
@@ -32,6 +47,7 @@ export default function MiniPlayer({ song, isPlaying, progress, volume, onToggle
           value={volume}
           onChange={e => onVolumeChange(parseFloat(e.target.value))}
           onClick={e => e.stopPropagation()}
+          style={{ '--vol': `${volume * 100}%` } as React.CSSProperties}
           aria-label="Volume"
         />
       ) : (
@@ -42,6 +58,7 @@ export default function MiniPlayer({ song, isPlaying, progress, volume, onToggle
       )}
 
       <button
+        ref={volBtnRef}
         className="mini-player__vol-btn"
         onClick={e => { e.stopPropagation(); setVolumeOpen(v => !v) }}
         aria-label="Volume"

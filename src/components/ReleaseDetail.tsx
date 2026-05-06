@@ -21,7 +21,9 @@ export default function ReleaseDetail({
   release, player, isPremium, dlStatuses,
   onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
 }: ReleaseDetailProps) {
-  const year = release.date ? new Date(release.date).getFullYear() : null
+  const formattedDate = release.date
+    ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
+    : null
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
   // Queue for "play all" only includes songs the user can actually play
@@ -89,7 +91,7 @@ export default function ReleaseDetail({
           )}
           <h1 className="release-hero__name">{release.name}</h1>
           <p className="release-hero__meta">
-            {[year, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
+            {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
           </p>
           {playableSongs.length > 0 && (
             <button

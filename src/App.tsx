@@ -12,6 +12,7 @@ import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
 import ReleaseDetail from './components/ReleaseDetail'
 import CollectionDetail from './components/CollectionDetail'
+import LyricsView from './components/LyricsView'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import { MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
@@ -151,6 +152,7 @@ export default function App() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
+  const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
@@ -167,6 +169,7 @@ export default function App() {
     setSelectedPlaylistId(null)
     setSelectedReleaseId(null)
     setSelectedCollectionId(null)
+    setLyricsSong(null)
     setTab(t)
   }
 
@@ -194,7 +197,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'home' && !selectedRelease && !selectedCollection && (
+        {tab === 'home' && !selectedRelease && !selectedCollection && !lyricsSong && (
           <Library
             releases={releases}
             collections={collections}
@@ -217,17 +220,26 @@ export default function App() {
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
           />
         )}
-        {tab === 'home' && selectedCollection && (
+        {tab === 'home' && selectedCollection && !lyricsSong && (
           <CollectionDetail
             collection={selectedCollection}
             player={player}
             isPremium={auth.user?.tier === 'premium'}
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
+            onOpenLyrics={setLyricsSong}
             onBack={() => setSelectedCollectionId(null)}
             onDownload={dl.download}
             onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
+          />
+        )}
+        {tab === 'home' && lyricsSong && (
+          <LyricsView
+            song={lyricsSong}
+            player={player}
+            onBack={() => setLyricsSong(null)}
+            onPlay={song => handlePlay(song, selectedCollection?.tracks ?? [song])}
           />
         )}
         {tab === 'player' && (

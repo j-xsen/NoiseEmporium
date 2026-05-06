@@ -20,6 +20,7 @@ export const contentfulClient = createClient({
 //   name       — Symbol   (track title, display field)
 //   file       — Asset    (audio)
 //   memberOnly — Boolean  (if true, only premium members can stream)
+//   lyrics     — Long text (optional; line breaks preserved)
 //
 // Collection (content type: "collection")
 //   title       — Symbol   (display field)
@@ -69,6 +70,7 @@ export async function fetchReleases(): Promise<Release[]> {
         cover: coverUrl,
         src,
         memberOnly: tf.memberOnly === true,
+        lyrics: tf.lyrics as string | undefined,
       })
     }
 
@@ -117,6 +119,7 @@ export async function fetchCollections(): Promise<Collection[]> {
         src,
         cover: coverUrl,
         memberOnly: tf.memberOnly === true,
+        lyrics: tf.lyrics as string | undefined,
       })
     }
 

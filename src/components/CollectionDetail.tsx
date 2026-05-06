@@ -11,6 +11,7 @@ interface CollectionDetailProps {
   isPremium: boolean
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
+  onOpenLyrics: (song: Song) => void
   onBack: () => void
   onDownload: (song: Song) => void
   onRemoveDownload: (id: string) => void
@@ -19,7 +20,7 @@ interface CollectionDetailProps {
 
 export default function CollectionDetail({
   collection, player, isPremium, dlStatuses,
-  onPlay, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
+  onPlay, onOpenLyrics, onBack, onDownload, onRemoveDownload, onAddToPlaylist,
 }: CollectionDetailProps) {
   const locked = collection.premiumOnly && !isPremium
 
@@ -76,7 +77,7 @@ export default function CollectionDetail({
               const isActive = song.id === player.currentSong?.id
               return (
                 <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''}`}>
-                  <button className="song-track__main" onClick={() => onPlay(song, collection.tracks)}>
+                  <button className="song-track__main" onClick={() => onOpenLyrics(song)}>
                     <span className="song-track__num">
                       {isActive && player.isPlaying
                         ? <span className="song-row__bars"><span /><span /><span /></span>

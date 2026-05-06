@@ -1139,6 +1139,36 @@
   line-height: 1.5;
 }
 
+/* ── Lyrics view ────────────────────────────────────────────────────────────── */
+
+.lyrics-hero {
+  display: flex;
+  justify-content: center;
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lyrics-hero__art {
+  width: min(180px, 50vw);
+  height: min(180px, 50vw);
+  border-radius: 10px;
+}
+
+.lyrics-body {
+  padding: 24px 24px 40px;
+}
+
+.lyrics-line {
+  font-size: 15px;
+  line-height: 1.8;
+  margin: 0;
+  color: var(--text);
+}
+
+.lyrics-gap {
+  height: 18px;
+}
+
 /* ── Release detail hero ────────────────────────────────────────────────────── */
 
 .release-hero {

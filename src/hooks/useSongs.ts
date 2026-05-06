@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react'
-import { fetchReleases } from '../lib/contentful'
-import type { Release, Song } from '../types'
+import { fetchCollections, fetchReleases } from '../lib/contentful'
+import type { Collection, Release, Song } from '../types'
 
 type Status = 'loading' | 'ready' | 'error'
 
 export function useSongs() {
   const [releases, setReleases] = useState<Release[]>([])
   const [songs, setSongs] = useState<Song[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchReleases()
-      .then(data => {
-        setReleases(data)
-        setSongs(data.flatMap(r => r.songs))
+    Promise.all([fetchReleases(), fetchCollections()])
+      .then(([releaseData, collectionData]) => {
+        setReleases(releaseData)
+        setSongs(releaseData.flatMap(r => r.songs))
+        setCollections(collectionData)
         setStatus('ready')
       })
       .catch(err => {
@@ -24,5 +26,5 @@ export function useSongs() {
       })
   }, [])
 
-  return { songs, releases, status, error }
+  return { songs, releases, collections, status, error }
 }

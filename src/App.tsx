@@ -11,6 +11,7 @@ import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
 import ReleaseDetail from './components/ReleaseDetail'
+import CollectionDetail from './components/CollectionDetail'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import { MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
@@ -132,7 +133,7 @@ type SongSheet = { songId: string; fromPlaylistId: string | null } | null
 
 export default function App() {
   const auth = useAuth()
-  const { songs, releases, status, error } = useSongs()
+  const { songs, releases, collections, status, error } = useSongs()
 
   const recordPlay = useCallback((songId: string) => {
     if (!auth.token) return
@@ -149,6 +150,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
@@ -164,6 +166,7 @@ export default function App() {
   function changeTab(t: Tab) {
     setSelectedPlaylistId(null)
     setSelectedReleaseId(null)
+    setSelectedCollectionId(null)
     setTab(t)
   }
 
@@ -179,6 +182,7 @@ export default function App() {
 
   const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
   const selectedRelease = releases.find(r => r.id === selectedReleaseId) ?? null
+  const selectedCollection = collections.find(c => c.id === selectedCollectionId) ?? null
   const miniPlayerVisible = !!player.currentSong && tab !== 'player'
   const progress = player.duration > 0 ? player.currentTime / player.duration : 0
 
@@ -190,11 +194,14 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'home' && !selectedRelease && (
+        {tab === 'home' && !selectedRelease && !selectedCollection && (
           <Library
             releases={releases}
+            collections={collections}
+            isPremium={auth.user?.tier === 'premium'}
             currentSongId={player.currentSong?.id}
             onSelectRelease={setSelectedReleaseId}
+            onSelectCollection={setSelectedCollectionId}
           />
         )}
         {tab === 'home' && selectedRelease && (
@@ -205,6 +212,19 @@ export default function App() {
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
             onBack={() => setSelectedReleaseId(null)}
+            onDownload={dl.download}
+            onRemoveDownload={dl.remove}
+            onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
+          />
+        )}
+        {tab === 'home' && selectedCollection && (
+          <CollectionDetail
+            collection={selectedCollection}
+            player={player}
+            isPremium={auth.user?.tier === 'premium'}
+            dlStatuses={dl.statuses}
+            onPlay={handlePlay}
+            onBack={() => setSelectedCollectionId(null)}
             onDownload={dl.download}
             onRemoveDownload={dl.remove}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}

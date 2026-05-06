@@ -27,5 +27,14 @@ export interface Playlist {
   createdAt: number
 }
 
+export interface Collection {
+  id: string
+  title: string
+  description?: string
+  cover?: string
+  premiumOnly: boolean
+  tracks: Song[]
+}
+
 export type LoopMode = 'off' | 'one' | 'all'
 export type Tab = 'home' | 'player' | 'library'

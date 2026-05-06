@@ -1095,6 +1095,50 @@
 
 .release-card__play:active { color: var(--accent); }
 
+/* ── Release card lock badge ────────────────────────────────────────────────── */
+
+.release-card__lock {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+
+/* ── Home section headers ────────────────────────────────────────────────────── */
+
+.home-section {
+  margin-bottom: 4px;
+}
+
+.home-section__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-dim);
+  padding: 20px 16px 8px;
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ── Collection description ─────────────────────────────────────────────────── */
+
+.collection-description {
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 12px 20px 0;
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* ── Release detail hero ────────────────────────────────────────────────────── */
 
 .release-hero {

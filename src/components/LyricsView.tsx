@@ -45,16 +45,6 @@ export default function LyricsView({ song, player, onBack, onPlay }: LyricsViewP
           >
             {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
           </button>
-          <input
-            className="lyrics-volume"
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={player.volume}
-            onChange={e => player.setVolume(parseFloat(e.target.value))}
-            aria-label="Volume"
-          />
         </div>
 
         {song.lyrics ? (

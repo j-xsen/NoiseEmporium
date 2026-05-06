@@ -143,3 +143,11 @@ export const LockIcon = ({ size = 16, className }: IconProps) => (
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 )
+
+export const VolumeIcon = ({ size = 20, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+  </svg>
+)

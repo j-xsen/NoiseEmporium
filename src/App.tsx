@@ -155,15 +155,19 @@ export default function App() {
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
+  const isPremium = auth.user?.tier === 'premium'
+
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
-    const q = queue ?? [song]
+    if (!isPremium && song.memberOnly) return
+    const q = (queue ?? [song]).filter(s => isPremium || !s.memberOnly)
+    if (q.length === 0) return
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)
       return localSrc ? { ...s, src: localSrc } : s
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
-  }, [dl.getLocalSrc, player.playSong])
+  }, [dl.getLocalSrc, player.playSong, isPremium])
 
   function changeTab(t: Tab) {
     setSelectedPlaylistId(null)
@@ -278,8 +282,10 @@ export default function App() {
           song={player.currentSong!}
           isPlaying={player.isPlaying}
           progress={progress}
+          volume={player.volume}
           onToggle={player.togglePlay}
           onExpand={() => changeTab('player')}
+          onVolumeChange={player.setVolume}
         />
       )}
 

@@ -9,14 +9,18 @@ interface LibraryProps {
   currentSongId: string | undefined
   onSelectRelease: (id: string) => void
   onSelectCollection: (id: string) => void
+  onLogout: () => void
 }
 
-export default function Library({ releases, collections, isPremium, currentSongId, onSelectRelease, onSelectCollection }: LibraryProps) {
+export default function Library({ releases, collections, isPremium, currentSongId, onSelectRelease, onSelectCollection, onLogout }: LibraryProps) {
   return (
     <div className="screen-layout">
       <div className="screen-header">
-        <h1 className="screen-title">Home</h1>
-        <span className="screen-subtitle">{releases.length} {releases.length === 1 ? 'release' : 'releases'}</span>
+        <div className="screen-header__center">
+          <h1 className="screen-title">Home</h1>
+          <span className="screen-subtitle">{releases.length} {releases.length === 1 ? 'release' : 'releases'}</span>
+        </div>
+        <button className="signout-btn" onClick={onLogout}>Sign out</button>
       </div>
 
       <div className="scroll-area">

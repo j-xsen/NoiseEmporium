@@ -205,6 +205,7 @@ export default function App() {
             currentSongId={player.currentSong?.id}
             onSelectRelease={setSelectedReleaseId}
             onSelectCollection={setSelectedCollectionId}
+            onLogout={auth.logout}
           />
         )}
         {tab === 'home' && selectedRelease && (

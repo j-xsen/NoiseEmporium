@@ -186,9 +186,23 @@
   padding-bottom: 12px;
 }
 
+.screen-header__center {
+  display: flex;
+  flex-direction: column;
+}
+
 .screen-header--with-back .screen-header__center {
   flex: 1;
   text-align: center;
+}
+
+.signout-btn {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+  padding: 4px 0 4px 12px;
+  flex-shrink: 0;
+  align-self: flex-end;
 }
 
 .screen-title {

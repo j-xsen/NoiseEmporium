@@ -29,18 +29,32 @@ export default function LyricsView({ song, player, onBack, onPlay }: LyricsViewP
           <h1 className="screen-title">{song.title}</h1>
           {song.album && <span className="screen-subtitle">{song.album}</span>}
         </div>
-        <button
-          className="header-action"
-          onClick={() => isPlaying ? player.togglePlay() : onPlay(song)}
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-        >
-          {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-        </button>
+        <div className="header-action-placeholder" />
       </div>
 
       <div className="scroll-area">
         <div className="lyrics-hero">
           <CoverArt song={song} className="lyrics-hero__art" />
+        </div>
+
+        <div className="lyrics-controls">
+          <button
+            className="lyrics-play-btn"
+            onClick={() => isPlaying ? player.togglePlay() : onPlay(song)}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+          </button>
+          <input
+            className="lyrics-volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={player.volume}
+            onChange={e => player.setVolume(parseFloat(e.target.value))}
+            aria-label="Volume"
+          />
         </div>
 
         {song.lyrics ? (

@@ -1158,14 +1158,41 @@
 .lyrics-hero {
   display: flex;
   justify-content: center;
-  padding: 24px 20px 20px;
-  border-bottom: 1px solid var(--border);
+  padding: 24px 20px 0;
 }
 
 .lyrics-hero__art {
   width: min(180px, 50vw);
   height: min(180px, 50vw);
   border-radius: 10px;
+}
+
+.lyrics-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lyrics-play-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: opacity 0.15s;
+}
+
+.lyrics-play-btn:active { opacity: 0.6; }
+
+.lyrics-volume {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 3px;
+  cursor: pointer;
 }
 
 .lyrics-body {
@@ -1181,6 +1208,12 @@
 
 .lyrics-gap {
   height: 18px;
+}
+
+/* balances the back button on the opposite side of the lyrics header */
+.header-action-placeholder {
+  width: 36px;
+  flex-shrink: 0;
 }
 
 /* ── Release detail hero ────────────────────────────────────────────────────── */

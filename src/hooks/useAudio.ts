@@ -7,12 +7,14 @@ export interface PlayerAPI {
   currentTime: number
   duration: number
   loopMode: LoopMode
+  volume: number
   playSong: (song: Song, queue?: Song[]) => void
   togglePlay: () => void
   seek: (time: number) => void
   skipNext: () => void
   skipPrev: () => void
   cycleLoop: () => void
+  setVolume: (v: number) => void
 }
 
 const MS = 'mediaSession' in navigator
@@ -39,6 +41,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [loopMode, setLoopModeState] = useState<LoopMode>('off')
+  const [volume, setVolumeState] = useState(1)
 
   const loadAndPlay = useCallback((song: Song, qi: number, queue: Song[]) => {
     const el = audioRef.current
@@ -230,17 +233,25 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     setLoopModeState(next)
   }, [])
 
+  const setVolume = useCallback((v: number) => {
+    const clamped = Math.max(0, Math.min(1, v))
+    if (audioRef.current) audioRef.current.volume = clamped
+    setVolumeState(clamped)
+  }, [])
+
   return {
     currentSong,
     isPlaying,
     currentTime,
     duration,
     loopMode,
+    volume,
     playSong,
     togglePlay,
     seek,
     skipNext,
     skipPrev,
     cycleLoop,
+    setVolume,
   }
 }

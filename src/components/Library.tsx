@@ -1,18 +1,25 @@
 import CoverArt from './CoverArt'
 import { LockIcon } from './Icons'
-import type { Collection, Release, Song } from '../types'
+import type { Collection, Playlist, Release, Song } from '../types'
 
 interface LibraryProps {
   releases: Release[]
   collections: Collection[]
+  featuredPlaylists: Playlist[]
   isPremium: boolean
   currentSongId: string | undefined
   onSelectRelease: (id: string) => void
   onSelectCollection: (id: string) => void
+  onSelectFeaturedPlaylist: (id: string) => void
   onLogout: () => void
 }
 
-export default function Library({ releases, collections, isPremium, currentSongId, onSelectRelease, onSelectCollection, onLogout }: LibraryProps) {
+export default function Library({
+  releases, collections, featuredPlaylists, isPremium, currentSongId,
+  onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onLogout,
+}: LibraryProps) {
+  const hasFeatured = collections.length > 0 || featuredPlaylists.length > 0
+
   return (
     <div className="screen-layout">
       <div className="screen-header">
@@ -24,9 +31,43 @@ export default function Library({ releases, collections, isPremium, currentSongI
       </div>
 
       <div className="scroll-area">
-        {collections.length > 0 && (
+        {releases.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">♪</div>
+            <p className="empty-title">No releases yet</p>
+            <p className="empty-hint">Add releases to your Contentful space</p>
+          </div>
+        ) : (
+          <section className={hasFeatured ? 'home-section' : undefined}>
+            {hasFeatured && <h2 className="home-section__title">Releases</h2>}
+            <ul className="release-grid">
+              {releases.map(release => {
+                const year = release.date ? new Date(release.date).getFullYear() : null
+                const count = release.songs.length
+                const isActive = release.songs.some(s => s.id === currentSongId)
+                return (
+                  <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
+                    <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
+                      <div className="release-card__art-wrap">
+                        <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                      </div>
+                      <div className="release-card__info">
+                        <span className="release-card__name">{release.name}</span>
+                        <span className="release-card__meta">
+                          {year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
+
+        {hasFeatured && (
           <section className="home-section">
-            <h2 className="home-section__title">Collections</h2>
+            <h2 className="home-section__title">Featured</h2>
             <ul className="release-grid">
               {collections.map(collection => {
                 const locked = collection.premiumOnly && !isPremium
@@ -54,40 +95,22 @@ export default function Library({ releases, collections, isPremium, currentSongI
                   </li>
                 )
               })}
-            </ul>
-          </section>
-        )}
 
-        {releases.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">♪</div>
-            <p className="empty-title">No releases yet</p>
-            <p className="empty-hint">Add releases to your Contentful space</p>
-          </div>
-        ) : (
-          <section className={collections.length > 0 ? 'home-section' : undefined}>
-            {collections.length > 0 && <h2 className="home-section__title">Releases</h2>}
-            <ul className="release-grid">
-              {releases.map(release => {
-                const year = release.date ? new Date(release.date).getFullYear() : null
-                const count = release.songs.length
-                const isActive = release.songs.some(s => s.id === currentSongId)
-                return (
-                  <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
-                    <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
-                      <div className="release-card__art-wrap">
-                        <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
-                      </div>
-                      <div className="release-card__info">
-                        <span className="release-card__name">{release.name}</span>
-                        <span className="release-card__meta">
-                          {year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                )
-              })}
+              {featuredPlaylists.map(playlist => (
+                <li key={playlist.id} className="release-card">
+                  <button className="release-card__select" onClick={() => onSelectFeaturedPlaylist(playlist.id)}>
+                    <div className="release-card__art-wrap">
+                      <CoverArt song={{ id: playlist.id, title: playlist.name, src: '' }} className="release-card__art" />
+                    </div>
+                    <div className="release-card__info">
+                      <span className="release-card__name">{playlist.name}</span>
+                      <span className="release-card__meta">
+                        {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
             </ul>
           </section>
         )}

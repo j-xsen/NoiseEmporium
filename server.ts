@@ -24,8 +24,9 @@ app.post('/api/auth/login',    (req, res) => handle('./api/auth/login.ts',    {}
 app.get( '/api/auth/me',       (req, res) => handle('./api/auth/me.ts',       {}, req, res))
 
 // ── Playlists ─────────────────────────────────────────────────────────────────
-app.get( '/api/playlists',     (req, res) => handle('./api/playlists/index.ts', {}, req, res))
-app.post('/api/playlists',     (req, res) => handle('./api/playlists/index.ts', {}, req, res))
+app.get( '/api/playlists',          (req, res) => handle('./api/playlists/index.ts',    {}, req, res))
+app.post('/api/playlists',          (req, res) => handle('./api/playlists/index.ts',    {}, req, res))
+app.get( '/api/playlists/featured', (req, res) => handle('./api/playlists/featured.ts', {}, req, res))
 
 app.patch( '/api/playlists/:id', (req, res) => handle('./api/playlists/[id].ts', { id: req.params.id }, req, res))
 app.delete('/api/playlists/:id', (req, res) => handle('./api/playlists/[id].ts', { id: req.params.id }, req, res))

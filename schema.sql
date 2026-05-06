@@ -19,10 +19,12 @@ CREATE TABLE users (
 -- ─── Playlists ────────────────────────────────────────────────────────────────
 
 CREATE TABLE playlists (
-  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name       TEXT        NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name           TEXT        NOT NULL,
+  featured       BOOLEAN     NOT NULL DEFAULT false,
+  featured_order INTEGER,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT playlists_name_nonempty CHECK (length(trim(name)) > 0)
 );

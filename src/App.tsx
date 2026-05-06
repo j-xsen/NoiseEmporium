@@ -3,6 +3,7 @@ import './App.css'
 import { useSongs } from './hooks/useSongs'
 import { useAudio } from './hooks/useAudio'
 import { usePlaylists } from './hooks/usePlaylists'
+import { useFeaturedPlaylists } from './hooks/useFeaturedPlaylists'
 import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import AuthScreen from './components/AuthScreen'
@@ -147,11 +148,13 @@ export default function App() {
 
   const player = useAudio(recordPlay)
   const pm = usePlaylists(auth.token)
+  const featuredPlaylists = useFeaturedPlaylists()
   const dl = useDownloads()
   const [tab, setTab] = useState<Tab>('home')
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
+  const [selectedFeaturedPlaylistId, setSelectedFeaturedPlaylistId] = useState<string | null>(null)
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
@@ -173,6 +176,7 @@ export default function App() {
     setSelectedPlaylistId(null)
     setSelectedReleaseId(null)
     setSelectedCollectionId(null)
+    setSelectedFeaturedPlaylistId(null)
     setLyricsSong(null)
     setTab(t)
   }
@@ -190,6 +194,11 @@ export default function App() {
   const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
   const selectedRelease = releases.find(r => r.id === selectedReleaseId) ?? null
   const selectedCollection = collections.find(c => c.id === selectedCollectionId) ?? null
+  const selectedFeaturedPlaylist =
+    pm.playlists.find(p => p.id === selectedFeaturedPlaylistId) ??
+    featuredPlaylists.find(p => p.id === selectedFeaturedPlaylistId) ??
+    null
+  const userOwnsFeaturedPlaylist = pm.playlists.some(p => p.id === selectedFeaturedPlaylistId)
   const miniPlayerVisible = !!player.currentSong && tab !== 'player'
   const progress = player.duration > 0 ? player.currentTime / player.duration : 0
 
@@ -201,15 +210,33 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'home' && !selectedRelease && !selectedCollection && !lyricsSong && (
+        {tab === 'home' && !selectedRelease && !selectedCollection && !selectedFeaturedPlaylist && !lyricsSong && (
           <Library
             releases={releases}
             collections={collections}
+            featuredPlaylists={featuredPlaylists}
             isPremium={auth.user?.tier === 'premium'}
             currentSongId={player.currentSong?.id}
             onSelectRelease={setSelectedReleaseId}
             onSelectCollection={setSelectedCollectionId}
+            onSelectFeaturedPlaylist={setSelectedFeaturedPlaylistId}
             onLogout={auth.logout}
+          />
+        )}
+        {tab === 'home' && selectedFeaturedPlaylist && !lyricsSong && (
+          <PlaylistDetail
+            playlist={selectedFeaturedPlaylist}
+            songs={songs}
+            player={player}
+            dlStatuses={dl.statuses}
+            onPlay={handlePlay}
+            onBack={() => setSelectedFeaturedPlaylistId(null)}
+            onDownload={dl.download}
+            onRemoveDownload={dl.remove}
+            onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: selectedFeaturedPlaylist.id })}
+            onRename={userOwnsFeaturedPlaylist
+              ? name => pm.renamePlaylist(selectedFeaturedPlaylist.id, name)
+              : undefined}
           />
         )}
         {tab === 'home' && selectedRelease && (

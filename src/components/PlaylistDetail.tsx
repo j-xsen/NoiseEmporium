@@ -16,7 +16,7 @@ interface PlaylistDetailProps {
   onDownload: (song: Song) => void
   onRemoveDownload: (id: string) => void
   onAddToPlaylist: (songId: string) => void
-  onRename: (name: string) => void
+  onRename?: (name: string) => void
 }
 
 export default function PlaylistDetail({
@@ -32,7 +32,7 @@ export default function PlaylistDetail({
 
   function commitRename() {
     const trimmed = nameInput.trim()
-    if (trimmed && trimmed !== playlist.name) onRename(trimmed)
+    if (trimmed && trimmed !== playlist.name) onRename?.(trimmed)
     setRenaming(false)
   }
 
@@ -61,13 +61,15 @@ export default function PlaylistDetail({
           <span className="screen-subtitle">{playlistSongs.length} {playlistSongs.length === 1 ? 'song' : 'songs'}</span>
         </div>
         <div className="header-actions">
-          <button
-            className="header-action"
-            onClick={() => { setNameInput(playlist.name); setRenaming(true) }}
-            aria-label="Rename playlist"
-          >
-            <PencilIcon size={17} />
-          </button>
+          {onRename && (
+            <button
+              className="header-action"
+              onClick={() => { setNameInput(playlist.name); setRenaming(true) }}
+              aria-label="Rename playlist"
+            >
+              <PencilIcon size={17} />
+            </button>
+          )}
           {playlistSongs.length > 0 && (
             <button className="header-action" onClick={() => onPlay(playlistSongs[0], playlistSongs)} aria-label="Play all">
               <PlayIcon size={18} />

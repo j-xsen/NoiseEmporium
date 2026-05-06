@@ -232,7 +232,7 @@ export default function App() {
             isPremium={auth.user?.tier === 'premium'}
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
-            onOpenLyrics={setLyricsSong}
+            onOpenLyrics={song => { if (isPremium || !song.memberOnly) setLyricsSong(song) }}
             onBack={() => setSelectedCollectionId(null)}
             onDownload={dl.download}
             onRemoveDownload={dl.remove}

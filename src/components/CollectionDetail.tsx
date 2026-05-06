@@ -75,13 +75,16 @@ export default function CollectionDetail({
           <ul className="song-track-list">
             {collection.tracks.map((song, i) => {
               const isActive = song.id === player.currentSong?.id
+              const trackLocked = song.memberOnly && !isPremium
               return (
-                <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''}`}>
-                  <button className="song-track__main" onClick={() => onOpenLyrics(song)}>
+                <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${trackLocked ? 'song-track--locked' : ''}`}>
+                  <button className="song-track__main" onClick={() => !trackLocked && onOpenLyrics(song)} disabled={trackLocked}>
                     <span className="song-track__num">
-                      {isActive && player.isPlaying
-                        ? <span className="song-row__bars"><span /><span /><span /></span>
-                        : i + 1
+                      {trackLocked
+                        ? <LockIcon size={13} />
+                        : isActive && player.isPlaying
+                          ? <span className="song-row__bars"><span /><span /><span /></span>
+                          : i + 1
                       }
                     </span>
                     <div className="song-track__info">
@@ -89,21 +92,23 @@ export default function CollectionDetail({
                       {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
                     </div>
                   </button>
-                  <div className="song-track__actions">
-                    <DownloadButton
-                      song={song}
-                      status={dlStatuses[song.id] ?? 'none'}
-                      onDownload={onDownload}
-                      onRemove={onRemoveDownload}
-                    />
-                    <button
-                      className="song-track__more"
-                      onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                      aria-label="More options"
-                    >
-                      <MoreIcon size={16} />
-                    </button>
-                  </div>
+                  {!trackLocked && (
+                    <div className="song-track__actions">
+                      <DownloadButton
+                        song={song}
+                        status={dlStatuses[song.id] ?? 'none'}
+                        onDownload={onDownload}
+                        onRemove={onRemoveDownload}
+                      />
+                      <button
+                        className="song-track__more"
+                        onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
+                        aria-label="More options"
+                      >
+                        <MoreIcon size={16} />
+                      </button>
+                    </div>
+                  )}
                 </li>
               )
             })}

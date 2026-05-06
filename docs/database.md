@@ -15,7 +15,6 @@ Neon is chosen for:
 CREATE TABLE users (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   email         TEXT        NOT NULL,
-  -- bcrypt embeds a random salt inside the hash value; no separate salt column is needed
   password_hash TEXT        NOT NULL,
   tier          TEXT        NOT NULL DEFAULT 'free',  -- 'free' | 'premium'
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -26,31 +25,66 @@ CREATE TABLE users (
 );
 
 CREATE TABLE playlists (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name       TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name           TEXT        NOT NULL,
+  featured       BOOLEAN     NOT NULL DEFAULT false,
+  featured_order INTEGER,                            -- sort order in home Featured section
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT playlists_name_nonempty CHECK (length(trim(name)) > 0)
 );
+
+CREATE INDEX playlists_user_id_idx ON playlists (user_id);
 
 CREATE TABLE playlist_songs (
-  playlist_id UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-  song_id     TEXT NOT NULL,  -- Contentful entry ID
+  playlist_id UUID    NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+  song_id     TEXT    NOT NULL,   -- Contentful entry ID
   position    INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (playlist_id, song_id)
+
+  PRIMARY KEY (playlist_id, song_id),
+  CONSTRAINT playlist_songs_position_nonneg CHECK (position >= 0)
 );
 
+CREATE INDEX playlist_songs_playlist_id_idx ON playlist_songs (playlist_id);
+
 CREATE TABLE song_plays (
-  id        BIGSERIAL PRIMARY KEY,
-  user_id   UUID REFERENCES users(id) ON DELETE SET NULL,
-  song_id   TEXT NOT NULL,
-  played_at TIMESTAMPTZ DEFAULT NOW()
+  id        BIGSERIAL   PRIMARY KEY,
+  user_id   UUID        REFERENCES users(id) ON DELETE SET NULL,
+  song_id   TEXT        NOT NULL,
+  played_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX song_plays_song_id_idx   ON song_plays (song_id);
+CREATE INDEX song_plays_user_id_idx   ON song_plays (user_id);
+CREATE INDEX song_plays_played_at_idx ON song_plays (played_at);
 
 CREATE VIEW song_play_counts AS
   SELECT song_id, COUNT(*) AS play_count
   FROM song_plays
   GROUP BY song_id;
 ```
+
+### Migrations applied (run these on an existing database)
+
+```sql
+-- Add featured playlist support
+ALTER TABLE playlists
+  ADD COLUMN featured       BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN featured_order INTEGER;
+```
+
+### Featuring a playlist (no admin UI yet)
+
+```sql
+-- Feature a playlist on the home screen
+UPDATE playlists SET featured = true, featured_order = 1 WHERE id = '<uuid>';
+
+-- Un-feature
+UPDATE playlists SET featured = false, featured_order = NULL WHERE id = '<uuid>';
+```
+
+---
 
 ## Planned Schema Additions
 
@@ -101,7 +135,6 @@ CREATE TABLE memberships (
 
 ### Music Store (future)
 ```sql
--- A purchasable item: either a physical CD or a digital download
 CREATE TYPE product_type AS ENUM ('cd', 'download');
 
 CREATE TABLE products (
@@ -119,10 +152,10 @@ CREATE TABLE orders (
   user_id                UUID REFERENCES users(id) ON DELETE SET NULL,  -- null = guest
   buyer_email            TEXT NOT NULL,
   product_id             UUID NOT NULL REFERENCES products(id),
-  amount_cents           INTEGER NOT NULL DEFAULT 0,   -- actual amount paid (>= price_cents)
-  stripe_payment_intent  TEXT,                         -- null for free downloads
+  amount_cents           INTEGER NOT NULL DEFAULT 0,
+  stripe_payment_intent  TEXT,
   status                 TEXT NOT NULL DEFAULT 'pending',  -- pending | complete | refunded
-  download_token         TEXT,                         -- signed token for download link
+  download_token         TEXT,
   created_at             TIMESTAMPTZ DEFAULT NOW(),
   fulfilled_at           TIMESTAMPTZ
 );
@@ -133,10 +166,10 @@ CREATE TABLE orders (
 CREATE TABLE revenue_distributions (
   id             BIGSERIAL PRIMARY KEY,
   membership_id  UUID REFERENCES memberships(id),
-  billing_period DATE NOT NULL,        -- first day of the month
+  billing_period DATE NOT NULL,
   song_id        TEXT NOT NULL,
-  play_share     NUMERIC(6,5),         -- fraction of plays (0.0–1.0)
-  amount_cents   INTEGER NOT NULL,     -- artist payout in cents
+  play_share     NUMERIC(6,5),
+  amount_cents   INTEGER NOT NULL,
   distributed_at TIMESTAMPTZ
 );
 ```

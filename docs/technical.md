@@ -18,20 +18,31 @@
 
 ```
 src/hooks/
-  useAuth.ts        Auth state, token storage, login/logout
-  useSongs.ts       Fetch songs from Contentful; source of truth for the library
-  usePlaylists.ts   Playlist CRUD; syncs with API
-  useAudio.ts       HTML5 audio, queue, playback state
-  useDownloads.ts   IndexedDB cache for offline songs
+  useAuth.ts               Auth state, token storage, login/logout
+  useSongs.ts              Fetches releases AND collections from Contentful; exposes songs, releases, collections
+  usePlaylists.ts          Playlist CRUD for the logged-in user; syncs with API
+  useFeaturedPlaylists.ts  Fetches featured playlists from /api/playlists/featured (public, no auth)
+  useAudio.ts              HTML5 audio, queue, playback state, volume
+  useDownloads.ts          IndexedDB cache for offline songs
 ```
 
 `App.tsx` wires these hooks together and passes state down to components. No prop drilling — hooks are called at the top level and relevant slices are passed to child components.
 
-**Tab navigation** (BottomNav): Library → Player → Playlists
+**Tab navigation** (BottomNav): Home → Player → Library (Playlists)
+
+**Navigation state** is managed with `useState` IDs in `App.tsx` — no router. Switching tabs clears all detail-level state. Within the Home tab, the depth stack is:
+
+```
+Home (Library.tsx)
+  ├── ReleaseDetail.tsx
+  ├── CollectionDetail.tsx
+  │     └── LyricsView.tsx
+  └── PlaylistDetail.tsx  (featured playlist)
+```
 
 **Player layout:**
 - Full-screen `NowPlaying` when on Player tab
-- `MiniPlayer` bar when on Library or Playlists tab
+- `MiniPlayer` bar when on Home or Library tab (hidden on Player tab)
 - Both driven by the same `useAudio` state
 
 ## API Architecture
@@ -40,19 +51,22 @@ Handlers live in `api/` and are written as Vercel Serverless Functions. Locally,
 
 ```
 api/
-  _auth.ts              JWT sign/verify helpers
-  _db.ts                Neon database client
+  _auth.ts                      JWT sign/verify helpers
+  _db.ts                        Neon database client
   auth/
-    register.ts         POST /api/auth/register
-    login.ts            POST /api/auth/login
-    me.ts               GET  /api/auth/me
+    register.ts                 POST /api/auth/register
+    login.ts                    POST /api/auth/login
+    me.ts                       GET  /api/auth/me
   playlists/
-    index.ts            GET/POST /api/playlists
-    [id].ts             PATCH/DELETE /api/playlists/:id
+    index.ts                    GET/POST /api/playlists           (auth required)
+    featured.ts                 GET      /api/playlists/featured  (public)
+    [id].ts                     PATCH/DELETE /api/playlists/:id   (auth + ownership)
     [id]/songs/
-      songs.ts          POST /api/playlists/:id/songs
-      [songId].ts       DELETE /api/playlists/:id/songs/:songId
+      songs.ts                  POST   /api/playlists/:id/songs
+      [songId].ts               DELETE /api/playlists/:id/songs/:songId
 ```
+
+> **Important:** In `server.ts`, the `/api/playlists/featured` route must be registered **before** `/api/playlists/:id`, otherwise Express matches "featured" as an ID.
 
 All mutating playlist endpoints verify JWT and ownership (`WHERE user_id = $userId`).
 
@@ -64,18 +78,64 @@ All mutating playlist endpoints verify JWT and ownership (`WHERE user_id = $user
 4. On app load: `GET /api/auth/me` with `Authorization: Bearer <token>` → restore session
 5. All protected API calls include the Bearer header
 
+## Contentful Data Model
+
+Collections and songs are fetched from Contentful via `src/lib/contentful.ts`. Both `fetchReleases()` and `fetchCollections()` are called in parallel by `useSongs` on app load.
+
+```
+Release (content type: "release")
+  name         — Short text  (display field)
+  date         — Date
+  cover        — Asset       (shared cover art for all tracks in this release)
+  spotify      — Short text  (optional)
+  tracks       — References  (ordered Song entries; sort by Song.pos)
+
+Song (content type: "song")
+  pos          — Integer     (track number within a release; ignored for collections)
+  name         — Short text  (display field)
+  file         — Asset       (audio file)
+  memberOnly   — Boolean     (true = premium only; controls playback AND lyrics access)
+  lyrics       — Long text   (optional; line breaks preserved)
+
+Collection (content type: "collection")
+  title        — Short text  (display field)
+  description  — Short text  (optional subtitle)
+  coverImage   — Asset       (optional cover art)
+  premiumOnly  — Boolean     (true = entire collection locked for non-premium users)
+  tracks       — References  (Song entries; order controlled by drag in Contentful editor)
+```
+
 ## Data Sources
 
 | Data | Where it lives |
 |------|---------------|
-| Song metadata (title, artist, album, audio URL, cover art) | Contentful CMS |
+| Song metadata (title, audio URL, cover art, lyrics) | Contentful CMS |
+| Collections (curated playlists with premium gate) | Contentful CMS |
 | Users | Neon `users` table |
 | Playlists | Neon `playlists` + `playlist_songs` tables |
+| Featured playlists | `playlists.featured` flag + `playlists.featured_order` |
 | Play counts | Neon `song_plays` table + `song_play_counts` view |
 | Memberships / subscriptions | Neon *(planned)* |
 | Payments | Stripe *(planned)* |
 
 Songs are identified by their **Contentful entry ID**. The database never stores audio files — only references to Contentful IDs.
+
+## Premium Access Enforcement
+
+Tier checking happens in `App.tsx`:
+
+```ts
+const isPremium = auth.user?.tier === 'premium'
+```
+
+This value is passed down to all components that need it. Enforcement points:
+
+1. **`handlePlay`** — filters `memberOnly` songs from the queue; blocks play entirely if the target song is locked. This is the primary guard — even if UI buttons are bypassed, playback won't start.
+2. **`ReleaseDetail`** — shows lock icon and disables buttons for `memberOnly` tracks
+3. **`CollectionDetail`** — blocks the entire collection if `premiumOnly && !isPremium`; also locks individual `memberOnly` tracks within an accessible collection
+4. **`LyricsView`** — only reachable from `CollectionDetail`; `App.tsx` guards `setLyricsSong` with a `isPremium || !song.memberOnly` check
+
+> **Note:** Contentful CDN URLs are public. This is all client-side enforcement. Server-side enforcement would require an audio proxy API that validates the JWT before serving the file.
 
 ## Deployment
 
@@ -170,58 +230,42 @@ await stripe.transfers.create({
 CREATE TABLE artists (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
-  stripe_account_id TEXT,          -- null until Connect onboarding complete
-  payout_threshold_cents INT DEFAULT 100,  -- don't transfer below this
-  unpaid_balance_cents   INT DEFAULT 0,    -- accumulated below threshold
+  stripe_account_id TEXT,
+  payout_threshold_cents INT DEFAULT 100,
+  unpaid_balance_cents   INT DEFAULT 0,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Link songs to artists (songs live in Contentful; this is the DB-side attribution)
--- Add artist_id to song_plays or store contentful_song_id → artist_id mapping
 CREATE TABLE song_artist_map (
   contentful_song_id TEXT PRIMARY KEY,
   artist_id UUID REFERENCES artists(id)
 );
 
--- Audit trail for royalty calculations
 CREATE TABLE monthly_royalties (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   artist_id   UUID REFERENCES artists(id),
-  period      DATE NOT NULL,         -- first day of the billing month
+  period      DATE NOT NULL,
   plays       INT NOT NULL,
   gross_payout_cents INT NOT NULL,
-  transfer_id TEXT,                  -- Stripe transfer ID, null if below threshold
-  status      TEXT DEFAULT 'pending', -- pending | transferred | rolled_over
+  transfer_id TEXT,
+  status      TEXT DEFAULT 'pending',
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 ```
 
 ### Artist Onboarding Flow
 
-Artist onboarding happens in two phases back to back: your form, then Stripe's.
-
 **Phase 1 — Noise Emporium application (you build)**
-Artist submits name, email, music links, short bio via a "Join as an artist" page. Stored in `artists` table with `status = 'pending'`. No Stripe account exists yet. Jaxsen reviews and approves manually (fits the curated Louisville-area scope).
+Artist submits name, email, music links, short bio. Stored in `artists` table with `status = 'pending'`. Jaxsen reviews and approves manually.
 
 **Phase 2 — Stripe Express onboarding (Stripe hosts)**
 Once approved:
-1. Call `stripe.accounts.create({ type: 'express' })` → store the returned `acct_xxx` in `artists.stripe_account_id`
-2. Call `stripe.accountLinks.create({ account, type: 'account_onboarding', return_url, refresh_url })` → get a one-time URL
-3. Redirect artist to that URL — Stripe collects legal name, DOB, address, SSN last 4, and bank account
-4. Artist lands back on your `return_url`; call `stripe.accounts.retrieve(acct_xxx)` and confirm `payouts_enabled: true`
-
-Stripe saves progress, so artists can close the tab and return. Regenerate the Account Link (step 2) when they come back — links expire and are single-use.
-
-**After onboarding**, artists have their own Stripe Express dashboard at `dashboard.stripe.com` where Stripe shows them their balance, payout history, bank account settings, and annual 1099s. You do not build any of this.
-
-On Noise Emporium, the artist dashboard should show:
-- Play counts and calculated royalty for the current month
-- Payout setup status ("Active ✓" or "Complete setup →")
-- A "Go to Stripe Dashboard" button (see below)
+1. `stripe.accounts.create({ type: 'express' })` → store `acct_xxx` in `artists.stripe_account_id`
+2. `stripe.accountLinks.create(...)` → get one-time URL
+3. Redirect artist to Stripe for KYC
+4. On return, confirm `payouts_enabled: true`
 
 ### Stripe Dashboard Login Link
-
-Artists can be redirected to their Express dashboard with a button. Because the link is single-use and short-lived, it must be generated fresh on each click — never pre-generated or stored.
 
 ```
 Artist clicks button
@@ -231,14 +275,12 @@ Artist clicks button
   → frontend redirects to url
 ```
 
-If the artist has no `stripe_account_id` or `payouts_enabled` is false, show "Complete payout setup" instead, which starts the Account Link onboarding flow rather than the login link flow.
-
 ### Stripe Environment Variables (to add)
 
 ```
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-STRIPE_CONNECT_CLIENT_ID=     # for Express onboarding OAuth flow
+STRIPE_CONNECT_CLIENT_ID=
 VITE_STRIPE_PUBLISHABLE_KEY=
 ```
 
@@ -250,4 +292,4 @@ VITE_STRIPE_PUBLISHABLE_KEY=
 - Contentful CDN serves audio files globally
 - Neon is on the same region as Vercel functions (co-locate for low latency)
 - IndexedDB caching eliminates repeat fetches for downloaded songs
-- Contentful data is fetched once on app load and held in memory
+- Contentful data (releases + collections) is fetched once on app load in parallel and held in memory

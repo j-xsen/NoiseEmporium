@@ -176,7 +176,6 @@
   justify-content: space-between;
   gap: 8px;
   padding: calc(var(--safe-top) + 18px) 20px 14px;
-  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -196,13 +195,31 @@
   text-align: center;
 }
 
+.signout-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+
+.signout-email {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--text);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .signout-btn {
   font-size: 12px;
   font-weight: 400;
-  color: var(--text-dim);
-  padding: 4px 0 4px 12px;
+  color: var(--text);
+  padding: 0;
   flex-shrink: 0;
-  align-self: flex-end;
 }
 
 .screen-title {
@@ -373,7 +390,7 @@
 .song-track__more {
   width: 36px;
   height: 44px;
-  color: var(--text-dim);
+  color: var(--text);
 }
 
 .song-track--locked {
@@ -433,8 +450,8 @@
   transition: opacity 0.15s;
 }
 
-.dl-btn--none { color: var(--text-dim); }
-.dl-btn--downloading { color: var(--text-dim); pointer-events: none; }
+.dl-btn--none { color: var(--text); }
+.dl-btn--downloading { color: var(--text); pointer-events: none; }
 .dl-btn--done { color: var(--accent); }
 .dl-btn--error { color: var(--danger); }
 
@@ -1151,13 +1168,24 @@
 
 .home-section__title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 400;
-  color: var(--text-dim);
+  color: color-mix(in srgb, var(--text-bright) 55%, var(--text));
   padding: 20px 16px 8px;
   margin: 0;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-section__title::before,
+.home-section__title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
 }
 
 /* ── Collection description ─────────────────────────────────────────────────── */
@@ -1232,29 +1260,52 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 24px 20px 20px;
   border-bottom: 1px solid var(--border);
 }
 
 .release-hero__img {
-  width: min(260px, 72vw);
-  height: min(260px, 72vw);
+  width: min(220px, 65vw);
+  height: min(220px, 65vw);
   border-radius: 10px;
   object-fit: cover;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  margin-bottom: 4px;
 }
 
-.release-hero__spotify {
-  font-size: 13px;
-  color: var(--accent);
-  text-decoration: none;
-  padding: 6px 16px;
-  border: 1px solid var(--accent);
-  border-radius: 20px;
-  transition: background 0.15s;
+.release-hero__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text-bright);
+  text-align: center;
+  margin: 0;
 }
-.release-hero__spotify:active { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+.release-hero__meta {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+}
+
+.release-hero__play {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 8px 24px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.release-hero__play:active { opacity: 0.8; }
 
 /* ── Playlist header rename ─────────────────────────────────────────────────── */
 

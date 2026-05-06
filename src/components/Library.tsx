@@ -7,6 +7,7 @@ interface LibraryProps {
   collections: Collection[]
   featuredPlaylists: Playlist[]
   isPremium: boolean
+  userEmail: string
   currentSongId: string | undefined
   onSelectRelease: (id: string) => void
   onSelectCollection: (id: string) => void
@@ -15,7 +16,7 @@ interface LibraryProps {
 }
 
 export default function Library({
-  releases, collections, featuredPlaylists, isPremium, currentSongId,
+  releases, collections, featuredPlaylists, isPremium, userEmail, currentSongId,
   onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onLogout,
 }: LibraryProps) {
   const hasFeatured = collections.length > 0 || featuredPlaylists.length > 0
@@ -25,9 +26,11 @@ export default function Library({
       <div className="screen-header">
         <div className="screen-header__center">
           <h1 className="screen-title">Home</h1>
-          <span className="screen-subtitle">{releases.length} {releases.length === 1 ? 'release' : 'releases'}</span>
         </div>
-        <button className="signout-btn" onClick={onLogout}>Sign out</button>
+        <div className="signout-block">
+          <span className="signout-email">{userEmail}</span>
+          <button className="signout-btn" onClick={onLogout}>Sign out</button>
+        </div>
       </div>
 
       <div className="scroll-area">

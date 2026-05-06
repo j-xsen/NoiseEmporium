@@ -216,6 +216,7 @@ export default function App() {
             collections={collections}
             featuredPlaylists={featuredPlaylists}
             isPremium={auth.user?.tier === 'premium'}
+            userEmail={auth.user?.email ?? ''}
             currentSongId={player.currentSong?.id}
             onSelectRelease={setSelectedReleaseId}
             onSelectCollection={setSelectedCollectionId}

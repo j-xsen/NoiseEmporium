@@ -70,45 +70,38 @@ export default function ReleaseDetail({
     )
   }
 
+  const count = release.songs.length
+
   return (
     <div className="screen-layout">
       <div className="screen-header screen-header--with-back">
         <button className="back-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon size={22} />
         </button>
-        <div className="screen-header__center">
-          <h1 className="screen-title">{release.name}</h1>
-          <span className="screen-subtitle">
-            {year && `${year} · `}{release.songs.length} {release.songs.length === 1 ? 'track' : 'tracks'}
-          </span>
-        </div>
-        {playableSongs.length > 0 && (
-          <button
-            className="header-action"
-            onClick={() => onPlay(playableSongs[0], playableSongs)}
-            aria-label="Play all"
-          >
-            <PlayIcon size={18} />
-          </button>
-        )}
+        <div className="screen-header__center" />
+        <div className="header-action-placeholder" />
       </div>
 
       <div className="scroll-area">
-        {release.cover && (
-          <div className="release-hero">
+        <div className="release-hero">
+          {release.cover && (
             <img src={release.cover} alt={release.name} className="release-hero__img" />
-            {release.spotify && (
-              <a
-                href={release.spotify}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="release-hero__spotify"
-              >
-                Open on Spotify
-              </a>
-            )}
-          </div>
-        )}
+          )}
+          <h1 className="release-hero__name">{release.name}</h1>
+          <p className="release-hero__meta">
+            {[year, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
+          </p>
+          {playableSongs.length > 0 && (
+            <button
+              className="release-hero__play"
+              onClick={() => onPlay(playableSongs[0], playableSongs)}
+              aria-label="Play all"
+            >
+              <PlayIcon size={20} />
+              <span>Play</span>
+            </button>
+          )}
+        </div>
 
         {release.songs.length === 0 ? (
           <div className="empty-state">

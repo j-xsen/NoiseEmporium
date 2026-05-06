@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ChevronLeftIcon, PlayIcon, PauseIcon } from './Icons'
 import CoverArt from './CoverArt'
 import type { Song } from '../types'
@@ -13,6 +14,10 @@ interface LyricsViewProps {
 export default function LyricsView({ song, player, onBack, onPlay }: LyricsViewProps) {
   const isActive = player.currentSong?.id === song.id
   const isPlaying = isActive && player.isPlaying
+
+  useEffect(() => {
+    if (!isActive) onPlay(song)
+  }, [song.id])
 
   return (
     <div className="screen-layout">

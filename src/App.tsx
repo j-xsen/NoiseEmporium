@@ -16,7 +16,7 @@ import CollectionDetail from './components/CollectionDetail'
 import LyricsView from './components/LyricsView'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
-import { CheckIcon, DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
+import { DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist } from './types'
 

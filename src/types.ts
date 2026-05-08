@@ -16,6 +16,8 @@ export interface Song {
 export interface Release {
   id: string
   name: string
+  /** Contentful field: 'album' | 'ep' | 'single'. Defaults to 'album' if unset. */
+  releaseType: 'album' | 'ep' | 'single'
   date: string
   cover?: string
   spotify?: string

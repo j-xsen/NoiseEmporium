@@ -76,6 +76,22 @@ export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayin
         </button>
       </div>
 
+      <div className="np-volume-wrap">
+        <input
+          type="range"
+          className="np-volume"
+          min={0}
+          max={1}
+          step={0.01}
+          value={player.volume}
+          onChange={e => player.setVolume(parseFloat(e.target.value))}
+          aria-label="Volume"
+          style={{
+            background: `linear-gradient(to right, var(--text-dim) ${player.volume * 100}%, var(--border) ${player.volume * 100}%)`
+          }}
+        />
+      </div>
+
       <button
         className={`np-loop ${loopMode !== 'off' ? 'np-loop--active' : ''}`}
         onClick={player.cycleLoop}

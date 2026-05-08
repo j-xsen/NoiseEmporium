@@ -314,6 +314,56 @@
   line-height: 1.6;
 }
 
+/* ── Singles list (compact rows on the home screen) ─────────────────────────── */
+
+.singles-list {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 4px;
+}
+
+.single-row__btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 16px;
+  text-align: left;
+}
+
+.single-row--active .single-row__name { color: var(--accent); }
+
+.single-row__art-wrap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.single-row__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.single-row__name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.single-row__year {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
 /* ── Song track list (numbered rows in release/playlist detail) ──────────────── */
 
 .song-track-list {
@@ -623,14 +673,39 @@
   margin: 0 12px;
 }
 
+.np-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 52%;
+  margin-bottom: 24px;
+  color: var(--text-dim);
+}
+
+.np-volume {
+  flex: 1;
+}
+
+.np-volume::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
+  box-shadow: none;
+}
+
+.np-volume::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+}
+
 .np-loop {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
+  border: 1px solid var(--text-dim);
+  color: var(--text);
   font-size: 13px;
   font-weight: 400;
   transition: all 0.2s;
@@ -646,14 +721,14 @@
   margin-top: 16px;
   padding: 8px 28px;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
+  border: 1px solid var(--text-dim);
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
   transition: all 0.2s;
 }
-.np-lyrics-btn:hover { color: var(--text); border-color: var(--text-dim); }
+.np-lyrics-btn:hover { color: var(--text-bright); border-color: var(--text); }
 
 /* ── Playlists ──────────────────────────────────────────────────────────────── */
 

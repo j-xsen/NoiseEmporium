@@ -1,3 +1,10 @@
+// useSongs.ts — fetches all music content from Contentful on mount.
+//
+// Contentful is the single source of truth for songs, releases, and
+// collections. The database only stores user data (accounts, playlists, plays).
+// songs is a flat list derived from releases and is used by playlist screens
+// to look up song metadata by ID.
+
 import { useState, useEffect } from 'react'
 import { fetchCollections, fetchReleases } from '../lib/contentful'
 import type { Collection, Release, Song } from '../types'
@@ -15,6 +22,7 @@ export function useSongs() {
     Promise.all([fetchReleases(), fetchCollections()])
       .then(([releaseData, collectionData]) => {
         setReleases(releaseData)
+        // Flat song list for O(1) lookups by ID elsewhere in the app.
         setSongs(releaseData.flatMap(r => r.songs))
         setCollections(collectionData)
         setStatus('ready')

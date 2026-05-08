@@ -1,3 +1,12 @@
+// contentful.ts — fetches music content from the Contentful CMS.
+//
+// Contentful is the source of truth for songs, releases, and collections.
+// Content is managed in the Contentful dashboard; the schema below must stay
+// in sync with the actual content model or fields will silently be undefined.
+//
+// To add a new field: add it to the schema comment, the mapping below, and
+// the Song/Release/Collection interface in types.ts.
+
 import { createClient } from 'contentful'
 import type { Collection, Release, Song } from '../types'
 
@@ -21,7 +30,7 @@ export const contentfulClient = createClient({
 //   name       — Symbol   (track title, display field)
 //   file       — Asset    (audio)
 //   memberOnly — Boolean  (if true, only premium members can stream)
-//   lyrics     — Long text (optional; line breaks preserved)
+//   lyrics     — Long text (optional; rendered as HTML)
 //
 // Collection (content type: "collection")
 //   title       — Symbol   (display field)

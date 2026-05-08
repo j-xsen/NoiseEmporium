@@ -1,15 +1,24 @@
+// usePlaylists.ts — user playlist CRUD backed by the /api/playlists API.
+//
+// All mutations use optimistic updates: local state is changed immediately and
+// the API call happens in the background. This keeps the UI instant.
+// If an API call fails the state will be out of sync until the next reload,
+// which is acceptable for a personal playlist use case.
+
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Playlist } from '../types'
 
 export function usePlaylists(token: string | null) {
   const [playlists, setPlaylists] = useState<Playlist[]>([])
 
+  // Memoised so it doesn't invalidate useCallback/useEffect deps on every render.
   const authHeaders = useMemo(() => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token ?? ''}`,
   }), [token])
 
-  // Fetch playlists whenever the token changes (login / logout)
+  // Fetch playlists whenever the auth token changes (login / logout).
+  // On logout token is null, so we clear local state immediately.
   useEffect(() => {
     if (!token) { setPlaylists([]); return }
     fetch('/api/playlists', { headers: authHeaders })
@@ -28,6 +37,7 @@ export function usePlaylists(token: string | null) {
   }, [authHeaders])
 
   const deletePlaylist = useCallback(async (id: string) => {
+    // Optimistic: remove from UI first, then delete on server.
     setPlaylists(ps => ps.filter(p => p.id !== id))
     await fetch(`/api/playlists/${id}`, { method: 'DELETE', headers: authHeaders })
   }, [authHeaders])
@@ -40,6 +50,7 @@ export function usePlaylists(token: string | null) {
   }, [authHeaders])
 
   const addToPlaylist = useCallback(async (playlistId: string, songId: string) => {
+    // Guard against duplicates client-side; the server also enforces uniqueness.
     setPlaylists(ps => ps.map(p =>
       p.id === playlistId && !p.songIds.includes(songId)
         ? { ...p, songIds: [...p.songIds, songId] }

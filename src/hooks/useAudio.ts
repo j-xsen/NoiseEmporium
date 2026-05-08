@@ -1,3 +1,14 @@
+// useAudio.ts — single HTMLAudioElement that owns all playback state.
+//
+// Design notes:
+// - A single <Audio> element is created once in a useEffect and shared for the
+//   entire session. React state drives the UI; refs drive the audio element
+//   directly to avoid stale-closure issues inside event handlers.
+// - Queue/index/loopMode are stored in refs so the 'ended' and 'timeupdate'
+//   handlers always see current values without needing to be re-registered.
+// - The Media Session API hooks let the OS lock screen and hardware keys control
+//   playback. Without it, Safari suspends background audio on iOS.
+
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Song, LoopMode } from '../types'
 
@@ -18,20 +29,24 @@ export interface PlayerAPI {
 }
 
 const MS = 'mediaSession' in navigator
-const PLAY_THRESHOLD = 15 // seconds of actual listening before a play is counted
+// A play is counted only after this many seconds of actual forward listening.
+const PLAY_THRESHOLD = 15
 
 export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  // Refs for event handler access — avoids stale closures
+
+  // Refs for event-handler access — avoids stale closures on loopMode, queue, etc.
   const loopRef = useRef<LoopMode>('off')
   const queueRef = useRef<Song[]>([])
-  const qiRef = useRef(-1)
-  // Guards against double-advance when both 'ended' and the timeupdate fallback fire
+  const qiRef = useRef(-1) // index of the currently playing song in queueRef
+
+  // Guards against double-advance when both 'ended' and the timeupdate fallback fire.
   const endFiredRef = useRef(false)
-  // Play count tracking
+
+  // Play-count tracking — accumulates forward-only deltas to exclude seeks.
   const listenedRef = useRef(0)        // cumulative seconds listened for current song
-  const lastTimeRef = useRef(0)        // previous currentTime value
-  const countedRef = useRef(false)     // whether this song has been counted yet
+  const lastTimeRef = useRef(0)        // previous currentTime sample
+  const countedRef = useRef(false)     // true once the play has been reported
   const currentSongIdRef = useRef<string | null>(null)
   const onCountPlayRef = useRef(onCountPlay)
   onCountPlayRef.current = onCountPlay
@@ -47,14 +62,14 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     const el = audioRef.current
     if (!el) return
     endFiredRef.current = false
-    // Reset listen-time tracking for the new song
+    // Reset listen-time counters for the new song.
     listenedRef.current = 0
     lastTimeRef.current = 0
     countedRef.current = false
     currentSongIdRef.current = song.id
     el.src = song.src
     el.loop = loopRef.current === 'one'
-    // iOS requires an explicit load() call after changing src
+    // iOS requires an explicit load() call after changing src.
     el.load()
     qiRef.current = qi
     queueRef.current = queue
@@ -66,7 +81,8 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     })
   }, [])
 
-  // Core audio element + Media Session action handlers (both live here to share refs)
+  // Create the audio element and attach all event listeners once on mount.
+  // Media Session handlers live here too because they share the same refs.
   useEffect(() => {
     const el = new Audio()
     el.preload = 'metadata'
@@ -76,14 +92,15 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
 
-    // Shared advance logic — guarded so timeupdate fallback and 'ended' can't both fire
+    // Shared advance logic — the endFiredRef guard prevents both 'ended' and the
+    // timeupdate fallback from advancing the queue simultaneously.
     const advance = () => {
       if (endFiredRef.current) return
       endFiredRef.current = true
       const mode = loopRef.current
       const q = queueRef.current
       const qi = qiRef.current
-      if (mode === 'one') return // el.loop = true handles this
+      if (mode === 'one') return // el.loop = true handles repeat-one
       const next = qi + 1
       if (next < q.length) {
         loadAndPlay(q[next], next, q)
@@ -96,10 +113,12 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
 
     const onEnded = () => advance()
 
-    // iOS PWA: the 'ended' event doesn't always fire. Fall back to timeupdate.
+    // iOS PWA: the 'ended' event doesn't always fire when the screen is locked.
+    // The timeupdate handler acts as a fallback: advance when < 0.3 s remain.
     const onTime = () => {
       const now = el.currentTime
-      // Accumulate only small forward increments — skips/seeks produce large deltas
+      // Only accumulate small forward increments — seeks produce large deltas
+      // that would artificially inflate the listen time.
       const delta = now - lastTimeRef.current
       if (delta > 0 && delta < 1.5) {
         listenedRef.current += delta
@@ -124,7 +143,6 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     el.addEventListener('ended', onEnded)
 
     // Media Session API — required for iOS background / lock-screen playback.
-    // Without this, Safari suspends audio when the screen locks.
     if (MS) {
       navigator.mediaSession.setActionHandler('play', () => el.play().catch(console.error))
       navigator.mediaSession.setActionHandler('pause', () => el.pause())
@@ -137,6 +155,8 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
         else if (loopRef.current === 'all' && q.length > 0) loadAndPlay(q[0], 0, q)
       })
       navigator.mediaSession.setActionHandler('previoustrack', () => {
+        // Pressing "previous" within the first 3 s restarts the track; after
+        // that it goes to the previous song (matches Spotify behaviour).
         if (el.currentTime > 3) { el.currentTime = 0; return }
         const q = queueRef.current
         const qi = qiRef.current
@@ -157,7 +177,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     }
   }, [loadAndPlay])
 
-  // Update lock-screen Now Playing metadata when song changes
+  // Keep the OS lock-screen "Now Playing" card in sync when the song changes.
   useEffect(() => {
     if (!MS || !currentSong) return
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -170,7 +190,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     })
   }, [currentSong])
 
-  // Keep lock-screen play/pause indicator in sync
+  // Keep lock-screen play/pause indicator in sync with actual playback state.
   useEffect(() => {
     if (!MS) return
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
@@ -210,6 +230,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const skipPrev = useCallback(() => {
     const el = audioRef.current
     if (!el) return
+    // Mirror the Media Session previoustrack behaviour: restart if past 3 s.
     if (el.currentTime > 3) {
       el.currentTime = 0
       setCurrentTime(0)

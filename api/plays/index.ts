@@ -1,3 +1,10 @@
+// api/plays/index.ts — records a song play event for the authenticated user.
+//
+// The client only calls this after PLAY_THRESHOLD seconds of actual listening
+// (enforced in useAudio.ts), so each row represents a genuine play, not an
+// accidental tap. song_id is a Contentful entry ID, not a database FK —
+// Contentful is the music source of truth and songs aren't stored in the DB.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'

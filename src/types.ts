@@ -9,7 +9,7 @@ export interface Song {
   cover?: string
   /** If true, only premium members can play this track. */
   memberOnly?: boolean
-  /** Song lyrics, may contain line breaks. */
+  /** Song lyrics as HTML from Contentful. */
   lyrics?: string
 }
 

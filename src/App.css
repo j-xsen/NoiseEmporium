@@ -642,6 +642,19 @@
   background: var(--accent-dim);
 }
 
+.np-lyrics-btn {
+  margin-top: 16px;
+  padding: 8px 28px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+}
+.np-lyrics-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
 /* ── Playlists ──────────────────────────────────────────────────────────────── */
 
 .playlist-create {
@@ -1283,6 +1296,8 @@
 
 .lyrics-body {
   padding: 24px 24px 40px;
+  white-space: pre-line;
+  text-align: center;
 }
 
 .lyrics-line {

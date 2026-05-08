@@ -1,3 +1,9 @@
+// NowPlaying.tsx — full-screen player shown on the "player" tab.
+//
+// onViewLyrics is only passed from App.tsx when the current song has a lyrics
+// field; the button is hidden otherwise. Tapping it sets lyricsSong in App,
+// which renders LyricsView as an overlay on top of this screen.
+
 import CoverArt from './CoverArt'
 import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, LoopIcon } from './Icons'
 import { formatTime, songSubtitle } from '../utils/format'
@@ -6,11 +12,12 @@ import type { PlayerAPI } from '../hooks/useAudio'
 interface NowPlayingProps {
   player: PlayerAPI
   onLogout: () => void
+  onViewLyrics?: () => void
 }
 
 const loopLabel: Record<string, string> = { off: 'Off', one: '1×', all: 'All' }
 
-export default function NowPlaying({ player, onLogout }: NowPlayingProps) {
+export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayingProps) {
   const { currentSong, isPlaying, currentTime, duration, loopMode } = player
   const progress = duration > 0 ? currentTime / duration : 0
 
@@ -77,6 +84,12 @@ export default function NowPlaying({ player, onLogout }: NowPlayingProps) {
         <LoopIcon size={18} />
         <span>{loopLabel[loopMode]}</span>
       </button>
+
+      {onViewLyrics && (
+        <button className="np-lyrics-btn" onClick={onViewLyrics}>
+          Lyrics
+        </button>
+      )}
     </div>
   )
 }

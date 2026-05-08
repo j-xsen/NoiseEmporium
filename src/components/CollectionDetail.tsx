@@ -1,3 +1,12 @@
+// CollectionDetail.tsx — track listing for a curator-built collection.
+//
+// Collections are thematic groupings (e.g. "Chill Vibes") defined in
+// Contentful. Unlike releases they don't have a fixed release date or
+// album structure — just a title, optional description, and a track list.
+//
+// Clicking a song row starts playback (queues the whole collection).
+// Lyrics are accessible via the meatball (⋯) menu on each track.
+
 import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
@@ -10,14 +19,13 @@ interface CollectionDetailProps {
   isPremium: boolean
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
-  onOpenLyrics: (song: Song) => void
   onBack: () => void
   onAddToPlaylist: (songId: string) => void
 }
 
 export default function CollectionDetail({
   collection, player, isPremium, dlStatuses,
-  onPlay, onOpenLyrics, onBack, onAddToPlaylist,
+  onPlay, onBack, onAddToPlaylist,
 }: CollectionDetailProps) {
   const locked = collection.premiumOnly && !isPremium
 
@@ -75,7 +83,8 @@ export default function CollectionDetail({
               const trackLocked = song.memberOnly && !isPremium
               return (
                 <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${trackLocked ? 'song-track--locked' : ''}`}>
-                  <button className="song-track__main" onClick={() => !trackLocked && onOpenLyrics(song)} disabled={trackLocked}>
+                  {/* Clicking a row starts playback for the whole collection. */}
+                  <button className="song-track__main" onClick={() => !trackLocked && onPlay(song, collection.tracks)} disabled={trackLocked}>
                     <span className="song-track__num">
                       {trackLocked
                         ? <LockIcon size={13} />
@@ -92,6 +101,7 @@ export default function CollectionDetail({
                   {!trackLocked && (
                     <div className="song-track__actions">
                       {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
+                      {/* onAddToPlaylist opens the SongActionsSheet, which also has the Lyrics option. */}
                       <button
                         className="song-track__more"
                         onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}

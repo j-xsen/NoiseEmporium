@@ -1,3 +1,9 @@
+// useAuth.ts — JWT-based authentication.
+//
+// Tokens are stored in localStorage under TOKEN_KEY and are valid for 30 days
+// (expiry enforced server-side). On mount we re-validate the stored token via
+// /api/auth/me so that expired or revoked tokens are cleaned up automatically.
+
 import { useState, useEffect, useCallback } from 'react'
 
 const TOKEN_KEY = 'ne-token'
@@ -13,7 +19,9 @@ export function useAuth() {
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // On mount: verify any stored token
+  // On mount: verify any stored token. If the server rejects it (expired,
+  // tampered, JWT_SECRET rotated) we remove the stale entry and show the
+  // login screen instead of looping on 401s.
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY)
     if (!stored) { setLoading(false); return }

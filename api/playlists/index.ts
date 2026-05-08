@@ -1,3 +1,5 @@
+// api/playlists/index.ts — GET (list) and POST (create) for the current user's playlists.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
@@ -7,6 +9,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!userId) return
 
   if (req.method === 'GET') {
+    // ARRAY_AGG with FILTER drops the NULL row that LEFT JOIN produces when
+    // a playlist has no songs, giving an empty array instead of [null].
     const rows = await sql`
       SELECT
         p.id, p.name, p.created_at,

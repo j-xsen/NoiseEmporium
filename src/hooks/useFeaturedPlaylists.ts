@@ -1,3 +1,9 @@
+// useFeaturedPlaylists.ts — loads curator-managed playlists from the API.
+//
+// Featured playlists are set via the database (featured = true on a playlist
+// row) and are publicly readable without auth. They appear on the home screen
+// and can be browsed — and optionally saved — by any logged-in user.
+
 import { useState, useEffect } from 'react'
 import type { Playlist } from '../types'
 

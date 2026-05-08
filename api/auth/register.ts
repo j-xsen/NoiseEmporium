@@ -16,10 +16,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rows = await sql`
       INSERT INTO users (email, password_hash)
       VALUES (${email.toLowerCase().trim()}, ${hash})
-      RETURNING id, email
+      RETURNING id, email, tier
     `
     const user = rows[0]
-    res.json({ token: signToken(user.id), user: { id: user.id, email: user.email } })
+    res.json({ token: signToken(user.id), user: { id: user.id, email: user.email, tier: user.tier } })
   } catch (err: unknown) {
     if ((err as { code?: string }).code === '23505') return res.status(409).json({ error: 'Email already in use' })
     console.error(err)

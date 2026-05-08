@@ -1,3 +1,9 @@
+// _auth.ts — JWT helpers shared by all API routes.
+//
+// JWT_SECRET must be set in Vercel environment variables. Rotating it will
+// immediately invalidate all existing tokens (all users are logged out).
+// Tokens expire after 30 days; the client re-validates on every page load.
+
 import jwt from 'jsonwebtoken'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 

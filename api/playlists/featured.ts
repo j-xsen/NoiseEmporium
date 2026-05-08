@@ -1,3 +1,10 @@
+// api/playlists/featured.ts — publicly readable curator playlists.
+//
+// Featured playlists are regular playlist rows with featured = true set
+// directly in the database (no UI for this yet). featured_order controls
+// display order on the home screen; playlists without it fall to the end.
+// No auth required — these are visible to all visitors.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 

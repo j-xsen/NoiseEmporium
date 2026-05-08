@@ -1,3 +1,11 @@
+// App.tsx — root component and single source of navigation state.
+//
+// Navigation model: no router. Each of the three tabs (home / player / library)
+// has its own "detail stack" tracked as a selected ID in state. When an ID is
+// set the corresponding detail screen renders; clearing it returns to the list.
+// LyricsView is the exception — lyricsSong renders unconditionally (no tab
+// guard) so it acts as a full-screen overlay accessible from any tab.
+
 import { useState, useCallback } from 'react'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
@@ -42,7 +50,9 @@ function ErrorScreen({ message }: { message: string | null }) {
 }
 
 // ── Song actions bottom sheet ─────────────────────────────────────────────────
-// Context-aware: shows "Remove from playlist" when opened from within a playlist.
+// Opened by the meatball (⋯) button on any song row. Context-aware: shows
+// "Remove from playlist" only when opened from within a user-owned playlist.
+// onViewLyrics is omitted when the song has no lyrics field.
 
 interface SongActionsSheetProps {
   playlists: Playlist[]
@@ -53,10 +63,11 @@ interface SongActionsSheetProps {
   onRemove: (() => Promise<void>) | null
   onDownload: () => void
   onRemoveDownload: () => void
+  onViewLyrics?: () => void
   onClose: () => void
 }
 
-function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onClose }: SongActionsSheetProps) {
+function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -67,7 +78,8 @@ function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, 
     setCreating(false)
   }
 
-  // Playlists available to add to (exclude current playlist if any)
+  // Exclude the playlist the sheet was opened from so you can't add a song to
+  // the playlist it's already in.
   const addablePlaylists = fromPlaylist
     ? playlists.filter(p => p.id !== fromPlaylist.id)
     : playlists
@@ -81,6 +93,11 @@ function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, 
           <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
         </div>
         <div className="sheet-body">
+          {onViewLyrics && (
+            <button className="sheet-new" onClick={() => { onViewLyrics(); onClose() }}>
+              <span>Lyrics</span>
+            </button>
+          )}
           {dlStatus === 'done' ? (
             <button className="sheet-remove" onClick={() => { onRemoveDownload(); onClose() }}>
               <XIcon size={16} />
@@ -149,13 +166,16 @@ function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, 
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-// Tracks which song opened the sheet and from what context
+// Tracks which song opened the meatball sheet and from what playlist context.
+// fromPlaylistId is set when opened inside a playlist so "Remove" can be shown.
 type SongSheet = { songId: string; fromPlaylistId: string | null } | null
 
 export default function App() {
   const auth = useAuth()
   const { songs, releases, collections, status, error } = useSongs()
 
+  // Fire-and-forget play event to the API. Only counted after PLAY_THRESHOLD
+  // seconds of actual listening (enforced in useAudio).
   const recordPlay = useCallback((songId: string) => {
     if (!auth.token) return
     fetch('/api/plays', {
@@ -170,15 +190,24 @@ export default function App() {
   const featuredPlaylists = useFeaturedPlaylists()
   const dl = useDownloads()
   const [tab, setTab] = useState<Tab>('home')
+
+  // Each of these IDs drives a detail screen within its tab.
+  // Only one detail screen is shown at a time per tab.
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null)
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
   const [selectedFeaturedPlaylistId, setSelectedFeaturedPlaylistId] = useState<string | null>(null)
+
+  // lyricsSong renders as a full-screen overlay independent of the active tab.
+  // Set it from any screen; clearing it restores whatever was showing beneath.
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
+
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
   const isPremium = auth.user?.tier === 'premium'
 
+  // Before handing a queue to the audio engine, swap in local blob URLs for any
+  // songs the user has downloaded. This makes offline playback transparent.
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
     if (!isPremium && song.memberOnly) return
     const q = (queue ?? [song]).filter(s => isPremium || !s.memberOnly)
@@ -191,6 +220,8 @@ export default function App() {
     player.playSong(target, resolved)
   }, [dl.getLocalSrc, player.playSong, isPremium])
 
+  // Switching tabs must clear all detail selections, otherwise the previous
+  // detail screen bleeds through when the user returns to that tab.
   function changeTab(t: Tab) {
     setSelectedPlaylistId(null)
     setSelectedReleaseId(null)
@@ -213,15 +244,18 @@ export default function App() {
   const selectedPlaylist = pm.playlists.find(p => p.id === selectedPlaylistId) ?? null
   const selectedRelease = releases.find(r => r.id === selectedReleaseId) ?? null
   const selectedCollection = collections.find(c => c.id === selectedCollectionId) ?? null
+  // Featured playlists can be cloned by users, so check both lists.
   const selectedFeaturedPlaylist =
     pm.playlists.find(p => p.id === selectedFeaturedPlaylistId) ??
     featuredPlaylists.find(p => p.id === selectedFeaturedPlaylistId) ??
     null
+  // If the user owns the playlist (cloned it), they can rename it.
   const userOwnsFeaturedPlaylist = pm.playlists.some(p => p.id === selectedFeaturedPlaylistId)
+  // Mini-player appears on home and library tabs; the full player tab replaces it.
   const miniPlayerVisible = !!player.currentSong && tab !== 'player'
   const progress = player.duration > 0 ? player.currentTime / player.duration : 0
 
-  // Sheet callbacks
+  // Resolve the playlist the sheet was opened from (for "Remove from…" label).
   const sheetFromPlaylist = songSheet?.fromPlaylistId
     ? (pm.playlists.find(p => p.id === songSheet.fromPlaylistId) ?? null)
     : null
@@ -275,12 +309,13 @@ export default function App() {
             isPremium={auth.user?.tier === 'premium'}
             dlStatuses={dl.statuses}
             onPlay={handlePlay}
-            onOpenLyrics={song => { if (isPremium || !song.memberOnly) setLyricsSong(song) }}
             onBack={() => setSelectedCollectionId(null)}
             onAddToPlaylist={songId => setSongSheet({ songId, fromPlaylistId: null })}
           />
         )}
-        {tab === 'home' && lyricsSong && (
+
+        {/* LyricsView has no tab guard — it overlays whatever screen is active. */}
+        {lyricsSong && (
           <LyricsView
             song={lyricsSong}
             player={player}
@@ -288,8 +323,14 @@ export default function App() {
             onPlay={song => handlePlay(song, selectedCollection?.tracks ?? [song])}
           />
         )}
-        {tab === 'player' && (
-          <NowPlaying player={player} onLogout={auth.logout} />
+
+        {tab === 'player' && !lyricsSong && (
+          <NowPlaying
+            player={player}
+            onLogout={auth.logout}
+            // Only pass the callback when the current song actually has lyrics.
+            onViewLyrics={player.currentSong?.lyrics ? () => setLyricsSong(player.currentSong!) : undefined}
+          />
         )}
         {tab === 'library' && !selectedPlaylist && (
           <Playlists
@@ -349,6 +390,11 @@ export default function App() {
             if (song) dl.download(song)
           }}
           onRemoveDownload={() => dl.remove(songSheet.songId)}
+          // IIFE to look up the song once and conditionally build the callback.
+          onViewLyrics={(() => {
+            const song = songs.find(s => s.id === songSheet.songId)
+            return song?.lyrics ? () => { setLyricsSong(song); setSongSheet(null) } : undefined
+          })()}
           onClose={() => setSongSheet(null)}
         />
       )}

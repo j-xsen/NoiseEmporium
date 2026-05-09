@@ -44,7 +44,7 @@ schema.sql             Database schema (Neon PostgreSQL)
 ## The Jaxsenville Universe
 
 Jaxsenville is a city built by Jaxsen Honeycutt across multiple web properties:
-- `museum.jaxsenville.com` — existing building #1
-- Building #2 — existing
+- `clinic.jaxsenville.com` — existing building #1
+- `museum.jaxsenville.com` — existing building #2
 - `noise.jaxsenville.com` *(or `emporium.jaxsenville.com`)* — **this app**, building #3
 - Domain registered at Porkbun; hosted on Vercel

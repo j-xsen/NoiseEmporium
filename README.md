@@ -1,73 +1,67 @@
-# React + TypeScript + Vite
+# Noise Emporium
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser-based music platform — streaming + store — scoped to Jaxsen Honeycutt's music. Part of the Jaxsenville universe at `noise.jaxsenville.com`.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend:** React 19 + TypeScript + Vite + Tailwind CSS v4
+- **Backend:** Vercel Serverless Functions (`api/`)
+- **Database:** Neon (serverless PostgreSQL)
+- **CMS:** Contentful (music catalog source of truth)
+- **Auth:** JWT (30-day), stored in localStorage
+- **Payments:** Stripe Checkout
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This runs Vite (frontend) and an Express dev server (API) concurrently. The API server proxies all `api/` routes locally.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Environment Variables
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Create a `.env` file in the project root:
+
+```env
+# Contentful
+VITE_CONTENTFUL_SPACE_ID=
+VITE_CONTENTFUL_ACCESS_TOKEN=
+
+# Database
+DATABASE_URL=
+
+# Auth
+JWT_SECRET=
+
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 ```
+
+## Project Structure
+
+```
+src/                  React frontend
+  components/         UI components
+  hooks/              Auth, audio, playlists, downloads
+  lib/contentful.ts   Contentful CMS client
+  shopData.ts         Stripe product definitions
+  types.ts            Shared TypeScript types
+api/                  Vercel serverless functions
+  auth/               register, login, me
+  playlists/          CRUD + song management
+  stripe/             checkout session, webhook
+  account/            password change, account deletion
+schema.sql            Database schema
+server.ts             Local Express dev server
+```
+
+## Shop Products
+
+Products are defined in `src/shopData.ts`. Replace the placeholder Stripe Price IDs with real ones from your Stripe dashboard before going live.
+
+## Deployment
+
+Deployed on Vercel. The `api/` directory is automatically served as serverless functions. Set all environment variables in the Vercel project settings.

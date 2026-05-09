@@ -41,4 +41,4 @@ export interface Collection {
 }
 
 export type LoopMode = 'off' | 'one' | 'all'
-export type Tab = 'home' | 'player' | 'library'
+export type Tab = 'home' | 'player' | 'library' | 'shop'

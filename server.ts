@@ -1,7 +1,16 @@
 import 'dotenv/config'
 import express from 'express'
+import type { Request, Response, NextFunction } from 'express'
 
 const app = express()
+
+// Stripe webhooks require raw body — register before express.json()
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req: Request, res: Response, next: NextFunction) => {
+  // Expose raw body so the webhook handler can verify the Stripe signature
+  ;(req as Request & { rawBody: Buffer }).rawBody = req.body as Buffer
+  next()
+}, (req: Request, res: Response) => handle('./api/stripe/webhook.ts', {}, req, res))
+
 app.use(express.json())
 
 // Helper: adapt a Vercel handler to Express, injecting URL params into req.query
@@ -36,6 +45,14 @@ app.delete('/api/playlists/:id', (req, res) => handle('./api/playlists/[id].ts',
 
 app.post(  '/api/playlists/:id/songs',          (req, res) => handle('./api/playlists/[id]/songs.ts',          { id: req.params.id },                            req, res))
 app.delete('/api/playlists/:id/songs/:songId',  (req, res) => handle('./api/playlists/[id]/songs/[songId].ts', { id: req.params.id, songId: req.params.songId }, req, res))
+
+// ── Stripe ────────────────────────────────────────────────────────────────────
+app.post('/api/stripe/checkout', (req, res) => handle('./api/stripe/checkout.ts', {}, req, res))
+// webhook route is registered above (needs raw body)
+
+// ── Account ───────────────────────────────────────────────────────────────────
+app.post(  '/api/account/password', (req, res) => handle('./api/account/password.ts', {}, req, res))
+app.delete('/api/account',          (req, res) => handle('./api/account/index.ts',    {}, req, res))
 
 const PORT = process.env.API_PORT ?? 3001
 app.listen(PORT, () => console.log(`API server running on http://localhost:${PORT}`))

@@ -17,12 +17,12 @@ interface LibraryProps {
   onSelectRelease: (id: string) => void
   onSelectCollection: (id: string) => void
   onSelectFeaturedPlaylist: (id: string) => void
-  onLogout: () => void
+  onOpenAccount: () => void
 }
 
 export default function Library({
   releases, collections, featuredPlaylists, isPremium, userEmail, currentSongId,
-  onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onLogout,
+  onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onOpenAccount,
 }: LibraryProps) {
   const albums  = releases.filter(r => r.releaseType !== 'single')
   const singles = releases.filter(r => r.releaseType === 'single')
@@ -36,10 +36,9 @@ export default function Library({
         <div className="screen-header__center">
           <h1 className="screen-title">Home</h1>
         </div>
-        <div className="signout-block">
+        <button className="account-trigger" onClick={onOpenAccount} aria-label="Account settings">
           <span className="signout-email">{userEmail}</span>
-          <button className="signout-btn" onClick={onLogout}>Sign out</button>
-        </div>
+        </button>
       </div>
 
       <div className="scroll-area">

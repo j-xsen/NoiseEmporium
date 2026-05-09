@@ -6,7 +6,7 @@
 // LyricsView is the exception — lyricsSong renders unconditionally (no tab
 // guard) so it acts as a full-screen overlay accessible from any tab.
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
 import { useAudio } from './hooks/useAudio'
@@ -24,6 +24,8 @@ import CollectionDetail from './components/CollectionDetail'
 import LyricsView from './components/LyricsView'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
+import Shop from './components/Shop'
+import AccountModal from './components/AccountModal'
 import { DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist } from './types'
@@ -201,6 +203,7 @@ export default function App() {
   // lyricsSong renders as a full-screen overlay independent of the active tab.
   // Set it from any screen; clearing it restores whatever was showing beneath.
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
+  const [accountModalOpen, setAccountModalOpen] = useState(false)
 
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
 
@@ -230,6 +233,12 @@ export default function App() {
     setLyricsSong(null)
     setTab(t)
   }
+
+  // On mount: handle tab from checkout redirect (?tab=shop)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === 'shop') setTab('shop')
+  }, [])
 
   // Auth loading
   if (auth.loading) return <LoadingScreen />
@@ -274,7 +283,7 @@ export default function App() {
             onSelectRelease={setSelectedReleaseId}
             onSelectCollection={setSelectedCollectionId}
             onSelectFeaturedPlaylist={setSelectedFeaturedPlaylistId}
-            onLogout={auth.logout}
+            onOpenAccount={() => setAccountModalOpen(true)}
           />
         )}
         {tab === 'home' && selectedFeaturedPlaylist && !lyricsSong && (
@@ -354,6 +363,13 @@ export default function App() {
             onRename={name => pm.renamePlaylist(selectedPlaylist.id, name)}
           />
         )}
+        {tab === 'shop' && (
+          <Shop
+            isPremium={isPremium}
+            token={auth.token}
+            onUpgradeSuccess={auth.refreshUser}
+          />
+        )}
         <div className="grass-divider" aria-hidden="true" />
       </div>
 
@@ -370,6 +386,16 @@ export default function App() {
       )}
 
       <BottomNav tab={tab} onChange={changeTab} hasSong={!!player.currentSong} />
+
+      {accountModalOpen && auth.user && auth.token && (
+        <AccountModal
+          user={auth.user}
+          token={auth.token}
+          onClose={() => setAccountModalOpen(false)}
+          onLogout={() => { setAccountModalOpen(false); auth.logout() }}
+          onGoToShop={() => { setAccountModalOpen(false); changeTab('shop') }}
+        />
+      )}
 
       {songSheet && (
         <SongActionsSheet

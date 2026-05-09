@@ -65,5 +65,16 @@ export function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, token, loading, login, register, logout }
+  const refreshUser = useCallback(async () => {
+    const stored = localStorage.getItem(TOKEN_KEY)
+    if (!stored) return
+    try {
+      const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${stored}` } })
+      if (!r.ok) return
+      const { user: u } = await r.json()
+      setUser(u)
+    } catch { /* ignore */ }
+  }, [])
+
+  return { user, token, loading, login, register, logout, refreshUser }
 }

@@ -33,7 +33,7 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
     if (newPassword.length < 8) { setPwError('New password must be at least 8 characters'); return }
     setPwLoading(true); setPwError(null)
     try {
-      const r = await fetch('/api/account/password', {
+      const r = await fetch('/api/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword }),

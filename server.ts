@@ -51,8 +51,8 @@ app.post('/api/stripe/checkout', (req, res) => handle('./api/stripe/checkout.ts'
 // webhook route is registered above (needs raw body)
 
 // ── Account ───────────────────────────────────────────────────────────────────
-app.post(  '/api/account/password', (req, res) => handle('./api/account/password.ts', {}, req, res))
-app.delete('/api/account',          (req, res) => handle('./api/account/index.ts',    {}, req, res))
+app.post(  '/api/account', (req, res) => handle('./api/account/index.ts', {}, req, res))
+app.delete('/api/account', (req, res) => handle('./api/account/index.ts', {}, req, res))
 
 const PORT = process.env.API_PORT ?? 3001
 app.listen(PORT, () => console.log(`API server running on http://localhost:${PORT}`))

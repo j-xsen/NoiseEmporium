@@ -9,6 +9,7 @@
 
 import { createClient } from 'contentful'
 import type { Collection, Release, Song } from '../types'
+import { slugify } from '../utils/format'
 
 export const contentfulClient = createClient({
   space: import.meta.env.VITE_CONTENTFUL_SPACE_ID ?? '',
@@ -90,7 +91,7 @@ export async function fetchReleases(): Promise<Release[]> {
       })
     }
 
-    releases.push({ id: release.sys.id, name, releaseType, date, cover: coverUrl, spotify, songs })
+    releases.push({ id: release.sys.id, slug: slugify(name), name, releaseType, date, cover: coverUrl, spotify, songs })
   }
 
   return releases
@@ -141,7 +142,7 @@ export async function fetchCollections(): Promise<Collection[]> {
       })
     }
 
-    collections.push({ id: entry.sys.id, title, description, cover: coverUrl, premiumOnly, tracks })
+    collections.push({ id: entry.sys.id, slug: slugify(title), title, description, cover: coverUrl, premiumOnly, tracks })
   }
 
   return collections

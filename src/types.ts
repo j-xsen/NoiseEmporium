@@ -15,6 +15,7 @@ export interface Song {
 
 export interface Release {
   id: string
+  slug: string
   name: string
   /** Contentful field: 'album' | 'ep' | 'single'. Defaults to 'album' if unset. */
   releaseType: 'album' | 'ep' | 'single'
@@ -33,6 +34,7 @@ export interface Playlist {
 
 export interface Collection {
   id: string
+  slug: string
   title: string
   description?: string
   cover?: string

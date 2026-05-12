@@ -29,7 +29,11 @@ export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
   return (
     <div className="auth-screen">
       <div className="auth-top">
-        <h1 className="auth-wordmark">Noise Emporium</h1>
+        <img
+          src="/wordmark.webp"
+          alt="Noise Emporium"
+          className="auth-wordmark"
+        />
       </div>
 
       <div className="auth-card">

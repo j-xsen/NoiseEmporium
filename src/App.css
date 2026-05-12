@@ -8,15 +8,7 @@
   justify-content: center;
   min-height: 100svh;
   padding: calc(var(--safe-top) + 40px) 24px calc(var(--safe-bottom) + 40px);
-  background: linear-gradient(
-    to bottom,
-    #0c1a30 0%,
-    #0d2040 8%,
-    #0f2d5a 28%,
-    #1a5c9e 52%,
-    #1a5c9e 90%,
-    #0f3060 100%
-  );
+  background: url('/background.avif') top center / cover no-repeat;
   gap: 40px;
 }
 
@@ -25,13 +17,11 @@
 }
 
 .auth-wordmark {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-style: italic;
-  font-size: 36px;
-  font-weight: 400;
-  color: var(--text-bright);
-  letter-spacing: -1px;
-  margin: 0;
+  display: block;
+  width: 220px;
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6));
 }
 
 .auth-card {
@@ -41,6 +31,9 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .auth-tabs {
@@ -151,7 +144,7 @@
   flex-direction: column;
   height: 100svh;
   overflow: hidden;
-  background: url('/sky.webp') top center / cover no-repeat;
+  background: url('/background.avif') top center / cover no-repeat;
 }
 
 .screen {

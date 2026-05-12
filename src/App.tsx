@@ -25,6 +25,7 @@ import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import AuthScreen from './components/AuthScreen'
 import BubbleWorld from './components/BubbleWorld'
+import Library from './components/Library'
 import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
@@ -315,6 +316,13 @@ export default function App() {
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>(() =>
+    (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '2d'
+  )
+
+  useEffect(() => {
+    localStorage.setItem('noise-view-mode', viewMode)
+  }, [viewMode])
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -390,6 +398,21 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
+        {tab === 'home' && !lyricsSong && (
+          <div className="view-toggle" role="group" aria-label="Choose view mode">
+            <button
+              className={`view-toggle__opt${viewMode === '3d' ? ' view-toggle__opt--active' : ''}`}
+              onClick={() => setViewMode('3d')}
+              aria-pressed={viewMode === '3d'}
+            >3D</button>
+            <button
+              className={`view-toggle__opt${viewMode === '2d' ? ' view-toggle__opt--active' : ''}`}
+              onClick={() => setViewMode('2d')}
+              aria-pressed={viewMode === '2d'}
+            >2D</button>
+          </div>
+        )}
+
         {lyricsSong ? (
           <LyricsView
             song={lyricsSong}
@@ -400,11 +423,32 @@ export default function App() {
         ) : (
           <Routes>
             <Route path="/" element={
-              <BubbleWorld
-                releases={releases}
-                collections={collections}
-                currentSongId={player.currentSong?.id}
-              />
+              viewMode === '3d' ? (
+                <BubbleWorld
+                  releases={releases}
+                  collections={collections}
+                  currentSongId={player.currentSong?.id}
+                />
+              ) : (
+                <Library
+                  releases={releases}
+                  collections={collections}
+                  featuredPlaylists={featuredPlaylists}
+                  isPremium={isPremium}
+                  userEmail={auth.user?.email ?? ''}
+                  currentSongId={player.currentSong?.id}
+                  onSelectRelease={id => {
+                    const r = releases.find(r => r.id === id)
+                    if (r) navigate(`/${r.releaseType}/${r.slug}`)
+                  }}
+                  onSelectCollection={id => {
+                    const c = collections.find(c => c.id === id)
+                    if (c) navigate(`/collection/${c.slug}`)
+                  }}
+                  onSelectFeaturedPlaylist={id => navigate(`/playlist/${id}`)}
+                  onOpenAccount={() => setAccountModalOpen(true)}
+                />
+              )
             } />
 
             <Route path="/ep/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />

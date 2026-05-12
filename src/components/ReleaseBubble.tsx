@@ -1,6 +1,6 @@
-import { memo, useRef, useState, useEffect } from 'react'
+import { memo, useRef, useState, Suspense } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Text, Billboard } from '@react-three/drei'
+import { Text, Billboard, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ReleaseBubbleProps {
@@ -13,28 +13,26 @@ interface ReleaseBubbleProps {
   onClick: () => void
 }
 
-function useCoverTexture(url?: string) {
-  const [texture, setTexture] = useState<THREE.Texture | null>(null)
+const ACTIVE_COLOR = new THREE.Color('#5ab5e0')
 
-  useEffect(() => {
-    if (!url) return
-    let disposed = false
-    const loader = new THREE.TextureLoader()
-    loader.crossOrigin = 'anonymous'
-    loader.load(url, (t) => {
-      if (!disposed) setTexture(t)
-    })
-    return () => { disposed = true }
-  }, [url])
-
-  useEffect(() => {
-    return () => { texture?.dispose() }
-  }, [texture])
-
-  return texture
+function ArtPlane({ url, artSize }: { url: string; artSize: number }) {
+  const texture = useTexture(url)
+  return (
+    <mesh renderOrder={0}>
+      <planeGeometry args={[artSize, artSize]} />
+      <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
+    </mesh>
+  )
 }
 
-const ACTIVE_COLOR = new THREE.Color('#5ab5e0')
+function FallbackPlane({ artSize }: { artSize: number }) {
+  return (
+    <mesh renderOrder={0}>
+      <planeGeometry args={[artSize, artSize]} />
+      <meshBasicMaterial color="#1c3d6e" side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
 
 function ReleaseBubble({
   position, radius, cover, name, isActive, phaseOffset, onClick,
@@ -44,7 +42,6 @@ function ReleaseBubble({
   // rotGroupRef: only the glass sphere shell spins
   const rotGroupRef = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
-  const texture = useCoverTexture(cover)
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
@@ -71,14 +68,13 @@ function ReleaseBubble({
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
     >
       {/* Art plane — in the non-rotating group so it always faces the camera */}
-      <mesh renderOrder={0}>
-        <planeGeometry args={[artSize, artSize]} />
-        <meshBasicMaterial
-          map={texture ?? undefined}
-          color={texture ? '#ffffff' : '#1c3d6e'}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      {cover ? (
+        <Suspense fallback={<FallbackPlane artSize={artSize} />}>
+          <ArtPlane url={cover} artSize={artSize} />
+        </Suspense>
+      ) : (
+        <FallbackPlane artSize={artSize} />
+      )}
 
       {/* Active glow ring behind the art */}
       {isActive && (

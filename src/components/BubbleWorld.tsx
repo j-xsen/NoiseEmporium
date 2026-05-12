@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls, GradientTexture } from '@react-three/drei'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
 
@@ -102,8 +102,16 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           dpr={[1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
         >
-          {/* Sky blue background — reliable solid color, no shader needed */}
-          <color attach="background" args={['#5ba3d9']} />
+          {/* Sky gradient — big plane behind the scene, matches the 2D CSS gradient */}
+          <mesh position={[0, 0, -30]} scale={[80, 55, 1]}>
+            <planeGeometry />
+            <meshBasicMaterial toneMapped={false}>
+              <GradientTexture
+                stops={[0, 0.25, 0.6, 1]}
+                colors={['#1a5c8a', '#2e8ab5', '#5ab8d4', '#8dd4e8']}
+              />
+            </meshBasicMaterial>
+          </mesh>
 
           <ambientLight intensity={0.7} color="#ddeeff" />
           <directionalLight position={[5, 10, 3]} intensity={1.2} color="#fff8e0" />

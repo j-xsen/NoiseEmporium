@@ -2077,3 +2077,47 @@
   font-weight: 500;
   width: fit-content;
 }
+
+/* ── 3D / 2D view toggle ─────────────────────────────────────────────────────── */
+
+.view-toggle {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(5, 12, 28, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  padding: 3px;
+}
+
+.view-toggle__opt {
+  padding: 5px 16px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+
+.view-toggle__opt--active {
+  background: var(--accent);
+  color: #071018;
+}
+
+.view-toggle__opt:not(.view-toggle__opt--active):hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.view-toggle__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

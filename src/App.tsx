@@ -24,7 +24,7 @@ import { useFeaturedPlaylists } from './hooks/useFeaturedPlaylists'
 import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import AuthScreen from './components/AuthScreen'
-import Library from './components/Library'
+import BubbleWorld from './components/BubbleWorld'
 import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
@@ -400,23 +400,10 @@ export default function App() {
         ) : (
           <Routes>
             <Route path="/" element={
-              <Library
+              <BubbleWorld
                 releases={releases}
                 collections={collections}
-                featuredPlaylists={featuredPlaylists}
-                isPremium={isPremium}
-                userEmail={auth.user?.email ?? ''}
                 currentSongId={player.currentSong?.id}
-                onSelectRelease={id => {
-                  const r = releases.find(r => r.id === id)
-                  if (r) navigate(`/${r.releaseType}/${r.slug}`)
-                }}
-                onSelectCollection={id => {
-                  const c = collections.find(c => c.id === id)
-                  if (c) navigate(`/collection/${c.slug}`)
-                }}
-                onSelectFeaturedPlaylist={id => navigate(`/playlist/${id}`)}
-                onOpenAccount={() => setAccountModalOpen(true)}
               />
             } />
 

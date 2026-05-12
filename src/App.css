@@ -1681,6 +1681,133 @@
 }
 .account-delete-btn:disabled { opacity: 0.45; }
 
+/* ── Bubble world ─────────────────────────────────────────────────────────────── */
+
+.bubble-world {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── PS2/WoW release & collection detail ─────────────────────────────────────── */
+
+.release-detail-ps2 {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  overflow: hidden;
+  padding-top: calc(var(--safe-top) + 52px);
+}
+
+.rps2-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(32px) brightness(0.3) saturate(1.6);
+  transform: scale(1.1);
+  z-index: 0;
+}
+
+.rps2-back {
+  position: absolute;
+  top: calc(var(--safe-top) + 12px);
+  left: 12px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  color: var(--accent);
+}
+
+.rps2-cover-col {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px 20px 20px;
+}
+
+.rps2-cover {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.rps2-info-col {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px 20px 0 8px;
+}
+
+.rps2-header {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.rps2-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 400;
+  color: var(--text-bright);
+  line-height: 1.2;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.rps2-meta {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-dim);
+  margin: 0 0 14px;
+}
+
+.rps2-description {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+
+.rps2-tracks-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: 80px;
+}
+
+@media (max-width: 600px) {
+  .release-detail-ps2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .rps2-cover-col {
+    padding: 8px 20px 12px;
+    justify-content: center;
+  }
+
+  .rps2-cover {
+    max-width: 110px;
+    border-radius: 8px;
+  }
+
+  .rps2-info-col {
+    padding: 0 20px;
+  }
+}
+
 /* ── Shop ───────────────────────────────────────────────────────────────────── */
 
 .shop-filters {

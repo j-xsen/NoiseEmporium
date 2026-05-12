@@ -23,7 +23,6 @@ export default function ReleaseDetail({
     : null
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
-  // Queue for "play all" only includes songs the user can actually play
   const playableSongs = isPremium ? release.songs : publicSongs
 
   function renderTrack(song: Song, displayNum: number, locked: boolean) {
@@ -67,22 +66,24 @@ export default function ReleaseDetail({
   const count = release.songs.length
 
   return (
-    <div className="screen-layout">
-      <div className="screen-header screen-header--with-back">
-        <button className="back-btn" onClick={onBack} aria-label="Back">
-          <ChevronLeftIcon size={22} />
-        </button>
-        <div className="screen-header__center" />
-        <div className="header-action-placeholder" />
+    <div className="release-detail-ps2">
+      {release.cover && (
+        <div className="rps2-bg" style={{ backgroundImage: `url(${release.cover})` }} />
+      )}
+      <button className="rps2-back" onClick={onBack} aria-label="Back">
+        <ChevronLeftIcon size={22} />
+      </button>
+
+      <div className="rps2-cover-col">
+        {release.cover && (
+          <img src={release.cover} alt={release.name} className="rps2-cover" />
+        )}
       </div>
 
-      <div className="scroll-area">
-        <div className="release-hero">
-          {release.cover && (
-            <img src={release.cover} alt={release.name} className="release-hero__img" />
-          )}
-          <h1 className="release-hero__name">{release.name}</h1>
-          <p className="release-hero__meta">
+      <div className="rps2-info-col">
+        <div className="rps2-header">
+          <h1 className="rps2-title">{release.name}</h1>
+          <p className="rps2-meta">
             {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
           </p>
           {playableSongs.length > 0 && (
@@ -97,28 +98,29 @@ export default function ReleaseDetail({
           )}
         </div>
 
-        {release.songs.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">♪</div>
-            <p className="empty-title">No tracks</p>
-          </div>
-        ) : (
-          <ul className="song-track-list">
-            {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
-
-            {memberSongs.length > 0 && (
-              <>
-                <li className="song-track-section">
-                  <LockIcon size={12} />
-                  <span>Members Only</span>
-                </li>
-                {memberSongs.map((song, i) =>
-                  renderTrack(song, publicSongs.length + i + 1, !isPremium)
-                )}
-              </>
-            )}
-          </ul>
-        )}
+        <div className="rps2-tracks-scroll">
+          {release.songs.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">♪</div>
+              <p className="empty-title">No tracks</p>
+            </div>
+          ) : (
+            <ul className="song-track-list">
+              {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
+              {memberSongs.length > 0 && (
+                <>
+                  <li className="song-track-section">
+                    <LockIcon size={12} />
+                    <span>Members Only</span>
+                  </li>
+                  {memberSongs.map((song, i) =>
+                    renderTrack(song, publicSongs.length + i + 1, !isPremium)
+                  )}
+                </>
+              )}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )

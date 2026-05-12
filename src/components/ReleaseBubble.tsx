@@ -57,7 +57,7 @@ function ReleaseBubble({
   })
 
   // Plane sized to fill sphere interior; planeGeometry normal is +Z which faces the camera
-  const artSize = radius * 1.35
+  const artSize = radius * 1.1
 
   return (
     <group
@@ -94,7 +94,7 @@ function ReleaseBubble({
             iridescenceIOR={1.3}
             iridescenceThicknessRange={[100, 400]}
             transparent
-            opacity={hovered ? 0.22 : 0.1}
+            opacity={hovered ? 0.28 : 0.18}
             roughness={0}
             metalness={0.05}
             clearcoat={1}
@@ -108,15 +108,15 @@ function ReleaseBubble({
       {/* Label — Billboard so it always faces the camera as the bubble bobs */}
       <Billboard>
         <Text
-          position={[0, -(radius + 0.55), 0]}
-          fontSize={0.24}
-          color={hovered ? '#ffffff' : '#e8f4ff'}
+          position={[0, -(radius + 0.22), 0]}
+          fontSize={0.30}
+          color={hovered ? '#ffffff' : '#f0e6c0'}
           anchorX="center"
           anchorY="top"
           maxWidth={radius * 3}
           textAlign="center"
-          outlineWidth={0.022}
-          outlineColor="#000000"
+          outlineWidth={0.01}
+          outlineColor="#0a1e35"
           outlineOpacity={0.85}
         >
           {name}

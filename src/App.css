@@ -1722,19 +1722,19 @@
 }
 
 .bubble-nav__arrow {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(5, 12, 28, 0.55);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
-  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s, opacity 0.2s;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .bubble-nav__arrow:disabled {
@@ -1760,6 +1760,38 @@
   text-align: center;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
+
+/* ── Mobile per-row side arrows ──────────────────────────────────────────────── */
+
+.bubble-side-arrow {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(5, 12, 28, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.bubble-side-arrow--left  { left: 8px; }
+.bubble-side-arrow--right { right: 8px; }
+
+/* Row 0 (releases) — centered on screen, matching where the bubble sits */
+.bubble-side-arrow--row0 { top: 50%; transform: translateY(-50%); }
+
+/* Row 1 (collections) — near the bottom edge where the peek is visible */
+.bubble-side-arrow--row1 { bottom: 12px; top: auto; transform: none; }
+
+.bubble-side-arrow:disabled { opacity: 0.2; cursor: not-allowed; }
+.bubble-side-arrow:not(:disabled):hover { background: rgba(5, 12, 28, 0.8); }
+.bubble-side-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* ── PS2/WoW release & collection detail ─────────────────────────────────────── */
 

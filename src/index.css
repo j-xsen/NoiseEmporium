@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0c1a30;
-  --surface: #0f2040;
-  --surface-raised: #152a50;
-  --border: #1e3858;
-  --text: #8ab4cc;
-  --text-dim: #5a85a0;
-  --text-bright: #d8ebf5;
-  --accent: #5ab5e0;
-  --accent-dim: rgba(90, 181, 224, 0.12);
-  --accent-border: rgba(90, 181, 224, 0.32);
-  --danger: #c04848;
+  --bg: linear-gradient(to bottom, #1a5c8a 0%, #2e8ab5 40%, #5ab8d4 75%, #8dd4e8 100%);
+  --surface: rgba(10, 28, 50, 0.82);
+  --surface-raised: rgba(18, 38, 65, 0.88);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #c8e6f0;
+  --text-dim: rgba(200, 230, 240, 0.72);
+  --text-bright: #ffffff;
+  --accent: #c8741a;
+  --accent-dim: rgba(200, 116, 26, 0.15);
+  --accent-border: rgba(200, 116, 26, 0.4);
+  --danger: #e05555;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -34,7 +34,7 @@
 
 body {
   margin: 0;
-  background: #1a0e08;
+  background: linear-gradient(to bottom, #1a5c8a 0%, #2e8ab5 40%, #5ab8d4 75%, #8dd4e8 100%) fixed;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;

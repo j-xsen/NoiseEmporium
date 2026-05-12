@@ -19,12 +19,30 @@ export interface ShopProduct {
 
 export const SHOP_PRODUCTS: ShopProduct[] = [
   {
-    id: 'premium-membership',
+    id: 'membership-supporter',
     category: 'membership',
-    name: 'Premium Membership',
-    description: 'Unlock all member-only tracks, offline downloads, and exclusive collections. Billed monthly.',
+    name: 'Supporter',
+    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
+    price: 100,
+    priceId: 'price_1TW1bOKHXukW25xldpJMrnCb',
+    mode: 'subscription',
+  },
+  {
+    id: 'membership-enthusiast',
+    category: 'membership',
+    name: 'Enthusiast',
+    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
     price: 500,
-    priceId: 'price_REPLACE_MEMBERSHIP',
+    priceId: 'price_REPLACE_ENTHUSIAST',
+    mode: 'subscription',
+  },
+  {
+    id: 'membership-champion',
+    category: 'membership',
+    name: 'Champion',
+    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
+    price: 1000,
+    priceId: 'price_REPLACE_CHAMPION',
     mode: 'subscription',
   },
   // ── CDs ───────────────────────────────────────────────────────────────────

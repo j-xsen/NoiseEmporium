@@ -30,13 +30,22 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
     const params = new URLSearchParams(window.location.search)
     if (params.get('checkout') === 'success') {
       setCheckoutStatus('success')
-      onUpgradeSuccess()
       window.history.replaceState({}, '', window.location.pathname)
+      const sessionId = params.get('session_id')
+      if (sessionId && token) {
+        fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: 'fulfill', sessionId }),
+        }).finally(() => onUpgradeSuccess())
+      } else {
+        onUpgradeSuccess()
+      }
     } else if (params.get('checkout') === 'cancelled') {
       setCheckoutStatus('cancelled')
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [onUpgradeSuccess])
+  }, [onUpgradeSuccess, token])
 
   async function handleBuy(product: ShopProduct) {
     if (!token) return
@@ -48,7 +57,7 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
         body: JSON.stringify({
           priceId: product.priceId,
           mode: product.mode,
-          successUrl: `${window.location.origin}/?checkout=success&tab=shop`,
+          successUrl: `${window.location.origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/?checkout=cancelled&tab=shop`,
         }),
       })

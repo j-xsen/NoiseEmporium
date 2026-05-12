@@ -1,20 +1,29 @@
-import { Suspense } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Stars, Environment } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
 
-const GOLDEN_ANGLE = 2.399963
+// 3 bubbles per row, spaced 3.8 units apart.
+// Camera at z=22 fov=50: frustum half-width at z=0 is ~5.1 on 9:16 mobile.
+// Outermost bubble center at x=3.8, max radius 1.6 → edge at 5.4 — fits safely.
+const COLS = 3
+const COL_SPACING = 3.8
+const ROW_Y: [number, number] = [3.5, -2.0]
 
-function getBubblePositions(count: number): [number, number, number][] {
-  const radii = [4, 5, 6, 7]
-  return Array.from({ length: count }, (_, i) => {
-    const angle = i * GOLDEN_ANGLE
-    const r = radii[i % 4]
-    const y = Math.sin(i * 1.618) * 1.5
-    return [Math.cos(angle) * r, y, Math.sin(angle) * r]
-  })
+function colX(i: number): number {
+  return (i - (COLS - 1) / 2) * COL_SPACING
+}
+
+interface Item {
+  id: string
+  name: string
+  label: string      // accessible name e.g. "Forever — EP"
+  cover?: string
+  radius: number
+  isActive: boolean
+  onClick: () => void
 }
 
 interface BubbleWorldProps {
@@ -25,65 +34,138 @@ interface BubbleWorldProps {
 
 export default function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
+  const [page, setPage] = useState(0)
 
-  const items = [
-    ...releases.map(r => ({
-      id: r.id,
-      name: r.name,
-      cover: r.cover,
-      radius: r.releaseType === 'album' ? 1.1 : r.releaseType === 'ep' ? 0.85 : 0.65,
-      isActive: r.songs.some(s => s.id === currentSongId),
-      onClick: () => navigate(`/${r.releaseType}/${r.slug}`),
-    })),
-    ...collections.map(c => ({
-      id: c.id,
-      name: c.title,
-      cover: c.cover,
-      radius: 1.0,
-      isActive: c.tracks.some(s => s.id === currentSongId),
-      onClick: () => navigate(`/collection/${c.slug}`),
-    })),
-  ]
+  const row0: Item[] = releases.map(r => ({
+    id: r.id,
+    name: r.name,
+    label: `${r.name} — ${r.releaseType.charAt(0).toUpperCase() + r.releaseType.slice(1)}`,
+    cover: r.cover,
+    radius: r.releaseType === 'album' ? 1.6 : r.releaseType === 'ep' ? 1.2 : 0.9,
+    isActive: r.songs.some(s => s.id === currentSongId),
+    onClick: () => navigate(`/${r.releaseType}/${r.slug}`),
+  }))
 
-  const positions = getBubblePositions(items.length)
+  const row1: Item[] = collections.map(c => ({
+    id: c.id,
+    name: c.title,
+    label: `${c.title} — Collection`,
+    cover: c.cover,
+    radius: 1.4,
+    isActive: c.tracks.some(s => s.id === currentSongId),
+    onClick: () => navigate(`/collection/${c.slug}`),
+  }))
+
+  const maxPage = Math.max(0, Math.ceil(Math.max(row0.length, row1.length) / COLS) - 1)
+  const hasPrev = page > 0
+  const hasNext = page < maxPage
+
+  const visibleRow0 = row0.slice(page * COLS, (page + 1) * COLS)
+  const visibleRow1 = row1.slice(page * COLS, (page + 1) * COLS)
 
   return (
-    <div className="bubble-world">
-      <Canvas camera={{ position: [0, 1, 14], fov: 50 }} dpr={[1, 2]}>
-        <color attach="background" args={['#071220']} />
-        <fog attach="fog" args={['#071220', 20, 35]} />
+    <div className="bubble-world" role="region" aria-label="Music library">
 
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[6, 8, 4]} intensity={1.2} color="#ffe4b5" />
-        <pointLight position={[-8, 4, -6]} intensity={0.8} color="#5ab5e0" />
-        <pointLight position={[8, -4, 6]} intensity={0.5} color="#4090c0" />
+      {/* ── Accessible navigation ─────────────────────────────────────────── */}
+      {/* Visually hidden; keyboard/screen-reader users navigate here.        */}
+      <nav aria-label="Browse music" className="sr-only">
+        {row0.length > 0 && (
+          <section aria-labelledby="bw-releases-heading">
+            <h2 id="bw-releases-heading">Releases</h2>
+            <ul>
+              {row0.map(item => (
+                <li key={item.id}>
+                  <button onClick={item.onClick}>{item.label}</button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {row1.length > 0 && (
+          <section aria-labelledby="bw-collections-heading">
+            <h2 id="bw-collections-heading">Collections</h2>
+            <ul>
+              {row1.map(item => (
+                <li key={item.id}>
+                  <button onClick={item.onClick}>{item.label}</button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </nav>
 
-        <Suspense fallback={null}>
-          <Environment preset="city" />
-        </Suspense>
-        <Stars radius={60} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
+      {/* ── 3-D scene (visual only) ───────────────────────────────────────── */}
+      <div className="bubble-world__canvas" aria-hidden="true">
+        <Canvas
+          camera={{ position: [0, 0.75, 22], fov: 50 }}
+          dpr={[1, 1.5]}
+          gl={{ antialias: false, powerPreference: 'high-performance' }}
+        >
+          {/* Sky blue background — reliable solid color, no shader needed */}
+          <color attach="background" args={['#5ba3d9']} />
 
-        {items.map((item, i) => (
-          <ReleaseBubble
-            key={item.id}
-            position={positions[i]}
-            radius={item.radius}
-            cover={item.cover}
-            name={item.name}
-            isActive={item.isActive}
-            phaseOffset={i * 0.7}
-            onClick={item.onClick}
-          />
-        ))}
+          <ambientLight intensity={0.7} color="#ddeeff" />
+          <directionalLight position={[5, 10, 3]} intensity={1.2} color="#fff8e0" />
+          <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
 
-        <OrbitControls
-          enablePan={false}
-          minDistance={5}
-          maxDistance={22}
-          autoRotate={0}
-          autoRotateSpeed={0.5}
-        />
-      </Canvas>
+          {/* Row 0 — releases */}
+          {visibleRow0.map((item, i) => (
+            <ReleaseBubble
+              key={item.id}
+              position={[colX(i), ROW_Y[0], 0]}
+              radius={item.radius}
+              cover={item.cover}
+              name={item.name}
+              isActive={item.isActive}
+              phaseOffset={i * 0.7}
+              onClick={item.onClick}
+            />
+          ))}
+
+          {/* Row 1 — collections */}
+          {visibleRow1.map((item, i) => (
+            <ReleaseBubble
+              key={item.id}
+              position={[colX(i), ROW_Y[1], 0]}
+              radius={item.radius}
+              cover={item.cover}
+              name={item.name}
+              isActive={item.isActive}
+              phaseOffset={i * 0.7 + 1.5}
+              onClick={item.onClick}
+            />
+          ))}
+
+          <OrbitControls enablePan={false} enableRotate={false} enableZoom={false} />
+        </Canvas>
+      </div>
+
+      {/* ── Page navigation ───────────────────────────────────────────────── */}
+      {maxPage > 0 && (
+        <nav className="bubble-nav" aria-label="Music pages">
+          <button
+            className="bubble-nav__arrow"
+            onClick={() => setPage(p => p - 1)}
+            disabled={!hasPrev}
+            aria-label="Previous page"
+          >
+            ◄
+          </button>
+          <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
+            <span className="sr-only">Page </span>
+            {page + 1} / {maxPage + 1}
+          </span>
+          <button
+            className="bubble-nav__arrow"
+            onClick={() => setPage(p => p + 1)}
+            disabled={!hasNext}
+            aria-label="Next page"
+          >
+            ►
+          </button>
+        </nav>
+      )}
     </div>
   )
 }

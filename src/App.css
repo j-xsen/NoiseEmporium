@@ -1681,11 +1681,84 @@
 }
 .account-delete-btn:disabled { opacity: 0.45; }
 
+/* ── Visually hidden / screen-reader only ──────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+  list-style: none;
+}
+
 /* ── Bubble world ─────────────────────────────────────────────────────────────── */
 
 .bubble-world {
   position: absolute;
   inset: 0;
+}
+
+.bubble-world__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── Page navigation arrows ───────────────────────────────────────────────── */
+
+.bubble-nav {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 5;
+}
+
+.bubble-nav__arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(5, 12, 28, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, opacity 0.2s;
+  cursor: pointer;
+}
+
+.bubble-nav__arrow:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.bubble-nav__arrow:not(:disabled):hover {
+  background: rgba(5, 12, 28, 0.8);
+}
+
+.bubble-nav__arrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.bubble-nav__page {
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.75);
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* ── PS2/WoW release & collection detail ─────────────────────────────────────── */

@@ -8,8 +8,7 @@ import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
 import * as THREE from 'three'
 
-// ── Desktop: 3 columns, camera at z=26 ───────────────────────────────────────
-const COLS = 3
+// ── Desktop: camera at z=26 ──────────────────────────────────────────────────
 const COL_SPACING = 4.5
 const ROW_Y: [number, number] = [4.0, -2.5]
 
@@ -18,9 +17,6 @@ const MOBILE_BREAKPOINT = 640
 const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
 const MOBILE_SPACING = 5.5
 
-function colX(i: number): number {
-  return (i - (COLS - 1) / 2) * COL_SPACING
-}
 
 // ── Camera controller ─────────────────────────────────────────────────────────
 function CameraController({ targetY, targetZ }: { targetY: number; targetZ: number }) {
@@ -90,12 +86,11 @@ interface CarouselRowProps {
   page: number
   rowY: number
   spacing: number
-  defaultRadius: number
   phaseBase: number
   apiRef: MutableRefObject<CarouselApi | null>
 }
 
-function CarouselRow({ items, page, rowY, spacing, defaultRadius, phaseBase, apiRef }: CarouselRowProps) {
+function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef }: CarouselRowProps) {
   const [spring, api] = useSpring(() => ({
     x: -page * spacing,
     config: { tension: 58, friction: 22, mass: 1.1 },
@@ -379,7 +374,6 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 page={pageRow0}
                 rowY={MOBILE_ROW_Y[0]}
                 spacing={MOBILE_SPACING}
-                defaultRadius={2.0}
                 phaseBase={0}
                 apiRef={row0Api}
               />
@@ -388,7 +382,6 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 page={pageRow1}
                 rowY={MOBILE_ROW_Y[1]}
                 spacing={MOBILE_SPACING}
-                defaultRadius={1.8}
                 phaseBase={1.5}
                 apiRef={row1Api}
               />
@@ -400,7 +393,6 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 page={pageRow0}
                 rowY={ROW_Y[0]}
                 spacing={COL_SPACING}
-                defaultRadius={2.0}
                 phaseBase={0}
                 apiRef={row0Api}
               />
@@ -409,7 +401,6 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 page={pageRow1}
                 rowY={ROW_Y[1]}
                 spacing={COL_SPACING}
-                defaultRadius={1.8}
                 phaseBase={1.5}
                 apiRef={row1Api}
               />

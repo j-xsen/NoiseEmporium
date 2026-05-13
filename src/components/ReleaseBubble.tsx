@@ -68,13 +68,14 @@ function getGlareTex() {
   return _glareTex
 }
 
-// ── Micro-bubble orbit params (relative to parent radius) ─────────────────────
-const MICRO = [
-  { phase: 0.0,  orbitR: 1.25, speed: 0.38, size: 0.080, yOff:  0.15 },
-  { phase: 2.1,  orbitR: 1.05, speed: 0.31, size: 0.058, yOff: -0.10 },
-  { phase: 4.2,  orbitR: 1.35, speed: 0.47, size: 0.068, yOff:  0.25 },
-  { phase: 1.05, orbitR: 0.95, speed: 0.28, size: 0.045, yOff:  0.05 },
-]
+// ── Seeded pseudo-RNG (sin-hash) ──────────────────────────────────────────────
+function makeRng(seed: number) {
+  let s = seed * 127.1 + 311.7
+  return () => {
+    s = Math.sin(s) * 43758.5453
+    return s - Math.floor(s)
+  }
+}
 
 // ── Bubble shell with custom shader ──────────────────────────────────────────
 function BubbleShell({ radius, hovered }: { radius: number; hovered: boolean }) {
@@ -132,6 +133,8 @@ interface ReleaseBubbleProps {
   cover?: string
   name: string
   isActive: boolean
+  isFocused: boolean
+  resetKey: number
   phaseOffset: number
   onClick: () => void
 }
@@ -139,22 +142,44 @@ interface ReleaseBubbleProps {
 const ACTIVE_COLOR = new THREE.Color('#5ab5e0')
 
 function ReleaseBubble({
-  position, radius, cover, name, isActive, phaseOffset, onClick,
+  position, radius, cover, name, isActive, isFocused, resetKey, phaseOffset, onClick,
 }: ReleaseBubbleProps) {
   const posGroupRef = useRef<THREE.Group>(null)
   const rotGroupRef = useRef<THREE.Group>(null)
   const microRefs = useRef<(THREE.Mesh | null)[]>([null, null, null, null])
   const [hovered, setHovered] = useState(false)
 
+  useEffect(() => {
+    setHovered(false)
+    document.body.style.cursor = 'auto'
+  }, [resetKey])
+
+  // Per-instance randomized animation params — stable across renders (seeded by phaseOffset)
+  const { bobSpeed, bobAmp, rotSpeed, micro } = useMemo(() => {
+    const r = makeRng(phaseOffset)
+    return {
+      bobSpeed: 0.30 + r() * 0.35,
+      bobAmp:   0.10 + r() * 0.14,
+      rotSpeed: 0.04 + r() * 0.08,
+      micro: Array.from({ length: 4 }, () => ({
+        phase:  r() * Math.PI * 2,
+        orbitR: 0.90 + r() * 0.55,
+        speed:  0.22 + r() * 0.35,
+        size:   0.04 + r() * 0.05,
+        yOff:  (r() - 0.5) * 0.55,
+      })),
+    }
+  }, [phaseOffset])
+
   // Micro-bubble materials — each tiny bubble is also a soap bubble
-  const microMats = useMemo(() => MICRO.map(() => new THREE.ShaderMaterial({
+  const microMats = useMemo(() => micro.map(() => new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uOpacity: { value: 1.1 } },
     vertexShader: BUBBLE_VERT,
     fragmentShader: BUBBLE_FRAG,
     transparent: true,
     depthWrite: false,
     side: THREE.FrontSide,
-  })), [])
+  })), [micro])
 
   useEffect(() => () => microMats.forEach(m => m.dispose()), [microMats])
 
@@ -163,20 +188,19 @@ function ReleaseBubble({
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     if (posGroupRef.current) {
-      posGroupRef.current.position.y = position[1] + Math.sin(t * 0.5 + phaseOffset) * 0.18
-      const target = hovered ? 1.1 : 1
+      posGroupRef.current.position.y = position[1] + Math.sin(t * bobSpeed + phaseOffset) * bobAmp
+      const target = isFocused ? (hovered ? 1.62 : 1.50) : hovered ? 1.18 : isActive ? 1.08 : 1
       const s = posGroupRef.current.scale.x
       posGroupRef.current.scale.setScalar(s + (target - s) * 0.08)
     }
     if (rotGroupRef.current) {
-      rotGroupRef.current.rotation.y = t * 0.08 + phaseOffset
+      rotGroupRef.current.rotation.y = t * rotSpeed + phaseOffset
     }
-    // Sync micro-bubble shader time + orbit positions
     microMats.forEach(m => { m.uniforms.uTime.value = t })
     microRefs.current.forEach((ref, i) => {
       if (!ref) return
-      const mb = MICRO[i]
-      const angle = t * mb.speed + mb.phase + phaseOffset
+      const mb = micro[i]
+      const angle = t * mb.speed + mb.phase
       ref.position.x = Math.cos(angle) * mb.orbitR * radius
       ref.position.y = mb.yOff * radius + Math.sin(t * 0.35 + mb.phase) * mb.orbitR * radius * 0.5
       ref.position.z = Math.sin(angle) * mb.orbitR * radius * 0.55
@@ -234,7 +258,7 @@ function ReleaseBubble({
       </sprite>
 
       {/* Micro-bubble satellite particles — also use the soap bubble shader */}
-      {MICRO.map((mb, i) => (
+      {micro.map((mb, i) => (
         <mesh key={i} ref={el => { microRefs.current[i] = el }} renderOrder={3}>
           <sphereGeometry args={[mb.size * radius, 8, 8]} />
           <primitive object={microMats[i]} attach="material" />

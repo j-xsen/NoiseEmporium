@@ -107,20 +107,24 @@ function ReleaseBubble({
 
       {/* Label — Billboard so it always faces the camera as the bubble bobs */}
       <Billboard>
-        <Text
-          position={[0, -(radius + 0.22), 0]}
-          fontSize={0.30}
-          color={hovered ? '#ffffff' : '#f0e6c0'}
-          anchorX="center"
-          anchorY="top"
-          maxWidth={radius * 3}
-          textAlign="center"
-          outlineWidth={0.01}
-          outlineColor="#0a1e35"
-          outlineOpacity={0.85}
-        >
-          {name}
-        </Text>
+        <Suspense fallback={null}>
+          <Text
+            font="/fonts/dm-sans-400.ttf"
+            position={[0, -(radius + 0.35), 0]}
+            fontSize={0.45}
+            color={hovered ? '#ffffff' : '#f0e6c0'}
+            anchorX="center"
+            anchorY="top"
+            maxWidth={radius * 3.5}
+            textAlign="center"
+            outlineWidth={0.03}
+            outlineColor="#0a1e35"
+            outlineOpacity={0.9}
+            renderOrder={2}
+          >
+            {name}
+          </Text>
+        </Suspense>
       </Billboard>
     </group>
   )

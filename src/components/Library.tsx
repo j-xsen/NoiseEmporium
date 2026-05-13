@@ -3,6 +3,7 @@
 // Releases are split by releaseType: albums/EPs render as art cards; singles
 // render as a compact list so they don't take up full card real estate.
 
+import { useEffect } from 'react'
 import CoverArt from './CoverArt'
 import { LockIcon } from './Icons'
 import type { Collection, Playlist, Release, Song } from '../types'
@@ -26,6 +27,12 @@ export default function Library({
 }: LibraryProps) {
   const albums  = releases.filter(r => r.releaseType !== 'single')
   const singles = releases.filter(r => r.releaseType === 'single')
+
+  useEffect(() => {
+    if (window.location.hash === '#collections') {
+      document.getElementById('collections')?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
 
   const hasCollections = collections.length > 0 || featuredPlaylists.length > 0
   const hasMultipleSections = (albums.length > 0 ? 1 : 0) + (singles.length > 0 ? 1 : 0) + (hasCollections ? 1 : 0) > 1
@@ -105,7 +112,7 @@ export default function Library({
 
             {/* ── Collections & playlists ── */}
             {hasCollections && (
-              <section className="home-section">
+              <section id="collections" className="home-section">
                 <h2 className="home-section__title">Collections</h2>
                 <ul className="release-grid">
                   {collections.map(collection => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, GradientTexture } from '@react-three/drei'
@@ -16,7 +16,7 @@ const ROW_Y: [number, number] = [4.0, -2.5]
 // Row 1 at y=-4.54 → top of bubble peeks ~20% (0.72 units) at bottom of screen.
 // Neighbor spacing 3.8 → inner edge at 1.8, visible: 2.62-1.8=0.82 (20% peek).
 const MOBILE_BREAKPOINT = 640
-const MOBILE_ROW_Y: [number, number] = [1.2, -4.54]
+const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
 const MOBILE_SPACING = 3.8
 
 function colX(i: number): number {
@@ -28,7 +28,6 @@ function CameraController({ targetY, targetZ }: { targetY: number; targetZ: numb
   const ty = useRef(targetY)
   const tz = useRef(targetZ)
 
-  // Snap to position immediately on mount so bubbles are full-size on first frame
   useLayoutEffect(() => {
     camera.position.y = targetY
     camera.position.z = targetZ
@@ -36,7 +35,6 @@ function CameraController({ targetY, targetZ }: { targetY: number; targetZ: numb
     tz.current = targetZ
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Animate on subsequent changes (e.g. resizing between mobile / desktop)
   useEffect(() => {
     ty.current = targetY
     tz.current = targetZ
@@ -47,6 +45,27 @@ function CameraController({ targetY, targetZ }: { targetY: number; targetZ: numb
     camera.position.z += (tz.current - camera.position.z) * 0.09
   })
   return null
+}
+
+// Animates a group's Y offset — used to scroll mobile bubble rows without
+// moving the camera (OrbitControls always targets the origin).
+function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; children: ReactNode }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const ty = useRef(targetOffsetY)
+
+  useLayoutEffect(() => {
+    if (groupRef.current) groupRef.current.position.y = targetOffsetY
+    ty.current = targetOffsetY
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { ty.current = targetOffsetY }, [targetOffsetY])
+
+  useFrame(() => {
+    if (!groupRef.current) return
+    groupRef.current.position.y += (ty.current - groupRef.current.position.y) * 0.09
+  })
+
+  return <group ref={groupRef}>{children}</group>
 }
 
 function ChevronLeft() {
@@ -89,6 +108,25 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
   const [pageRow0, setPageRow0] = useState(0)
   const [pageRow1, setPageRow1] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
+  // Mobile: which row the camera is centered on (0=releases, 1=collections)
+  const [focusedRow, setFocusedRow] = useState(() =>
+    window.location.hash === '#collections' ? 1 : 0
+  )
+
+  // Sync hash → focusedRow on back/forward navigation
+  useEffect(() => {
+    const onHash = () => setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // Sync focusedRow → hash
+  useEffect(() => {
+    const hash = focusedRow === 1 ? '#collections' : ''
+    if (window.location.hash !== hash) {
+      history.replaceState(null, '', hash || window.location.pathname)
+    }
+  }, [focusedRow])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
@@ -100,6 +138,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
     setPage(0)
     setPageRow0(0)
     setPageRow1(0)
+    setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
   }, [isMobile])
 
   const row0: Item[] = releases.map(r => ({
@@ -163,7 +202,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           dpr={[1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
         >
-          <CameraController targetY={isMobile ? 1.2 : 0.75} targetZ={isMobile ? 10 : 26} />
+          <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 10 : 26} />
 
           <mesh position={[0, 0, -30]} scale={[80, 55, 1]}>
             <planeGeometry />
@@ -180,7 +219,9 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
 
           {isMobile ? (
-            <>
+            // Mobile: ScrollGroup shifts all bubbles so the focused row lands
+            // at MOBILE_ROW_Y[0] (where the camera is pointed).
+            <ScrollGroup targetOffsetY={focusedRow === 0 ? 0 : MOBILE_ROW_Y[0] - MOBILE_ROW_Y[1]}>
               {/* Mobile row 0 — releases carousel */}
               {row0.map((item, i) => {
                 if (Math.abs(i - pageRow0) > 1) return null
@@ -213,7 +254,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                   />
                 )
               })}
-            </>
+            </ScrollGroup>
           ) : (
             <>
               {visibleRow0.map((item, i) => (
@@ -247,37 +288,66 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         </Canvas>
       </div>
 
+      {/* ── Mobile: row toggle arrow ──────────────────────────────────────── */}
+      {isMobile && (
+        <button
+          className="bubble-row-toggle"
+          onClick={() => setFocusedRow(r => r === 0 ? 1 : 0)}
+          aria-label={focusedRow === 0 ? 'View Collections' : 'View Releases'}
+        >
+          {focusedRow === 0 ? (
+            <>
+              <span>Collections</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </>
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15" /></svg>
+              <span>Releases</span>
+            </>
+          )}
+        </button>
+      )}
+
       {/* ── Mobile: independent side arrows per row ───────────────────────── */}
-      {isMobile && row0.length > 1 && (
+      {isMobile && focusedRow === 0 && row0.length > 1 && (
         <>
           <button
-            className="bubble-side-arrow bubble-side-arrow--left bubble-side-arrow--row0"
+            className="bubble-side-arrow bubble-side-arrow--left"
             onClick={() => setPageRow0(p => p - 1)}
             disabled={pageRow0 === 0}
             aria-label="Previous release"
           ><ChevronLeft /></button>
           <button
-            className="bubble-side-arrow bubble-side-arrow--right bubble-side-arrow--row0"
+            className="bubble-side-arrow bubble-side-arrow--right"
             onClick={() => setPageRow0(p => p + 1)}
             disabled={pageRow0 === row0.length - 1}
             aria-label="Next release"
           ><ChevronRight /></button>
         </>
       )}
-      {isMobile && row1.length > 1 && (
+      {isMobile && focusedRow === 1 && row1.length > 1 && (
         <>
           <button
-            className="bubble-side-arrow bubble-side-arrow--left bubble-side-arrow--row1"
+            className="bubble-side-arrow bubble-side-arrow--left"
             onClick={() => setPageRow1(p => p - 1)}
             disabled={pageRow1 === 0}
             aria-label="Previous collection"
           ><ChevronLeft /></button>
           <button
-            className="bubble-side-arrow bubble-side-arrow--right bubble-side-arrow--row1"
+            className="bubble-side-arrow bubble-side-arrow--right"
             onClick={() => setPageRow1(p => p + 1)}
             disabled={pageRow1 === row1.length - 1}
             aria-label="Next collection"
           ><ChevronRight /></button>
+        </>
+      )}
+
+      {/* ── Desktop: row labels ──────────────────────────────────────────── */}
+      {!isMobile && (
+        <>
+          <span className="bubble-row-label bubble-row-label--top">Releases</span>
+          <span className="bubble-row-label bubble-row-label--bottom">Collections</span>
         </>
       )}
 

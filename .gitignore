@@ -31,3 +31,4 @@ dist-ssr
 install.cmd
 /.junie
 /.agents
+/conversion

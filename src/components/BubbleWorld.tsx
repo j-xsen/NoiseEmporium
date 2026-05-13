@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, GradientTexture } from '@react-three/drei'
+import { OrbitControls, GradientTexture, Environment } from '@react-three/drei'
 import { useSpring, animated } from '@react-spring/three'
 import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
@@ -98,7 +98,7 @@ interface CarouselRowProps {
 function CarouselRow({ items, page, rowY, spacing, defaultRadius, phaseBase, apiRef }: CarouselRowProps) {
   const [spring, api] = useSpring(() => ({
     x: -page * spacing,
-    config: { tension: 320, friction: 28 },
+    config: { tension: 95, friction: 16, mass: 1.3 },
   }))
 
   // Expose the spring API to the HTML drag layer through the ref.
@@ -339,6 +339,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           <ambientLight intensity={0.7} color="#ddeeff" />
           <directionalLight position={[5, 10, 3]} intensity={1.2} color="#fff8e0" />
           <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
+          <Environment preset="dawn" background={false} />
 
           {isMobile ? (
             <ScrollGroup targetOffsetY={focusedRow === 0 ? 0 : MOBILE_ROW_Y[0] - MOBILE_ROW_Y[1]}>

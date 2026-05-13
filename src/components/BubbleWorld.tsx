@@ -1,9 +1,12 @@
-import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, GradientTexture } from '@react-three/drei'
+import { useSpring, animated } from '@react-spring/three'
+import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
+import * as THREE from 'three'
 
 // ── Desktop: 3 columns, camera at z=26 ───────────────────────────────────────
 const COLS = 3
@@ -11,10 +14,6 @@ const COL_SPACING = 4.5
 const ROW_Y: [number, number] = [4.0, -2.5]
 
 // ── Mobile: two independent carousels, camera at z=10 y=1.2 ─────────────────
-// z=10 fov=50 portrait 9:16: half-height≈4.66, half-width≈2.62.
-// Row 0 at y=1.2 (= camera y) → centered on screen.
-// Row 1 at y=-4.54 → top of bubble peeks ~20% (0.72 units) at bottom of screen.
-// Neighbor spacing 3.8 → inner edge at 1.8, visible: 2.62-1.8=0.82 (20% peek).
 const MOBILE_BREAKPOINT = 640
 const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
 const MOBILE_SPACING = 3.8
@@ -23,6 +22,7 @@ function colX(i: number): number {
   return (i - (COLS - 1) / 2) * COL_SPACING
 }
 
+// ── Camera controller ─────────────────────────────────────────────────────────
 function CameraController({ targetY, targetZ }: { targetY: number; targetZ: number }) {
   const { camera } = useThree()
   const ty = useRef(targetY)
@@ -47,8 +47,19 @@ function CameraController({ targetY, targetZ }: { targetY: number; targetZ: numb
   return null
 }
 
-// Animates a group's Y offset — used to scroll mobile bubble rows without
-// moving the camera (OrbitControls always targets the origin).
+// ── World-units-per-pixel calculator ─────────────────────────────────────────
+// Reads the live camera + viewport from R3F and writes to a ref so the HTML
+// drag handler (outside the Canvas) can convert pixel movement to world units.
+function WorldScaleProbe({ scaleRef }: { scaleRef: MutableRefObject<number> }) {
+  const { camera, size } = useThree()
+  useFrame(() => {
+    const cam = camera as THREE.PerspectiveCamera
+    scaleRef.current = (2 * cam.position.z * Math.tan((cam.fov * Math.PI) / 360)) / size.height
+  })
+  return null
+}
+
+// ── Y-scroll group (shifts rows without moving camera) ────────────────────────
 function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; children: ReactNode }) {
   const groupRef = useRef<THREE.Group>(null)
   const ty = useRef(targetOffsetY)
@@ -68,6 +79,64 @@ function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; child
   return <group ref={groupRef}>{children}</group>
 }
 
+// ── Spring-animated carousel row ──────────────────────────────────────────────
+export interface CarouselApi {
+  drag: (worldX: number) => void
+  settle: (page: number) => void
+}
+
+interface CarouselRowProps {
+  items: Item[]
+  page: number
+  rowY: number
+  spacing: number
+  defaultRadius: number
+  phaseBase: number
+  apiRef: MutableRefObject<CarouselApi | null>
+}
+
+function CarouselRow({ items, page, rowY, spacing, defaultRadius, phaseBase, apiRef }: CarouselRowProps) {
+  const [spring, api] = useSpring(() => ({
+    x: -page * spacing,
+    config: { tension: 320, friction: 28 },
+  }))
+
+  // Expose the spring API to the HTML drag layer through the ref.
+  // Re-register whenever page changes so settle() closes over the latest value.
+  useEffect(() => {
+    apiRef.current = {
+      drag:   (worldX) => api.start({ x: -page * spacing + worldX, immediate: true }),
+      settle: (newPage) => api.start({ x: -newPage * spacing, immediate: false }),
+    }
+  }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep spring in sync when page changes via buttons / arrow keys
+  useEffect(() => {
+    api.start({ x: -page * spacing })
+  }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <animated.group position-x={spring.x}>
+      {items.map((item, i) => {
+        if (Math.abs(i - page) > 2) return null
+        return (
+          <ReleaseBubble
+            key={item.id}
+            position={[i * spacing, rowY, 0]}
+            radius={item.radius}
+            cover={item.cover}
+            name={item.name}
+            isActive={item.isActive}
+            phaseOffset={i * 0.7 + phaseBase}
+            onClick={item.onClick}
+          />
+        )
+      })}
+    </animated.group>
+  )
+}
+
+// ── SVG arrows ────────────────────────────────────────────────────────────────
 function ChevronLeft() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -84,6 +153,7 @@ function ChevronRight() {
   )
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Item {
   id: string
   name: string
@@ -100,27 +170,24 @@ interface BubbleWorldProps {
   currentSongId?: string
 }
 
+// ── BubbleWorld ───────────────────────────────────────────────────────────────
 export default function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
-  // Desktop: shared page across both rows
   const [page, setPage] = useState(0)
-  // Mobile: independent page per row
   const [pageRow0, setPageRow0] = useState(0)
   const [pageRow1, setPageRow1] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
-  // Mobile: which row the camera is centered on (0=releases, 1=collections)
   const [focusedRow, setFocusedRow] = useState(() =>
     window.location.hash === '#collections' ? 1 : 0
   )
 
-  // Sync hash → focusedRow on back/forward navigation
+  // hash ↔ focusedRow sync
   useEffect(() => {
     const onHash = () => setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // Sync focusedRow → hash
   useEffect(() => {
     const hash = focusedRow === 1 ? '#collections' : ''
     if (window.location.hash !== hash) {
@@ -161,12 +228,66 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
     onClick: () => navigate(`/collection/${c.slug}`),
   }))
 
-  // Desktop pagination
   const desktopMaxPage = Math.max(0, Math.ceil(Math.max(row0.length, row1.length) / COLS) - 1)
   const hasPrev = page > 0
   const hasNext = page < desktopMaxPage
   const visibleRow0 = row0.slice(page * COLS, (page + 1) * COLS)
   const visibleRow1 = row1.slice(page * COLS, (page + 1) * COLS)
+
+  // Spring APIs exposed by CarouselRow children — written to from useDrag
+  const row0Api = useRef<CarouselApi | null>(null)
+  const row1Api = useRef<CarouselApi | null>(null)
+  // World-units-per-pixel, updated every frame by WorldScaleProbe
+  const worldScaleRef = useRef(0.024)
+  const canvasRef = useRef<HTMLDivElement>(null)
+
+  // ── Drag gesture ────────────────────────────────────────────────────────────
+  // filterTaps suppresses click-sized drags; threshold ignores micro-movements.
+  const bind = useDrag(
+    ({ movement: [mx], down, last, velocity: [vx], direction: [dx] }) => {
+      const worldDx = mx * worldScaleRef.current
+
+      if (isMobile) {
+        const activeApi = focusedRow === 0 ? row0Api : row1Api
+        const activePage = focusedRow === 0 ? pageRow0 : pageRow1
+        const maxPage = focusedRow === 0 ? row0.length - 1 : row1.length - 1
+
+        if (!last) {
+          activeApi.current?.drag(worldDx)
+        } else {
+          // Flick or drag past 60px → advance page
+          const flick = Math.abs(vx) > 0.4
+          let newPage = activePage
+          if (flick || Math.abs(mx) > 60) {
+            newPage = dx < 0
+              ? Math.min(activePage + 1, maxPage)
+              : Math.max(activePage - 1, 0)
+          }
+          if (focusedRow === 0) setPageRow0(newPage)
+          else setPageRow1(newPage)
+          activeApi.current?.settle(newPage)
+        }
+      } else {
+        // Desktop: both rows share one page
+        if (!last) {
+          row0Api.current?.drag(worldDx)
+          row1Api.current?.drag(worldDx)
+        } else {
+          const flick = Math.abs(vx) > 0.4
+          let newPage = page
+          if (flick || Math.abs(mx) > 60) {
+            newPage = dx < 0
+              ? Math.min(page + 1, desktopMaxPage)
+              : Math.max(page - 1, 0)
+          }
+          setPage(newPage)
+          row0Api.current?.settle(newPage)
+          row1Api.current?.settle(newPage)
+        }
+      }
+    },
+    { filterTaps: true, threshold: 8 }
+  )
 
   return (
     <div className="bubble-world" role="region" aria-label="Music library">
@@ -195,14 +316,15 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         )}
       </nav>
 
-      {/* ── 3-D scene (visual only) ───────────────────────────────────────── */}
-      <div className="bubble-world__canvas" aria-hidden="true">
+      {/* ── 3-D scene ────────────────────────────────────────────────────── */}
+      <div ref={canvasRef} className="bubble-world__canvas" aria-hidden="true" {...bind()}>
         <Canvas
           camera={{ position: [0, 0.75, 26], fov: 50 }}
           dpr={[1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
         >
           <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 10 : 26} />
+          <WorldScaleProbe scaleRef={worldScaleRef} />
 
           <mesh position={[0, 0, -30]} scale={[80, 55, 1]}>
             <planeGeometry />
@@ -219,68 +341,46 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
 
           {isMobile ? (
-            // Mobile: ScrollGroup shifts all bubbles so the focused row lands
-            // at MOBILE_ROW_Y[0] (where the camera is pointed).
             <ScrollGroup targetOffsetY={focusedRow === 0 ? 0 : MOBILE_ROW_Y[0] - MOBILE_ROW_Y[1]}>
-              {/* Mobile row 0 — releases carousel */}
-              {row0.map((item, i) => {
-                if (Math.abs(i - pageRow0) > 1) return null
-                return (
-                  <ReleaseBubble
-                    key={item.id}
-                    position={[(i - pageRow0) * MOBILE_SPACING, MOBILE_ROW_Y[0], 0]}
-                    radius={2.0}
-                    cover={item.cover}
-                    name={item.name}
-                    isActive={item.isActive}
-                    phaseOffset={i * 0.7}
-                    onClick={item.onClick}
-                  />
-                )
-              })}
-              {/* Mobile row 1 — collections carousel */}
-              {row1.map((item, i) => {
-                if (Math.abs(i - pageRow1) > 1) return null
-                return (
-                  <ReleaseBubble
-                    key={item.id}
-                    position={[(i - pageRow1) * MOBILE_SPACING, MOBILE_ROW_Y[1], 0]}
-                    radius={1.8}
-                    cover={item.cover}
-                    name={item.name}
-                    isActive={item.isActive}
-                    phaseOffset={i * 0.7 + 1.5}
-                    onClick={item.onClick}
-                  />
-                )
-              })}
+              <CarouselRow
+                items={row0}
+                page={pageRow0}
+                rowY={MOBILE_ROW_Y[0]}
+                spacing={MOBILE_SPACING}
+                defaultRadius={2.0}
+                phaseBase={0}
+                apiRef={row0Api}
+              />
+              <CarouselRow
+                items={row1}
+                page={pageRow1}
+                rowY={MOBILE_ROW_Y[1]}
+                spacing={MOBILE_SPACING}
+                defaultRadius={1.8}
+                phaseBase={1.5}
+                apiRef={row1Api}
+              />
             </ScrollGroup>
           ) : (
             <>
-              {visibleRow0.map((item, i) => (
-                <ReleaseBubble
-                  key={item.id}
-                  position={[colX(i), ROW_Y[0], 0]}
-                  radius={item.radius}
-                  cover={item.cover}
-                  name={item.name}
-                  isActive={item.isActive}
-                  phaseOffset={i * 0.7}
-                  onClick={item.onClick}
-                />
-              ))}
-              {visibleRow1.map((item, i) => (
-                <ReleaseBubble
-                  key={item.id}
-                  position={[colX(i), ROW_Y[1], 0]}
-                  radius={item.radius}
-                  cover={item.cover}
-                  name={item.name}
-                  isActive={item.isActive}
-                  phaseOffset={i * 0.7 + 1.5}
-                  onClick={item.onClick}
-                />
-              ))}
+              <CarouselRow
+                items={visibleRow0}
+                page={0}
+                rowY={ROW_Y[0]}
+                spacing={COL_SPACING}
+                defaultRadius={2.0}
+                phaseBase={0}
+                apiRef={row0Api}
+              />
+              <CarouselRow
+                items={visibleRow1}
+                page={0}
+                rowY={ROW_Y[1]}
+                spacing={COL_SPACING}
+                defaultRadius={1.8}
+                phaseBase={1.5}
+                apiRef={row1Api}
+              />
             </>
           )}
 
@@ -309,37 +409,17 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         </button>
       )}
 
-      {/* ── Mobile: independent side arrows per row ───────────────────────── */}
+      {/* ── Mobile: side arrows ───────────────────────────────────────────── */}
       {isMobile && focusedRow === 0 && row0.length > 1 && (
         <>
-          <button
-            className="bubble-side-arrow bubble-side-arrow--left"
-            onClick={() => setPageRow0(p => p - 1)}
-            disabled={pageRow0 === 0}
-            aria-label="Previous release"
-          ><ChevronLeft /></button>
-          <button
-            className="bubble-side-arrow bubble-side-arrow--right"
-            onClick={() => setPageRow0(p => p + 1)}
-            disabled={pageRow0 === row0.length - 1}
-            aria-label="Next release"
-          ><ChevronRight /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow0(p => p - 1)} disabled={pageRow0 === 0} aria-label="Previous release"><ChevronLeft /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow0(p => p + 1)} disabled={pageRow0 === row0.length - 1} aria-label="Next release"><ChevronRight /></button>
         </>
       )}
       {isMobile && focusedRow === 1 && row1.length > 1 && (
         <>
-          <button
-            className="bubble-side-arrow bubble-side-arrow--left"
-            onClick={() => setPageRow1(p => p - 1)}
-            disabled={pageRow1 === 0}
-            aria-label="Previous collection"
-          ><ChevronLeft /></button>
-          <button
-            className="bubble-side-arrow bubble-side-arrow--right"
-            onClick={() => setPageRow1(p => p + 1)}
-            disabled={pageRow1 === row1.length - 1}
-            aria-label="Next collection"
-          ><ChevronRight /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow1(p => p - 1)} disabled={pageRow1 === 0} aria-label="Previous collection"><ChevronLeft /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow1(p => p + 1)} disabled={pageRow1 === row1.length - 1} aria-label="Next collection"><ChevronRight /></button>
         </>
       )}
 
@@ -351,25 +431,15 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         </>
       )}
 
-      {/* ── Desktop: shared bottom nav ────────────────────────────────────── */}
+      {/* ── Desktop: page nav ────────────────────────────────────────────── */}
       {!isMobile && desktopMaxPage > 0 && (
         <nav className="bubble-nav" aria-label="Music pages">
-          <button
-            className="bubble-nav__arrow"
-            onClick={() => setPage(p => p - 1)}
-            disabled={!hasPrev}
-            aria-label="Previous page"
-          ><ChevronLeft /></button>
+          <button className="bubble-nav__arrow" onClick={() => setPage(p => p - 1)} disabled={!hasPrev} aria-label="Previous page"><ChevronLeft /></button>
           <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
             <span className="sr-only">Page </span>
             {page + 1} / {desktopMaxPage + 1}
           </span>
-          <button
-            className="bubble-nav__arrow"
-            onClick={() => setPage(p => p + 1)}
-            disabled={!hasNext}
-            aria-label="Next page"
-          ><ChevronRight /></button>
+          <button className="bubble-nav__arrow" onClick={() => setPage(p => p + 1)} disabled={!hasNext} aria-label="Next page"><ChevronRight /></button>
         </nav>
       )}
     </div>

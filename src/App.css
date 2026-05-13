@@ -1706,6 +1706,7 @@
 .bubble-world__canvas {
   position: absolute;
   inset: 0;
+  touch-action: none;
 }
 
 /* ── Page navigation arrows ───────────────────────────────────────────────── */

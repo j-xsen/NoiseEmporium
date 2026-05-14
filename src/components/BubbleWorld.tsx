@@ -91,28 +91,33 @@ interface CarouselRowProps {
   spacing: number
   phaseBase: number
   apiRef: MutableRefObject<CarouselApi | null>
+  rowFocused: boolean
 }
 
-function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef }: CarouselRowProps) {
+function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused }: CarouselRowProps) {
   const [spring, api] = useSpring(() => ({
     x: -page * spacing,
     config: { tension: 58, friction: 22, mass: 1.1 },
   }))
 
-  // Expose the spring API to the HTML drag layer through the ref.
-  // Re-register whenever page changes so settle() closes over the latest value.
+  // Expose the spring API — drag is gated so unfocused rows never move.
   useEffect(() => {
     apiRef.current = {
-      drag:   (worldX)  => api.start({ x: -page * spacing + worldX, immediate: true }),
+      drag:   (worldX)  => { if (!rowFocused) return; api.start({ x: -page * spacing + worldX, immediate: true }) },
       settle: (newPage) => api.start({ x: -newPage * spacing, immediate: false }),
       snap:   (newPage) => api.start({ x: -newPage * spacing, immediate: true }),
     }
-  }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, spacing, rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep spring in sync when page changes via buttons / arrow keys
   useEffect(() => {
     api.start({ x: -page * spacing })
   }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When this row regains focus, snap immediately to its correct page position.
+  useEffect(() => {
+    if (rowFocused) api.start({ x: -page * spacing, immediate: true })
+  }, [rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <animated.group position-x={spring.x}>
@@ -126,7 +131,7 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef }: Carousel
             cover={item.cover}
             name={item.name}
             isActive={item.isActive}
-            isFocused={i === page}
+            isFocused={i === page && rowFocused}
             resetKey={page}
             phaseOffset={i * 0.7 + phaseBase}
             onClick={item.onClick}
@@ -429,6 +434,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 spacing={MOBILE_SPACING}
                 phaseBase={0}
                 apiRef={row0Api}
+                rowFocused={focusedRow === 0}
               />
               <CarouselRow
                 items={row1}
@@ -437,6 +443,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 spacing={MOBILE_SPACING}
                 phaseBase={1.5}
                 apiRef={row1Api}
+                rowFocused={focusedRow === 1}
               />
             </ScrollGroup>
           ) : (
@@ -448,6 +455,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 spacing={COL_SPACING}
                 phaseBase={0}
                 apiRef={row0Api}
+                rowFocused={true}
               />
               <CarouselRow
                 items={row1}
@@ -456,6 +464,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
                 spacing={COL_SPACING}
                 phaseBase={1.5}
                 apiRef={row1Api}
+                rowFocused={true}
               />
             </>
           )}

@@ -1,3 +1,10 @@
+// api/account/index.ts — account self-service actions (requires auth).
+//
+//   POST   — change password. Body: { currentPassword, newPassword }
+//   DELETE — delete account.  Body: { password }
+//            Cascades: deletes playlists → playlist_songs (via FK), and song_plays.
+//            The user row is deleted last; ON DELETE CASCADE handles most cleanup.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
@@ -41,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!valid) return res.status(401).json({ error: 'Incorrect password' })
       await sql`DELETE FROM playlist_songs WHERE playlist_id IN (SELECT id FROM playlists WHERE user_id = ${userId})`
       await sql`DELETE FROM playlists WHERE user_id = ${userId}`
-      await sql`DELETE FROM play_events WHERE user_id = ${userId}`
+      await sql`DELETE FROM song_plays WHERE user_id = ${userId}`
       await sql`DELETE FROM users WHERE id = ${userId}`
       return res.json({ ok: true })
     } catch (err) {

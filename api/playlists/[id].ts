@@ -1,3 +1,6 @@
+// api/playlists/[id].ts — PATCH (rename) and DELETE for a single playlist.
+// Both methods require the requesting user to own the playlist.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'

@@ -9,6 +9,11 @@ Users authenticate with email + password. JWT tokens are issued on login (30-day
 - Frontend auth screen exists (`src/components/AuthScreen.tsx`)
 - **Restriction:** Currently gated so only Jaxsen can log in (Phase 1 intent)
 
+### Account Management (fully implemented)
+- **Change password** — `POST /api/account` with `currentPassword` + `newPassword`; bcrypt-verified
+- **Delete account** — `DELETE /api/account` with password confirmation; cascades playlists + play history
+- Both actions are accessible via `AccountModal.tsx` (opened from the Home screen header)
+
 ### Planned
 - Open registration for Phase 2
 - User profile (display name, avatar)
@@ -38,7 +43,7 @@ Users authenticate with email + password. JWT tokens are issued on login (30-day
 ### Premium Tier
 - Full stream of the entire catalog
 - Access to all Collections and Collection tracks regardless of `memberOnly`
-- Three price points: **$1 / $3 / $5 per month** — same access, higher tiers contribute more to artists
+- Currently one active price point: **$5/month** — the $10 and $15 tiers are defined but hidden in the shop; multiple tiers felt like unnecessary friction for now and can be re-enabled in `shopData.ts` when the platform has enough artists to justify it
 - Revenue split per subscription:
   - **90%** distributed to artists proportionally based on songs listened to that month
   - **10%** goes to Noise Emporium to fund infrastructure and operations
@@ -59,11 +64,15 @@ Each paid subscription month:
 
 > Example: A $3/month subscriber listens to 100 songs. Song A played 20 times = 20% share = $0.54 to Song A's artist.
 
+### Implemented
+- `Shop.tsx` — membership purchase UI; filter by category; Stripe Checkout flow
+- `api/stripe/checkout.ts` — creates Checkout sessions; fulfills on return
+- `api/stripe/webhook.ts` — upgrades `users.tier` to `'premium'` on `checkout.session.completed`
+- `AccountModal.tsx` — shows current tier; change password; delete account
+
 ### Not Yet Implemented
 - Preview enforcement in the player (truncate playback at ~30s for non-premium non-free-stream songs — current model locks entirely instead of previewing)
 - Auth gate on downloads (currently no check)
-- Stripe or payment processor integration
-- Subscription management UI and webhook to flip `users.tier`
 - Play-weighted revenue calculation
 - Artist payout system
 

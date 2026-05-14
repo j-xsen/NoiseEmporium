@@ -1,3 +1,7 @@
+// ReleaseDetail.tsx — track list for a single release (album / EP / single).
+// Free users see public tracks normally and locked tracks greyed out with a lock icon.
+// Premium users see and can play everything.
+
 import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
 import { songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
@@ -23,6 +27,7 @@ export default function ReleaseDetail({
     : null
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
+  // Queue passed to onPlay excludes locked tracks for free users so auto-advance skips them.
   const playableSongs = isPremium ? release.songs : publicSongs
 
   function renderTrack(song: Song, displayNum: number, locked: boolean) {

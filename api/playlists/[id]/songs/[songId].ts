@@ -1,3 +1,6 @@
+// api/playlists/[id]/songs/[songId].ts — DELETE /api/playlists/:id/songs/:songId
+// Removes a song from a playlist. Requires the requesting user to own the playlist.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../../../_db.js'
 import { requireAuth } from '../../../_auth.js'

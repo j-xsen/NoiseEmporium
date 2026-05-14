@@ -27,24 +27,25 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     priceId: 'price_1TWopFKHXukW25xlfG3qRJea',
     mode: 'subscription',
   },
-  {
-    id: 'membership-tier-2',
-    category: 'membership',
-    name: 'Tier 2',
-    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
-    price: 1000,
-    priceId: 'price_1TWopTKHXukW25xlSDVvHEl5',
-    mode: 'subscription',
-  },
-  {
-    id: 'membership-tier-3',
-    category: 'membership',
-    name: 'Tier 3',
-    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
-    price: 1500,
-    priceId: 'price_1TWopcKHXukW25xlLoiFSlmW',
-    mode: 'subscription',
-  },
+  // Tier 2 and Tier 3 hidden until ready
+  // {
+  //   id: 'membership-tier-2',
+  //   category: 'membership',
+  //   name: 'Tier 2',
+  //   description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
+  //   price: 1000,
+  //   priceId: 'price_1TWopTKHXukW25xlSDVvHEl5',
+  //   mode: 'subscription',
+  // },
+  // {
+  //   id: 'membership-tier-3',
+  //   category: 'membership',
+  //   name: 'Tier 3',
+  //   description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
+  //   price: 1500,
+  //   priceId: 'price_1TWopcKHXukW25xlLoiFSlmW',
+  //   mode: 'subscription',
+  // },
   // ── CDs ───────────────────────────────────────────────────────────────────
   // Add one entry per physical CD you sell. Set priceId to the Stripe Price ID.
   // {

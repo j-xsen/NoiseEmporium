@@ -1,3 +1,6 @@
+// api/auth/register.ts — POST /api/auth/register
+// Creates a new user and immediately returns a JWT so the client is logged in.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
@@ -21,6 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = rows[0]
     res.json({ token: signToken(user.id), user: { id: user.id, email: user.email, tier: user.tier } })
   } catch (err: unknown) {
+    // 23505 = Postgres unique-violation; the users_email_unique constraint fired.
     if ((err as { code?: string }).code === '23505') return res.status(409).json({ error: 'Email already in use' })
     console.error(err)
     res.status(500).json({ error: 'Server error' })

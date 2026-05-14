@@ -1,3 +1,17 @@
+// api/stripe/checkout.ts — POST /api/stripe/checkout
+//
+// Two actions, selected by `action` in the request body:
+//
+//   (default) create  — opens a Stripe Checkout session and returns { url }.
+//                       The client redirects the browser to that URL.
+//
+//   "fulfill"         — called on the success redirect after Stripe returns.
+//                       Retrieves the completed session from Stripe and upgrades
+//                       users.tier to 'premium' for subscription purchases.
+//                       The webhook (stripe/webhook.ts) does the same thing as a
+//                       reliable fallback in case the browser never lands on the
+//                       success URL.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
 import sql from '../_db.js'

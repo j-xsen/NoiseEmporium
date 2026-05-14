@@ -1,3 +1,6 @@
+// api/playlists/[id]/songs.ts — POST /api/playlists/:id/songs
+// Appends a song to the end of a playlist. Silently ignores duplicates (ON CONFLICT DO NOTHING).
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../../_db.js'
 import { requireAuth } from '../../_auth.js'
@@ -16,6 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const rows = await sql`SELECT id FROM playlists WHERE id = ${playlistId} AND user_id = ${userId}`
   if (!rows[0]) return res.status(404).json({ error: 'Playlist not found' })
 
+  // Position = current max + 1, or 0 for the first song. The subquery runs atomically
+  // inside the INSERT so concurrent adds don't collide on the same position value.
   await sql`
     INSERT INTO playlist_songs (playlist_id, song_id, position)
     VALUES (

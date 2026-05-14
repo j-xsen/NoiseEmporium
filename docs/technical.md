@@ -49,6 +49,8 @@ Home (Library.tsx)
 
 Handlers live in `api/` and are written as Vercel Serverless Functions. Locally, `server.ts` wraps them in Express.
 
+> **Function limit:** The current plan allows a maximum of **12 serverless functions**. Files prefixed with `_` (`_auth.ts`, `_db.ts`) are shared utilities and do not count toward the limit. All other files in `api/` count as one function each. **The project is currently at 12/12.** Before adding a new route file, consolidate an existing one instead (e.g. combine two related endpoints into one handler that branches on method/action).
+
 ```
 api/
   _auth.ts                      JWT sign/verify helpers
@@ -57,13 +59,22 @@ api/
     register.ts                 POST /api/auth/register
     login.ts                    POST /api/auth/login
     me.ts                       GET  /api/auth/me
+  account/
+    index.ts                    POST   /api/account   (change password; auth required)
+                                DELETE /api/account   (delete account; auth required)
   playlists/
     index.ts                    GET/POST /api/playlists           (auth required)
     featured.ts                 GET      /api/playlists/featured  (public)
     [id].ts                     PATCH/DELETE /api/playlists/:id   (auth + ownership)
-    [id]/songs/
+    [id]/
       songs.ts                  POST   /api/playlists/:id/songs
-      [songId].ts               DELETE /api/playlists/:id/songs/:songId
+      songs/
+        [songId].ts             DELETE /api/playlists/:id/songs/:songId
+  plays/
+    index.ts                    POST /api/plays  (record a song play; auth optional)
+  stripe/
+    checkout.ts                 POST /api/stripe/checkout  (create session or fulfill; auth required)
+    webhook.ts                  POST /api/stripe/webhook   (Stripe events; no auth — signature verified)
 ```
 
 > **Important:** In `server.ts`, the `/api/playlists/featured` route must be registered **before** `/api/playlists/:id`, otherwise Express matches "featured" as an ID.
@@ -149,8 +160,11 @@ This value is passed down to all components that need it. Enforcement points:
 ```
 VITE_CONTENTFUL_SPACE_ID=
 VITE_CONTENTFUL_ACCESS_TOKEN=
-DATABASE_URL=              # Neon connection string
-JWT_SECRET=                # Strong random string
+DATABASE_URL=                  # Neon connection string
+JWT_SECRET=                    # Strong random string
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+VITE_STRIPE_PUBLISHABLE_KEY=
 ```
 
 ## Stripe Architecture (Part 2 — Artist Payouts)
@@ -275,13 +289,13 @@ Artist clicks button
   → frontend redirects to url
 ```
 
-### Stripe Environment Variables (to add)
+### Stripe Environment Variables
 
 ```
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_CONNECT_CLIENT_ID=
-VITE_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=              # Required — server-side Stripe API key
+STRIPE_WEBHOOK_SECRET=          # Required — from Stripe dashboard webhook settings
+VITE_STRIPE_PUBLISHABLE_KEY=    # Required — used client-side (not yet wired; for future Elements use)
+STRIPE_CONNECT_CLIENT_ID=       # Future — needed only when Connect onboarding is added
 ```
 
 ---

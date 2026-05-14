@@ -1,3 +1,7 @@
+// api/auth/me.ts — GET /api/auth/me
+// Validates the stored JWT and returns fresh user data (including current tier).
+// Called on every page load to restore session and pick up tier changes from webhooks.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'

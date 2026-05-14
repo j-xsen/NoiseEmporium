@@ -18,6 +18,10 @@
 | Cover art + gradient fallback | ✅ Working | |
 | Bottom navigation | ✅ Working | |
 | Sign out | ✅ Working | Available on Home screen header and Now Playing screen |
+| Shop UI | ✅ Working | `Shop.tsx` — filter by category, Stripe Checkout flow for memberships; CD/download listings ready to populate |
+| Stripe Checkout + webhook | ✅ Working | `api/stripe/checkout.ts` creates sessions + fulfills; `api/stripe/webhook.ts` upgrades `users.tier` on `checkout.session.completed` |
+| Account modal | ✅ Working | `AccountModal.tsx` — shows tier, change password, delete account |
+| 3D bubble world | 🔧 In progress | `ReleaseBubble.tsx` done; `BubbleWorld.tsx` scaffolded; App.tsx wiring, detail page restyle, and CSS still needed |
 
 ---
 
@@ -37,10 +41,10 @@ Items are ordered so each one unblocks or sets up the next.
 ### Part 1 — Music Store (Jaxsen only)
 
 - [ ] **1. Wire up play count display** — endpoint exists (`api/plays/index.ts`), needs to display on song cards. Play data already accumulates.
-- [ ] **2. Stripe account setup** — add Noise Emporium account under the Jaxsenville org, get API keys, add env vars. Prerequisite for all payment work.
-- [ ] **3. 3D store environment** — React Three Fiber foundation: scene, lighting, camera. Low-poly/low-res textures throughout. No purchases yet — just the browsable environment.
-- [ ] **4. CD listing pages** — tie each shelf/display item in the 3D environment to a Contentful release.
-- [ ] **5. Stripe Checkout for CDs** — purchase flow for physical CDs. Needs Stripe keys (2) and CD listings (4).
+- [x] **2. Stripe account setup** — done; keys in Vercel env vars.
+- [ ] **3. 3D store environment** — `BubbleWorld.tsx` and `ReleaseBubble.tsx` exist; App.tsx wiring, detail page restyle, and CSS still needed.
+- [ ] **4. CD listing pages** — tie each shelf/display item in the 3D environment to a Contentful release. Add CD entries to `shopData.ts`.
+- [ ] **5. Stripe Checkout for CDs** — Shop UI is ready; just needs CD products in `shopData.ts`.
 - [ ] **6. Name-your-price digital downloads** — $0 minimum, Stripe for any paid amount.
 - [ ] **7. Download delivery** — email buyer a download link on purchase.
 
@@ -48,8 +52,8 @@ Items are ordered so each one unblocks or sets up the next.
 
 - [ ] **8. Open registration** — remove the single-user gate.
 - [ ] **9. Preview enforcement** — 30-second preview for free users on memberOnly songs instead of hard block (current behavior is full lock).
-- [ ] **10. Membership UI** — show the user their tier, surface the upgrade prompt.
-- [ ] **11. Stripe Subscriptions** — paid membership billing ($1/$3/$5/month).
+- [ ] **10. Membership UI** — tier shown in `AccountModal.tsx`; upgrade CTA surfaces the Shop. ✅ Basic version done.
+- [x] **11. Stripe Subscriptions** — Checkout + webhook implemented; one tier ($5/mo) active. $10/$15 tiers commented out in `shopData.ts` — too much friction for now.
 - [ ] **12. Link songs to artist records** — `artists` table and `song_artist_map` in the DB.
 - [ ] **13. Artist application flow** — "Join as an artist" form, manual approval.
 - [ ] **14. Stripe Connect onboarding** — Express account, Account Link, Stripe KYC.

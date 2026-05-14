@@ -1,3 +1,6 @@
+// api/auth/login.ts — POST /api/auth/login
+// Returns a JWT + user object on success; 401 on bad credentials.
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
@@ -14,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SELECT id, email, password_hash, tier FROM users WHERE email = ${email.toLowerCase().trim()}
     `
     const user = rows[0]
+    // Same error for unknown email and wrong password — avoids leaking whether an account exists.
     if (!user) return res.status(401).json({ error: 'Invalid email or password' })
 
     const valid = await bcrypt.compare(password, user.password_hash)

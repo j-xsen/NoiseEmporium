@@ -81,6 +81,7 @@ function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; child
 export interface CarouselApi {
   drag: (worldX: number) => void
   settle: (page: number) => void
+  snap: (page: number) => void   // immediate — no animation
 }
 
 interface CarouselRowProps {
@@ -102,8 +103,9 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef }: Carousel
   // Re-register whenever page changes so settle() closes over the latest value.
   useEffect(() => {
     apiRef.current = {
-      drag:   (worldX) => api.start({ x: -page * spacing + worldX, immediate: true }),
+      drag:   (worldX)  => api.start({ x: -page * spacing + worldX, immediate: true }),
       settle: (newPage) => api.start({ x: -newPage * spacing, immediate: false }),
+      snap:   (newPage) => api.start({ x: -newPage * spacing, immediate: true }),
     }
   }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -165,10 +167,8 @@ interface Item {
 
 // ── Scrolling clouds ──────────────────────────────────────────────────────────
 const CLOUD_DEFS = [
-  { seed: 11, x: -30, y: 12.0, z: -18, dx: 0.7, bounds: [5, 1.5, 1.5] as [number,number,number] },
-  { seed: 22, x:  10, y: 14.5, z: -22, dx: 0.4, bounds: [7, 2,   2  ] as [number,number,number] },
-  { seed: 44, x:  40, y: 11.5, z: -16, dx: 0.9, bounds: [5, 1.5, 1.5] as [number,number,number] },
-  { seed: 77, x: -15, y: 16.0, z: -24, dx: 0.3, bounds: [8, 2,   2  ] as [number,number,number] },
+  { seed: 22, x:  10, y: 14.5, z: -22, dx: 0.4, bounds: [7, 2, 2] as [number,number,number] },
+  { seed: 77, x: -15, y: 16.0, z: -24, dx: 0.3, bounds: [8, 2, 2] as [number,number,number] },
 ]
 
 function ScrollingClouds() {
@@ -271,6 +271,21 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
   // Spring APIs exposed by CarouselRow children — written to from useDrag
   const row0Api = useRef<CarouselApi | null>(null)
   const row1Api = useRef<CarouselApi | null>(null)
+  // Refs so the useDrag closure always reads current values (avoids stale captures)
+  const focusedRowRef = useRef(focusedRow)
+  const pageRow0Ref   = useRef(pageRow0)
+  const pageRow1Ref   = useRef(pageRow1)
+  useEffect(() => { focusedRowRef.current = focusedRow }, [focusedRow])
+  useEffect(() => { pageRow0Ref.current   = pageRow0   }, [pageRow0])
+  useEffect(() => { pageRow1Ref.current   = pageRow1   }, [pageRow1])
+  // When focus switches on mobile, immediately snap the revealed row back to
+  // its saved page. Uses refs so values are always current, and snap() so
+  // there is no animation from a potentially drifted spring position.
+  useEffect(() => {
+    if (!isMobile) return
+    if (focusedRow === 0) row0Api.current?.snap(pageRow0Ref.current)
+    else                  row1Api.current?.snap(pageRow1Ref.current)
+  }, [focusedRow, isMobile])
   // World-units-per-pixel, updated every frame by WorldScaleProbe
   const worldScaleRef = useRef(0.024)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -313,10 +328,11 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
       const worldDx = mx * worldScaleRef.current
 
       if (isMobile) {
-        const activeApi = focusedRow === 0 ? row0Api : row1Api
-        const activePage = focusedRow === 0 ? pageRow0 : pageRow1
-        const maxPage = focusedRow === 0 ? row0MaxPage : row1MaxPage
-        const mobileDx = worldDx * MOBILE_DRAG_SENSITIVITY
+        const fr        = focusedRowRef.current
+        const activeApi = fr === 0 ? row0Api : row1Api
+        const activePage = fr === 0 ? pageRow0Ref.current : pageRow1Ref.current
+        const maxPage   = fr === 0 ? row0MaxPage : row1MaxPage
+        const mobileDx  = worldDx * MOBILE_DRAG_SENSITIVITY
 
         if (!last) {
           activeApi.current?.drag(mobileDx)
@@ -324,7 +340,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           // Project position forward by 200ms of velocity, then snap to nearest item
           const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
           const newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
-          if (focusedRow === 0) setPageRow0(newPage)
+          if (fr === 0) setPageRow0(newPage)
           else setPageRow1(newPage)
           activeApi.current?.settle(newPage)
         }

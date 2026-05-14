@@ -334,9 +334,15 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         if (!last) {
           activeApi.current?.drag(mobileDx)
         } else {
-          // Project position forward by 200ms of velocity, then snap to nearest item
-          const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
-          const newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
+          let newPage: number
+          if (Math.abs(vx) > 0.5) {
+            // Flick: jump exactly one item in the swipe direction
+            newPage = Math.max(0, Math.min(activePage + (vx < 0 ? 1 : -1), maxPage))
+          } else {
+            // Slow drag: project forward by 200ms of velocity, snap to nearest
+            const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
+            newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
+          }
           if (fr === 0) setPageRow0(newPage)
           else setPageRow1(newPage)
           activeApi.current?.settle(newPage)

@@ -17,7 +17,7 @@ const MOBILE_BREAKPOINT = 640
 const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
 const MOBILE_SPACING = 5.5
 // Amplify pixel→world conversion on mobile so a short swipe snaps to the next bubble
-const MOBILE_DRAG_SENSITIVITY = 3.0
+const MOBILE_DRAG_SENSITIVITY = 2.0
 
 
 // ── Camera controller ─────────────────────────────────────────────────────────
@@ -278,14 +278,6 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
   useEffect(() => { focusedRowRef.current = focusedRow }, [focusedRow])
   useEffect(() => { pageRow0Ref.current   = pageRow0   }, [pageRow0])
   useEffect(() => { pageRow1Ref.current   = pageRow1   }, [pageRow1])
-  // When focus switches on mobile, immediately snap the revealed row back to
-  // its saved page. Uses refs so values are always current, and snap() so
-  // there is no animation from a potentially drifted spring position.
-  useEffect(() => {
-    if (!isMobile) return
-    if (focusedRow === 0) row0Api.current?.snap(pageRow0Ref.current)
-    else                  row1Api.current?.snap(pageRow1Ref.current)
-  }, [focusedRow, isMobile])
   // World-units-per-pixel, updated every frame by WorldScaleProbe
   const worldScaleRef = useRef(0.024)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -476,7 +468,11 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
       {isMobile && (
         <button
           className="bubble-row-toggle"
-          onClick={() => setFocusedRow(r => r === 0 ? 1 : 0)}
+          onClick={() => {
+            const next = focusedRowRef.current === 0 ? 1 : 0
+            focusedRowRef.current = next   // synchronous — no gap before drag handler reads it
+            setFocusedRow(next)
+          }}
           aria-label={focusedRow === 0 ? 'View Collections' : 'View Releases'}
         >
           {focusedRow === 0 ? (

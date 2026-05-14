@@ -71,7 +71,7 @@ export default function ReleaseDetail({
   const count = release.songs.length
 
   return (
-    <div className="release-detail-ps2">
+    <div className={`release-detail-ps2${release.cover ? '' : ' release-detail-ps2--no-cover'}`}>
       {release.cover && (
         <div className="rps2-bg" style={{ backgroundImage: `url(${release.cover})` }} />
       )}
@@ -79,11 +79,11 @@ export default function ReleaseDetail({
         <ChevronLeftIcon size={22} />
       </button>
 
-      <div className="rps2-cover-col">
-        {release.cover && (
+      {release.cover && (
+        <div className="rps2-cover-col">
           <img src={release.cover} alt={release.name} className="rps2-cover" />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="rps2-info-col">
         <div className="rps2-header">

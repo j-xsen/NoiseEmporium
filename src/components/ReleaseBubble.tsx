@@ -303,7 +303,7 @@ function ReleaseBubble({
     <group
       ref={posGroupRef}
       position={position}
-      onClick={(e) => { e.stopPropagation(); onClick() }}
+      onClick={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; onClick() }}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
     >

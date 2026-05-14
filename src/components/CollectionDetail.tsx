@@ -21,7 +21,7 @@ export default function CollectionDetail({
   const locked = collection.premiumOnly && !isPremium
 
   return (
-    <div className="release-detail-ps2">
+    <div className={`release-detail-ps2${collection.cover ? '' : ' release-detail-ps2--no-cover'}`}>
       {collection.cover && (
         <div className="rps2-bg" style={{ backgroundImage: `url(${collection.cover})` }} />
       )}
@@ -29,11 +29,11 @@ export default function CollectionDetail({
         <ChevronLeftIcon size={22} />
       </button>
 
-      <div className="rps2-cover-col">
-        {collection.cover && (
+      {collection.cover && (
+        <div className="rps2-cover-col">
           <img src={collection.cover} alt={collection.title} className="rps2-cover" />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="rps2-info-col">
         <div className="rps2-header">

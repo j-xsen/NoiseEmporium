@@ -20,6 +20,8 @@ const BUBBLE_VERT = /* glsl */`
 const BUBBLE_FRAG = /* glsl */`
   uniform float uTime;
   uniform float uOpacity;
+  uniform float uBaseAlpha;
+  uniform float uDarkness;
   uniform sampler2D uArtTex;
   uniform float uHasArt;
   varying vec3 vNormal;
@@ -34,32 +36,69 @@ const BUBBLE_FRAG = /* glsl */`
     vec3 irid = 0.5 + 0.5 * cos(phase + vec3(0.0, 2.094, 4.189));
     vec3 shellColor = mix(vec3(0.88, 0.95, 1.0), irid, fresnel * 0.90);
 
-    // Blurred art dye — sphere normal as UV is a smooth spherical projection;
-    // 5-tap box blur smears art colors like frosted glass.
-    // The UV rotates with the bubble shell, so colours swirl as it spins.
-    vec2 sphereUV = vNormal.xy * 0.5 + 0.5;
-    float B = 0.10;
-    vec3 dye  = texture2D(uArtTex, sphereUV).rgb;
-    dye += texture2D(uArtTex, sphereUV + vec2( B, 0.0)).rgb;
-    dye += texture2D(uArtTex, sphereUV + vec2(-B, 0.0)).rgb;
-    dye += texture2D(uArtTex, sphereUV + vec2(0.0,  B)).rgb;
-    dye += texture2D(uArtTex, sphereUV + vec2(0.0, -B)).rgb;
-    dye /= 5.0;
-
-    // Slight desaturation so vivid album colours don't swamp the iridescence
-    float luma = dot(dye, vec3(0.299, 0.587, 0.114));
-    dye = mix(dye, vec3(luma), 0.18);
+    // Blurred art dye — only sample when a texture is actually bound.
+    // Sampling a null/unbound sampler is undefined behaviour and causes flickering.
+    vec3 dye = vec3(0.5);
+    if (uHasArt > 0.5) {
+      vec2 sphereUV = vNormal.xy * 0.5 + 0.5;
+      float B = 0.10;
+      dye  = texture2D(uArtTex, sphereUV).rgb;
+      dye += texture2D(uArtTex, sphereUV + vec2( B, 0.0)).rgb;
+      dye += texture2D(uArtTex, sphereUV + vec2(-B, 0.0)).rgb;
+      dye += texture2D(uArtTex, sphereUV + vec2(0.0,  B)).rgb;
+      dye += texture2D(uArtTex, sphereUV + vec2(0.0, -B)).rgb;
+      dye /= 5.0;
+      float luma = dot(dye, vec3(0.299, 0.587, 0.114));
+      dye = mix(dye, vec3(luma), 0.18);
+    }
 
     // Dye is strongest at the transparent centre, fades toward the iridescent rim
-    float dyeStrength = uHasArt * (1.0 - fresnel * 0.55) * 0.68;
+    float dyeStrength = uHasArt * (1.0 - fresnel * 0.38) * 0.82;
     vec3 col = mix(shellColor, dye, dyeStrength);
 
-    // Raise the base alpha so the dye colour is visible even at the
-    // near-transparent centre — without this the colour has nowhere to live.
-    float alpha = fresnel * uOpacity + uHasArt * 0.13 + 0.008;
+    // Raised base alpha so the dye has enough surface to read;
+    // centre stays translucent enough to see the cover art plane behind it.
+    float alpha = fresnel * uOpacity + uHasArt * 0.24 + uBaseAlpha;
+    // Darken micro-bubbles that are behind the main bubble
+    col   *= 1.0 - uDarkness * 0.72;
+    alpha *= 1.0 - uDarkness * 0.88;
     gl_FragColor = vec4(col, alpha);
   }
 `
+
+// ── Seeded pseudo-RNG (sin-hash) ──────────────────────────────────────────────
+function makeRng(seed: number) {
+  let s = seed * 127.1 + 311.7
+  return () => {
+    s = Math.sin(s) * 43758.5453
+    return s - Math.floor(s)
+  }
+}
+
+// ── Seeded gradient texture for cover-less bubbles ───────────────────────────
+// Produces a unique diagonal two-tone gradient seeded by the bubble's phaseOffset.
+function makeGradientTexture(seed: number): THREE.CanvasTexture {
+  const rng = makeRng(seed + 99.3)
+  const hue1 = rng() * 360
+  const hue2 = (hue1 + 100 + rng() * 80) % 360
+  const sat   = (70 + rng() * 20) | 0
+  const lit1  = (50 + rng() * 12) | 0
+  const lit2  = (42 + rng() * 12) | 0
+  const midH  = ((hue1 + hue2) / 2) | 0
+
+  const sz = 128
+  const canvas = document.createElement('canvas')
+  canvas.width  = sz
+  canvas.height = sz
+  const ctx = canvas.getContext('2d')!
+  const g = ctx.createLinearGradient(0, 0, sz, sz)
+  g.addColorStop(0,   `hsl(${hue1 | 0}, ${sat}%, ${lit1}%)`)
+  g.addColorStop(0.5, `hsl(${midH},     ${sat}%, ${(lit1 + lit2) >> 1}%)`)
+  g.addColorStop(1,   `hsl(${hue2 | 0}, ${sat}%, ${lit2}%)`)
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, sz, sz)
+  return new THREE.CanvasTexture(canvas)
+}
 
 // ── Glare texture (module singleton) ─────────────────────────────────────────
 // Soft radial gradient from pure white core to transparent — simulates the
@@ -88,15 +127,6 @@ function getGlareTex() {
   return _glareTex
 }
 
-// ── Seeded pseudo-RNG (sin-hash) ──────────────────────────────────────────────
-function makeRng(seed: number) {
-  let s = seed * 127.1 + 311.7
-  return () => {
-    s = Math.sin(s) * 43758.5453
-    return s - Math.floor(s)
-  }
-}
-
 // ── Bubble shell with custom shader ──────────────────────────────────────────
 function BubbleShell({ radius, hovered, artTexture }: {
   radius: number
@@ -108,10 +138,12 @@ function BubbleShell({ radius, hovered, artTexture }: {
 
   const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
-      uTime:    { value: 0 },
-      uOpacity: { value: 0.58 },
-      uArtTex:  { value: null },
-      uHasArt:  { value: 0.0 },
+      uTime:      { value: 0 },
+      uOpacity:   { value: 0.58 },
+      uBaseAlpha: { value: 0.008 },
+      uDarkness:  { value: 0.0 },
+      uArtTex:    { value: null },
+      uHasArt:    { value: 0.0 },
     },
     vertexShader: BUBBLE_VERT,
     fragmentShader: BUBBLE_FRAG,
@@ -217,9 +249,16 @@ function ReleaseBubble({
     }
   }, [phaseOffset])
 
+  // Gradient texture for cover-less bubbles (collections with no image)
+  const gradientTexture = useMemo(
+    () => cover ? null : makeGradientTexture(phaseOffset),
+    [cover, phaseOffset],
+  )
+  useEffect(() => () => { gradientTexture?.dispose() }, [gradientTexture])
+
   // Micro-bubble materials — each tiny bubble is also a soap bubble
   const microMats = useMemo(() => micro.map(() => new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uOpacity: { value: 1.1 } },
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 1.1 }, uBaseAlpha: { value: 0.22 }, uDarkness: { value: 0.0 }, uArtTex: { value: null }, uHasArt: { value: 0.0 } },
     vertexShader: BUBBLE_VERT,
     fragmentShader: BUBBLE_FRAG,
     transparent: true,
@@ -242,7 +281,6 @@ function ReleaseBubble({
     if (rotGroupRef.current) {
       rotGroupRef.current.rotation.y = t * rotSpeed + phaseOffset
     }
-    microMats.forEach(m => { m.uniforms.uTime.value = t })
     microRefs.current.forEach((ref, i) => {
       if (!ref) return
       const mb = micro[i]
@@ -250,6 +288,10 @@ function ReleaseBubble({
       ref.position.x = Math.cos(angle) * mb.orbitR * radius
       ref.position.y = mb.yOff * radius + Math.sin(t * 0.35 + mb.phase) * mb.orbitR * radius * 0.5
       ref.position.z = Math.sin(angle) * mb.orbitR * radius * 0.55
+      // Darken when behind the bubble centre (z < 0); max depth = orbitR * radius * 0.55
+      const maxDepth = mb.orbitR * radius * 0.55
+      microMats[i].uniforms.uTime.value = t
+      microMats[i].uniforms.uDarkness.value = Math.max(0, -ref.position.z / maxDepth)
     })
   })
 
@@ -265,13 +307,11 @@ function ReleaseBubble({
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
     >
-      {/* Art plane */}
-      {cover ? (
+      {/* Art plane — only when there's a real cover; gradient bubbles have no inner plane */}
+      {cover && (
         <Suspense fallback={<FallbackPlane artSize={artSize} />}>
           <ArtPlane url={cover} artSize={artSize} />
         </Suspense>
-      ) : (
-        <FallbackPlane artSize={artSize} />
       )}
 
       {/* Active glow ring */}
@@ -289,13 +329,13 @@ function ReleaseBubble({
           <sphereGeometry args={[radius, 20, 20]} />
           <meshBasicMaterial color="#a0ccf0" transparent opacity={0.05} side={THREE.BackSide} depthWrite={false} />
         </mesh>
-        {/* Fresnel + iridescence shell; art-aware once texture resolves */}
+        {/* Fresnel + iridescence shell; tinted by cover art or seeded gradient */}
         {cover ? (
           <Suspense fallback={<BubbleShell radius={radius} hovered={hovered} />}>
             <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={cover} />
           </Suspense>
         ) : (
-          <BubbleShell radius={radius} hovered={hovered} />
+          <BubbleShell radius={radius} hovered={hovered} artTexture={gradientTexture ?? undefined} />
         )}
       </group>
 

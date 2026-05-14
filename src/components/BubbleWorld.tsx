@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, GradientTexture, Environment } from '@react-three/drei'
+import { OrbitControls, GradientTexture, Environment, Clouds, Cloud } from '@react-three/drei'
 import { useSpring, animated } from '@react-spring/three'
 import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
@@ -16,6 +16,8 @@ const ROW_Y: [number, number] = [4.0, -2.5]
 const MOBILE_BREAKPOINT = 640
 const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
 const MOBILE_SPACING = 5.5
+// Amplify pixel→world conversion on mobile so a short swipe snaps to the next bubble
+const MOBILE_DRAG_SENSITIVITY = 3.0
 
 
 // ── Camera controller ─────────────────────────────────────────────────────────
@@ -161,6 +163,46 @@ interface Item {
   onClick: () => void
 }
 
+// ── Scrolling clouds ──────────────────────────────────────────────────────────
+const CLOUD_DEFS = [
+  { seed: 11, x: -30, y: 12.0, z: -18, dx: 0.7, bounds: [5, 1.5, 1.5] as [number,number,number] },
+  { seed: 22, x:  10, y: 14.5, z: -22, dx: 0.4, bounds: [7, 2,   2  ] as [number,number,number] },
+  { seed: 44, x:  40, y: 11.5, z: -16, dx: 0.9, bounds: [5, 1.5, 1.5] as [number,number,number] },
+  { seed: 77, x: -15, y: 16.0, z: -24, dx: 0.3, bounds: [8, 2,   2  ] as [number,number,number] },
+]
+
+function ScrollingClouds() {
+  const refs = useRef<(THREE.Group | null)[]>(CLOUD_DEFS.map(() => null))
+
+  useFrame((_, delta) => {
+    refs.current.forEach((ref, i) => {
+      if (!ref) return
+      ref.position.x += CLOUD_DEFS[i].dx * delta
+      if (ref.position.x > 55) ref.position.x = -55
+    })
+  })
+
+  return (
+    <Clouds material={THREE.MeshBasicMaterial}>
+      {CLOUD_DEFS.map((c, i) => (
+        <Cloud
+          key={c.seed}
+          ref={el => { refs.current[i] = el }}
+          seed={c.seed}
+          bounds={c.bounds}
+          position={[c.x, c.y, c.z]}
+          scale={2.8}
+          segments={20}
+          opacity={0.80}
+          speed={0.1}
+          color="#ffffff"
+          concentrate="inside"
+        />
+      ))}
+    </Clouds>
+  )
+}
+
 interface BubbleWorldProps {
   releases: Release[]
   collections: Collection[]
@@ -274,12 +316,13 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
         const activeApi = focusedRow === 0 ? row0Api : row1Api
         const activePage = focusedRow === 0 ? pageRow0 : pageRow1
         const maxPage = focusedRow === 0 ? row0MaxPage : row1MaxPage
+        const mobileDx = worldDx * MOBILE_DRAG_SENSITIVITY
 
         if (!last) {
-          activeApi.current?.drag(worldDx)
+          activeApi.current?.drag(mobileDx)
         } else {
           // Project position forward by 200ms of velocity, then snap to nearest item
-          const projected = worldDx + vx * worldScaleRef.current * 200
+          const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
           const newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
           if (focusedRow === 0) setPageRow0(newPage)
           else setPageRow1(newPage)
@@ -366,6 +409,8 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           <directionalLight position={[5, 10, 3]} intensity={1.2} color="#fff8e0" />
           <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
           <Environment preset="dawn" background={false} />
+
+          <ScrollingClouds />
 
           {isMobile ? (
             <ScrollGroup targetOffsetY={focusedRow === 0 ? 0 : MOBILE_ROW_Y[0] - MOBILE_ROW_Y[1]}>

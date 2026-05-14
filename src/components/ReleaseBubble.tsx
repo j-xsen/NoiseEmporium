@@ -20,23 +20,43 @@ const BUBBLE_VERT = /* glsl */`
 const BUBBLE_FRAG = /* glsl */`
   uniform float uTime;
   uniform float uOpacity;
+  uniform sampler2D uArtTex;
+  uniform float uHasArt;
   varying vec3 vNormal;
   varying vec3 vViewDir;
 
   void main() {
     float NdotV = max(dot(vNormal, vViewDir), 0.0);
-    // Fresnel: 0 at center (facing camera), 1 at grazing edges
     float fresnel = pow(1.0 - NdotV, 2.8);
 
-    // Thin-film iridescence: hue drifts with angle and time
+    // Thin-film iridescence at the rim
     float phase = NdotV * 4.2 + uTime * 0.07;
     vec3 irid = 0.5 + 0.5 * cos(phase + vec3(0.0, 2.094, 4.189));
+    vec3 shellColor = mix(vec3(0.88, 0.95, 1.0), irid, fresnel * 0.90);
 
-    // Base is a faint blue-white; edges bloom into rainbow
-    vec3 col = mix(vec3(0.88, 0.95, 1.0), irid, fresnel * 0.90);
+    // Blurred art dye — sphere normal as UV is a smooth spherical projection;
+    // 5-tap box blur smears art colors like frosted glass.
+    // The UV rotates with the bubble shell, so colours swirl as it spins.
+    vec2 sphereUV = vNormal.xy * 0.5 + 0.5;
+    float B = 0.10;
+    vec3 dye  = texture2D(uArtTex, sphereUV).rgb;
+    dye += texture2D(uArtTex, sphereUV + vec2( B, 0.0)).rgb;
+    dye += texture2D(uArtTex, sphereUV + vec2(-B, 0.0)).rgb;
+    dye += texture2D(uArtTex, sphereUV + vec2(0.0,  B)).rgb;
+    dye += texture2D(uArtTex, sphereUV + vec2(0.0, -B)).rgb;
+    dye /= 5.0;
 
-    // Nearly invisible at center; opaque-ish rim
-    float alpha = (fresnel * uOpacity + 0.008);
+    // Slight desaturation so vivid album colours don't swamp the iridescence
+    float luma = dot(dye, vec3(0.299, 0.587, 0.114));
+    dye = mix(dye, vec3(luma), 0.18);
+
+    // Dye is strongest at the transparent centre, fades toward the iridescent rim
+    float dyeStrength = uHasArt * (1.0 - fresnel * 0.55) * 0.68;
+    vec3 col = mix(shellColor, dye, dyeStrength);
+
+    // Raise the base alpha so the dye colour is visible even at the
+    // near-transparent centre — without this the colour has nowhere to live.
+    float alpha = fresnel * uOpacity + uHasArt * 0.13 + 0.008;
     gl_FragColor = vec4(col, alpha);
   }
 `
@@ -78,18 +98,32 @@ function makeRng(seed: number) {
 }
 
 // ── Bubble shell with custom shader ──────────────────────────────────────────
-function BubbleShell({ radius, hovered }: { radius: number; hovered: boolean }) {
+function BubbleShell({ radius, hovered, artTexture }: {
+  radius: number
+  hovered: boolean
+  artTexture?: THREE.Texture
+}) {
   const hoveredRef = useRef(hovered)
   useEffect(() => { hoveredRef.current = hovered }, [hovered])
 
   const material = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uOpacity: { value: 0.58 } },
+    uniforms: {
+      uTime:    { value: 0 },
+      uOpacity: { value: 0.58 },
+      uArtTex:  { value: null },
+      uHasArt:  { value: 0.0 },
+    },
     vertexShader: BUBBLE_VERT,
     fragmentShader: BUBBLE_FRAG,
     transparent: true,
     depthWrite: false,
     side: THREE.FrontSide,
   }), [])
+
+  useEffect(() => {
+    material.uniforms.uArtTex.value = artTexture ?? null
+    material.uniforms.uHasArt.value = artTexture ? 1.0 : 0.0
+  }, [artTexture, material])
 
   useFrame(({ clock }) => {
     material.uniforms.uTime.value = clock.elapsedTime
@@ -104,6 +138,18 @@ function BubbleShell({ radius, hovered }: { radius: number; hovered: boolean }) 
       <primitive object={material} attach="material" />
     </mesh>
   )
+}
+
+// Suspense-aware wrapper: loads cover art and feeds it to BubbleShell.
+// Drei's useTexture caches by URL — if ArtPlane already loaded this URL the
+// texture is returned synchronously with no network round-trip.
+function BubbleShellWithArt({ radius, hovered, coverUrl }: {
+  radius: number
+  hovered: boolean
+  coverUrl: string
+}) {
+  const artTexture = useTexture(coverUrl)
+  return <BubbleShell radius={radius} hovered={hovered} artTexture={artTexture} />
 }
 
 // ── Art plane helpers ─────────────────────────────────────────────────────────
@@ -243,8 +289,14 @@ function ReleaseBubble({
           <sphereGeometry args={[radius, 20, 20]} />
           <meshBasicMaterial color="#a0ccf0" transparent opacity={0.05} side={THREE.BackSide} depthWrite={false} />
         </mesh>
-        {/* Main Fresnel + iridescence shell */}
-        <BubbleShell radius={radius} hovered={hovered} />
+        {/* Fresnel + iridescence shell; art-aware once texture resolves */}
+        {cover ? (
+          <Suspense fallback={<BubbleShell radius={radius} hovered={hovered} />}>
+            <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={cover} />
+          </Suspense>
+        ) : (
+          <BubbleShell radius={radius} hovered={hovered} />
+        )}
       </group>
 
       {/* Glare sprite — Sprite auto-faces camera, so it stays at upper-left

@@ -266,6 +266,15 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
     setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
   }, [isMobile])
 
+  // Auto-scroll to the release that contains the currently playing song.
+  useEffect(() => {
+    if (!currentSongId) return
+    const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
+    if (idx < 0) return
+    setPageRow0(idx)
+    row0Api.current?.settle(idx)
+  }, [currentSongId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const row0: Item[] = releases.map(r => ({
     id: r.id,
     name: r.name,

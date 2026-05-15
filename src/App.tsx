@@ -352,6 +352,26 @@ export default function App() {
     player.playSong(target, resolved)
   }, [dl.getLocalSrc, player.playSong, isPremium])
 
+  // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
+  // every ~250 ms when useAudio's currentTime ticks.
+  const handleSelectRelease = useCallback((id: string) => {
+    const r = releases.find(r => r.id === id)
+    if (r) navigate(`/${r.releaseType}/${r.slug}`)
+  }, [releases, navigate])
+
+  const handleSelectCollection = useCallback((id: string) => {
+    const c = collections.find(c => c.id === id)
+    if (c) navigate(`/collection/${c.slug}`)
+  }, [collections, navigate])
+
+  const handleSelectFeaturedPlaylist = useCallback((id: string) => {
+    navigate(`/playlist/${id}`)
+  }, [navigate])
+
+  const handleOpenAccount = useCallback(() => {
+    setAccountModalOpen(true)
+  }, [])
+
   // Handle Stripe checkout redirect: ?tab=shop → /shop
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -437,16 +457,10 @@ export default function App() {
                   isPremium={isPremium}
                   userEmail={auth.user?.email ?? ''}
                   currentSongId={player.currentSong?.id}
-                  onSelectRelease={id => {
-                    const r = releases.find(r => r.id === id)
-                    if (r) navigate(`/${r.releaseType}/${r.slug}`)
-                  }}
-                  onSelectCollection={id => {
-                    const c = collections.find(c => c.id === id)
-                    if (c) navigate(`/collection/${c.slug}`)
-                  }}
-                  onSelectFeaturedPlaylist={id => navigate(`/playlist/${id}`)}
-                  onOpenAccount={() => setAccountModalOpen(true)}
+                  onSelectRelease={handleSelectRelease}
+                  onSelectCollection={handleSelectCollection}
+                  onSelectFeaturedPlaylist={handleSelectFeaturedPlaylist}
+                  onOpenAccount={handleOpenAccount}
                 />
               )
             } />

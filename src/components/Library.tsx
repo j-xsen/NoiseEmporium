@@ -3,7 +3,7 @@
 // Releases are split by releaseType: albums/EPs render as art cards; singles
 // render as a compact list so they don't take up full card real estate.
 
-import { useEffect } from 'react'
+import { memo, useEffect } from 'react'
 import CoverArt from './CoverArt'
 import { LockIcon } from './Icons'
 import type { Collection, Playlist, Release, Song } from '../types'
@@ -21,7 +21,7 @@ interface LibraryProps {
   onOpenAccount: () => void
 }
 
-export default function Library({
+function Library({
   releases, collections, featuredPlaylists, isPremium, userEmail, currentSongId,
   onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onOpenAccount,
 }: LibraryProps) {
@@ -166,3 +166,5 @@ export default function Library({
     </div>
   )
 }
+
+export default memo(Library)

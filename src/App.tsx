@@ -473,7 +473,6 @@ export default function App() {
             <Route path="/player" element={
               <NowPlaying
                 player={player}
-                onLogout={auth.logout}
                 onViewLyrics={player.currentSong?.lyrics ? () => setLyricsSong(player.currentSong!) : undefined}
               />
             } />

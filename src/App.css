@@ -530,21 +530,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.np-topbar {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -8px;
-  flex-shrink: 0;
-}
-
-.np-logout {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-dim);
-  padding: 4px 0;
-}
-
 .now-playing--empty {
   justify-content: center;
   text-align: center;

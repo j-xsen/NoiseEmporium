@@ -12,7 +12,7 @@ export function useFeaturedPlaylists() {
 
   useEffect(() => {
     fetch('/api/playlists/featured')
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(data => setPlaylists(data.playlists ?? []))
       .catch(console.error)
   }, [])

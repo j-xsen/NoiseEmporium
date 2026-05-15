@@ -641,9 +641,8 @@
 .np-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
+  justify-content: space-between;
+  width: 88%;
   margin-bottom: 24px;
 }
 
@@ -696,23 +695,31 @@
   height: 10px;
 }
 
-.np-loop {
+.np-btn--aux {
+  position: relative;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--text-dim);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 400;
-  transition: all 0.2s;
+  justify-content: center;
+  color: var(--text-dim);
+  transition: color 0.2s, transform 0.1s, opacity 0.15s;
+}
+.np-btn--aux:active { transform: scale(0.92); opacity: 0.7; }
+
+.np-btn--aux-active {
+  color: var(--accent);
 }
 
-.np-loop--active {
+.np-loop-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
   color: var(--accent);
-  border-color: var(--accent-border);
-  background: var(--accent-dim);
+  pointer-events: none;
 }
 
 .np-lyrics-btn {

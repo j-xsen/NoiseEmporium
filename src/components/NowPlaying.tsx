@@ -5,7 +5,7 @@
 // which renders LyricsView as an overlay on top of this screen.
 
 import CoverArt from './CoverArt'
-import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, LoopIcon } from './Icons'
+import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, LoopIcon, ShuffleIcon } from './Icons'
 import { formatTime, songSubtitle } from '../utils/format'
 import type { PlayerAPI } from '../hooks/useAudio'
 
@@ -15,10 +15,8 @@ interface NowPlayingProps {
   onViewLyrics?: () => void
 }
 
-const loopLabel: Record<string, string> = { off: 'Off', one: '1×', all: 'All' }
-
 export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayingProps) {
-  const { currentSong, isPlaying, currentTime, duration, loopMode } = player
+  const { currentSong, isPlaying, currentTime, duration, loopMode, isShuffle } = player
   const progress = duration > 0 ? currentTime / duration : 0
 
   if (!currentSong) {
@@ -65,6 +63,13 @@ export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayin
       </div>
 
       <div className="np-controls">
+        <button
+          className={`np-btn np-btn--aux${isShuffle ? ' np-btn--aux-active' : ''}`}
+          onClick={player.toggleShuffle}
+          aria-label={isShuffle ? 'Shuffle on' : 'Shuffle off'}
+        >
+          <ShuffleIcon size={20} />
+        </button>
         <button className="np-btn np-btn--skip" onClick={player.skipPrev} aria-label="Previous">
           <SkipBackIcon size={28} />
         </button>
@@ -73,6 +78,14 @@ export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayin
         </button>
         <button className="np-btn np-btn--skip" onClick={player.skipNext} aria-label="Next">
           <SkipForwardIcon size={28} />
+        </button>
+        <button
+          className={`np-btn np-btn--aux${loopMode !== 'off' ? ' np-btn--aux-active' : ''}`}
+          onClick={player.cycleLoop}
+          aria-label={loopMode === 'off' ? 'Loop off' : loopMode === 'one' ? 'Loop this song' : 'Loop all'}
+        >
+          <LoopIcon size={20} />
+          {loopMode === 'one' && <span className="np-loop-badge">1</span>}
         </button>
       </div>
 
@@ -91,15 +104,6 @@ export default function NowPlaying({ player, onLogout, onViewLyrics }: NowPlayin
           }}
         />
       </div>
-
-      <button
-        className={`np-loop ${loopMode !== 'off' ? 'np-loop--active' : ''}`}
-        onClick={player.cycleLoop}
-        aria-label={`Loop: ${loopMode}`}
-      >
-        <LoopIcon size={18} />
-        <span>{loopLabel[loopMode]}</span>
-      </button>
 
       {onViewLyrics && (
         <button className="np-lyrics-btn" onClick={onViewLyrics}>

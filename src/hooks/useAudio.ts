@@ -18,6 +18,7 @@ export interface PlayerAPI {
   currentTime: number
   duration: number
   loopMode: LoopMode
+  isShuffle: boolean
   volume: number
   playSong: (song: Song, queue?: Song[]) => void
   togglePlay: () => void
@@ -25,6 +26,7 @@ export interface PlayerAPI {
   skipNext: () => void
   skipPrev: () => void
   cycleLoop: () => void
+  toggleShuffle: () => void
   setVolume: (v: number) => void
 }
 
@@ -37,6 +39,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
 
   // Refs for event-handler access — avoids stale closures on loopMode, queue, etc.
   const loopRef = useRef<LoopMode>('off')
+  const shuffleRef = useRef(false)
   const queueRef = useRef<Song[]>([])
   const qiRef = useRef(-1) // index of the currently playing song in queueRef
 
@@ -56,6 +59,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [loopMode, setLoopModeState] = useState<LoopMode>('off')
+  const [isShuffle, setIsShuffle] = useState(false)
   const [volume, setVolumeState] = useState(1)
 
   const loadAndPlay = useCallback((song: Song, qi: number, queue: Song[]) => {
@@ -92,6 +96,18 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
 
+    const pickNext = (q: Song[], qi: number): number | null => {
+      if (shuffleRef.current && q.length > 1) {
+        let r = qi
+        while (r === qi) r = Math.floor(Math.random() * q.length)
+        return r
+      }
+      const next = qi + 1
+      if (next < q.length) return next
+      if (loopRef.current === 'all' && q.length > 0) return 0
+      return null
+    }
+
     // Shared advance logic — the endFiredRef guard prevents both 'ended' and the
     // timeupdate fallback from advancing the queue simultaneously.
     const advance = () => {
@@ -101,11 +117,9 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
       const q = queueRef.current
       const qi = qiRef.current
       if (mode === 'one') return // el.loop = true handles repeat-one
-      const next = qi + 1
-      if (next < q.length) {
+      const next = pickNext(q, qi)
+      if (next !== null) {
         loadAndPlay(q[next], next, q)
-      } else if (mode === 'all' && q.length > 0) {
-        loadAndPlay(q[0], 0, q)
       } else {
         setIsPlaying(false)
       }
@@ -150,9 +164,8 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
       navigator.mediaSession.setActionHandler('nexttrack', () => {
         const q = queueRef.current
         const qi = qiRef.current
-        const next = qi + 1
-        if (next < q.length) loadAndPlay(q[next], next, q)
-        else if (loopRef.current === 'all' && q.length > 0) loadAndPlay(q[0], 0, q)
+        const next = pickNext(q, qi)
+        if (next !== null) loadAndPlay(q[next], next, q)
       })
       navigator.mediaSession.setActionHandler('previoustrack', () => {
         // Pressing "previous" within the first 3 s restarts the track; after
@@ -219,6 +232,12 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const skipNext = useCallback(() => {
     const q = queueRef.current
     const qi = qiRef.current
+    if (shuffleRef.current && q.length > 1) {
+      let next = qi
+      while (next === qi) next = Math.floor(Math.random() * q.length)
+      loadAndPlay(q[next], next, q)
+      return
+    }
     const next = qi + 1
     if (next < q.length) {
       loadAndPlay(q[next], next, q)
@@ -254,6 +273,11 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     setLoopModeState(next)
   }, [])
 
+  const toggleShuffle = useCallback(() => {
+    shuffleRef.current = !shuffleRef.current
+    setIsShuffle(shuffleRef.current)
+  }, [])
+
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v))
     if (audioRef.current) audioRef.current.volume = clamped
@@ -266,6 +290,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     currentTime,
     duration,
     loopMode,
+    isShuffle,
     volume,
     playSong,
     togglePlay,
@@ -273,6 +298,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     skipNext,
     skipPrev,
     cycleLoop,
+    toggleShuffle,
     setVolume,
   }
 }

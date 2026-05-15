@@ -432,7 +432,7 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? (row1.length > 0 ? 13 : 10) : 26} />
           <WorldScaleProbe scaleRef={worldScaleRef} />
 
-          <mesh position={[0, 0, -30]} scale={[80, 55, 1]}>
+          <mesh position={[0, 0, -30]} scale={[220, 60, 1]}>
             <planeGeometry />
             <meshBasicMaterial toneMapped={false}>
               <GradientTexture

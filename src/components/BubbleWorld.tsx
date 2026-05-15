@@ -212,7 +212,7 @@ function ScrollingClouds() {
           seed={c.seed}
           bounds={c.bounds}
           position={[c.x, c.y, c.z]}
-          scale={2.8}
+          scale={CLOUD_SCALE}
           segments={20}
           opacity={0.80}
           speed={0.1}

@@ -30,6 +30,10 @@ server.ts              Local Express dev server (proxies api/ handlers)
 schema.sql             Database schema (Neon PostgreSQL)
 ```
 
+## Worktree Setup
+
+When operating inside a git worktree (path contains `.claude/worktrees/`), run `pnpm install` at the start of the session before doing any dev work. This ensures `node_modules` is linked correctly — pnpm reuses the global store so it's fast.
+
 ## Key Facts for Code Generation
 
 - **Framework:** React 19 + TypeScript + Vite 8 + Tailwind CSS v4

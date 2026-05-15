@@ -114,9 +114,10 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
     api.start({ x: -page * spacing })
   }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When this row regains focus, snap immediately to its correct page position.
+  // Snap immediately whenever focus changes — stops any in-progress animation
+  // so the row isn't seen mid-transition while the scroll group slides it off-screen.
   useEffect(() => {
-    if (rowFocused) api.start({ x: -page * spacing, immediate: true })
+    api.start({ x: -page * spacing, immediate: true })
   }, [rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

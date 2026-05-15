@@ -43,6 +43,16 @@ export const LoopIcon = ({ size = 20, className }: IconProps) => (
   </svg>
 )
 
+export const ShuffleIcon = ({ size = 20, className }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
+    <polyline points="16 3 21 3 21 8" />
+    <line x1="4" y1="20" x2="21" y2="3" />
+    <polyline points="21 16 21 21 16 21" />
+    <line x1="15" y1="15" x2="21" y2="21" />
+    <line x1="4" y1="4" x2="9" y2="9" />
+  </svg>
+)
+
 export const HomeIcon = ({ size = 22, className }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base} strokeWidth={1.75}>
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

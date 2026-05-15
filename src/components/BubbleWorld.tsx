@@ -351,11 +351,13 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           activeApi.current?.drag(mobileDx)
         } else {
           let newPage: number
-          if (Math.abs(vx) > 0.5) {
-            // Flick: jump exactly one item in the swipe direction
-            newPage = Math.max(0, Math.min(activePage + (vx < 0 ? 1 : -1), maxPage))
+          // Use velocity OR pixel distance: fast flick OR meaningful drag both advance one item.
+          // vx from touchend is often near-zero (touchend has no coords), so mx is the fallback.
+          if (Math.abs(vx) > 0.3 || Math.abs(mx) > 40) {
+            const dir = ((Math.abs(vx) > 0.3 ? vx : mx) < 0) ? 1 : -1
+            newPage = Math.max(0, Math.min(activePage + dir, maxPage))
           } else {
-            // Slow drag: project forward by 200ms of velocity, snap to nearest
+            // Slow deliberate drag: project forward by 200ms of velocity, snap to nearest
             const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
             newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
           }

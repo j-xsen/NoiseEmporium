@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
+import { memo, useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, GradientTexture, Environment, Clouds, Cloud } from '@react-three/drei'
@@ -232,7 +232,7 @@ interface BubbleWorldProps {
 }
 
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
-export default function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
+function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
   const [pageRow0, setPageRow0] = useState(0)
   const [pageRow1, setPageRow1] = useState(0)
@@ -563,3 +563,5 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
     </div>
   )
 }
+
+export default memo(BubbleWorld)

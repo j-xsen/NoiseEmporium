@@ -351,10 +351,10 @@ export default function BubbleWorld({ releases, collections, currentSongId }: Bu
           activeApi.current?.drag(mobileDx)
         } else {
           let newPage: number
-          // Use velocity OR pixel distance: fast flick OR meaningful drag both advance one item.
-          // vx from touchend is often near-zero (touchend has no coords), so mx is the fallback.
+          // vx from use-gesture is unsigned (speed, not signed velocity), so always use mx for direction.
+          // Treat as a deliberate page-change if fast flick OR moved > 40px.
           if (Math.abs(vx) > 0.3 || Math.abs(mx) > 40) {
-            const dir = ((Math.abs(vx) > 0.3 ? vx : mx) < 0) ? 1 : -1
+            const dir = mx < 0 ? 1 : -1
             newPage = Math.max(0, Math.min(activePage + dir, maxPage))
           } else {
             // Slow deliberate drag: project forward by 200ms of velocity, snap to nearest

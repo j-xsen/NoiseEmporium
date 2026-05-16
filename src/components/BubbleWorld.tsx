@@ -1,7 +1,7 @@
-import { memo, useState, useEffect, useLayoutEffect, useRef, type ReactNode, type MutableRefObject } from 'react'
+import { memo, useState, useEffect, useLayoutEffect, useRef, useCallback, type ReactNode, type MutableRefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, GradientTexture, Environment, Clouds, Cloud } from '@react-three/drei'
+import { OrbitControls, GradientTexture, Environment, Clouds, Cloud, useTexture, useProgress } from '@react-three/drei'
 import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
@@ -265,6 +265,28 @@ function ScrollingClouds() {
   )
 }
 
+// ── Scene ready probe ─────────────────────────────────────────────────────────
+// Fires onReady on the first frame where useProgress.active is false, meaning
+// the loading manager has no more pending items (fonts, env map, initial textures).
+function ReadyProbe({ onReady }: { onReady: () => void }) {
+  const { active } = useProgress()
+  const activeRef = useRef(active)
+  const firedRef = useRef(false)
+  useEffect(() => { activeRef.current = active }, [active])
+  useFrame(() => {
+    if (firedRef.current || activeRef.current) return
+    firedRef.current = true
+    onReady()
+  })
+  return null
+}
+
+// Preloads every cover in a row into Three.js texture cache so Suspense boundaries
+// resolve immediately as the user scrolls to each bubble.
+function preloadRowCovers(items: Item[]) {
+  items.forEach(item => { if (item.cover) useTexture.preload(item.cover) })
+}
+
 interface BubbleWorldProps {
   releases: Release[]
   collections: Collection[]
@@ -279,6 +301,8 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
   const [pageRow2, setPageRow2] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
   const [focusedRow, setFocusedRow] = useState(() => rowForHash(window.location.hash))
+  const [sceneReady, setSceneReady] = useState(false)
+  const handleSceneReady = useCallback(() => setSceneReady(true), [])
 
   // hash ↔ focusedRow sync
   useEffect(() => {
@@ -302,6 +326,10 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     setPageRow0(0); setPageRow1(0); setPageRow2(0)
     setFocusedRow(rowForHash(window.location.hash))
   }, [isMobile])
+
+  // Preload all covers in the focused row so bubbles load ahead of scrolling
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { preloadRowCovers(rows[focusedRow]) }, [focusedRow])
 
   // ── Row data ─────────────────────────────────────────────────────────────────
   const row0: Item[] = releases
@@ -401,8 +429,11 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       const worldDx = mx * worldScaleRef.current
 
       if (isMobile) {
-        // Lock axis on first frame so each gesture is purely horizontal or vertical
-        if (first) dragAxisRef.current = Math.abs(my) > Math.abs(mx) ? 'y' : 'x'
+        // Lock axis on first frame; also kick off preloading for the whole row
+        if (first) {
+          dragAxisRef.current = Math.abs(my) > Math.abs(mx) ? 'y' : 'x'
+          preloadRowCovers(rows[focusedRowRef.current])
+        }
 
         if (dragAxisRef.current === 'y') {
           // Vertical swipe — shift the scroll group, then snap to adjacent row on release
@@ -438,7 +469,10 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           rowApis[fr].current?.settle(newPage)
         }
       } else {
-        if (first) dragRowRef.current = rowFromMouseY(mouseYRef.current)
+        if (first) {
+          dragRowRef.current = rowFromMouseY(mouseYRef.current)
+          preloadRowCovers(rows[dragRowRef.current])
+        }
         const dr = dragRowRef.current
 
         if (!last) {
@@ -456,6 +490,15 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
 
   return (
     <div className="bubble-world" role="region" aria-label="Music library">
+
+      {/* Loading overlay — fades out once the scene's first frame is idle */}
+      <div className={`bw-loading${sceneReady ? ' bw-loading--ready' : ''}`} aria-hidden="true">
+        <div className="bw-loading__dots">
+          <div className="bw-loading__dot" />
+          <div className="bw-loading__dot" />
+          <div className="bw-loading__dot" />
+        </div>
+      </div>
 
       {/* Accessible navigation (visually hidden) */}
       <nav aria-label="Browse music" className="sr-only">
@@ -486,6 +529,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
         >
           <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 13 : 26} />
           <WorldScaleProbe scaleRef={worldScaleRef} />
+          <ReadyProbe onReady={handleSceneReady} />
 
           <mesh position={[0, 0, -30]} scale={[220, 60, 1]}>
             <planeGeometry />

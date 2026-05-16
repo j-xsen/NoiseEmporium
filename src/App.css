@@ -2251,3 +2251,43 @@
 }
 
 .bw-account-btn:active { color: #fff; }
+
+/* ── BubbleWorld loading overlay ─────────────────────────────────────────────── */
+
+.bw-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Matches the sky gradient used for the 3D background plane */
+  background: linear-gradient(to bottom, #1a5c8a 0%, #2e8ab5 35%, #5ab8d4 70%, #8dd4e8 100%);
+  transition: opacity 0.6s ease;
+}
+
+.bw-loading--ready {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bw-loading__dots {
+  display: flex;
+  gap: 10px;
+}
+
+.bw-loading__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  animation: bw-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.bw-loading__dot:nth-child(2) { animation-delay: 0.18s; }
+.bw-loading__dot:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes bw-dot-pulse {
+  0%, 80%, 100% { transform: scale(0.65); opacity: 0.35; }
+  40%            { transform: scale(1);    opacity: 1; }
+}

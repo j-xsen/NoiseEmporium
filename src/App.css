@@ -1985,6 +1985,11 @@
   }
 }
 
+@media (max-width: 639px) {
+  .mini-player__vol-btn { display: none; }
+  .np-volume-wrap { display: none; }
+}
+
 /* ── Shop ───────────────────────────────────────────────────────────────────── */
 
 .shop-filters {

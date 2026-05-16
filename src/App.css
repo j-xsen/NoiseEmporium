@@ -1701,37 +1701,24 @@
   touch-action: none;
 }
 
-/* ── Page navigation arrows ───────────────────────────────────────────────── */
+/* ── Desktop per-row nav ──────────────────────────────────────────────────── */
+/* top% derived from camera y=0.75, z=26, fov=50 projecting ROW_Y [6, 0, -6] */
 
-.bubble-nav {
+.bw-rnav {
   position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  left: 0;
+  right: 0;
   z-index: 5;
 }
 
-.bubble-nav-dual {
+.bw-rnav--0 { top: 28%; }
+.bw-rnav--1 { top: 53%; }
+.bw-rnav--2 { top: 78%; }
+
+.bw-rnav__arrow {
   position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 32px;
-  z-index: 5;
-}
-
-.bubble-nav--inline {
-  position: static;
-  transform: none;
-  bottom: auto;
-  left: auto;
-}
-
-.bubble-nav__arrow {
+  top: 0;
+  transform: translateY(-50%);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1744,32 +1731,25 @@
   justify-content: center;
   transition: background 0.2s, opacity 0.2s;
   cursor: pointer;
-  flex-shrink: 0;
 }
 
-.bubble-nav__arrow:disabled {
+.bw-rnav__arrow--prev { left: 16px; }
+.bw-rnav__arrow--next { right: 16px; }
+
+.bw-rnav__arrow:disabled {
   opacity: 0.25;
   cursor: not-allowed;
 }
 
-.bubble-nav__arrow:not(:disabled):hover {
+.bw-rnav__arrow:not(:disabled):hover {
   background: rgba(5, 12, 28, 0.8);
 }
 
-.bubble-nav__arrow:focus-visible {
+.bw-rnav__arrow:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-.bubble-nav__page {
-  font-size: 13px;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.75);
-  font-variant-numeric: tabular-nums;
-  min-width: 48px;
-  text-align: center;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-}
 
 /* ── Desktop row labels ──────────────────────────────────────────────────────── */
 

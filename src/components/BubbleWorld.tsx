@@ -9,7 +9,7 @@ import * as THREE from 'three'
 
 // ── Desktop: camera at z=26 ──────────────────────────────────────────────────
 const COL_SPACING = 4.5
-const ROW_Y: [number, number, number] = [5.0, 0.0, -5.0]
+const ROW_Y: [number, number, number] = [6.0, 0.0, -6.0]
 
 // ── Mobile: three independent carousels, camera at z=10 y=1.2 ───────────────
 const MOBILE_BREAKPOINT = 640
@@ -640,36 +640,23 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       )}
 
       {/* ── Desktop: per-row nav ─────────────────────────────────────────── */}
-      {!isMobile && (
-        <div className="bubble-nav-dual">
-          {row0.length > 1 && (
-            <nav className="bubble-nav bubble-nav--inline" aria-label="Albums & EPs pages">
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, -1)} disabled={pageRow0 === 0} aria-label="Previous album or EP"><ChevronLeft /></button>
-              <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
-                <span className="sr-only">Albums & EPs page </span>{pageRow0 + 1}/{row0.length}
-              </span>
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, 1)} disabled={pageRow0 === row0MaxPage} aria-label="Next album or EP"><ChevronRight /></button>
-            </nav>
-          )}
-          {row1.length > 1 && (
-            <nav className="bubble-nav bubble-nav--inline" aria-label="Singles pages">
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, -1)} disabled={pageRow1 === 0} aria-label="Previous single"><ChevronLeft /></button>
-              <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
-                <span className="sr-only">Singles page </span>{pageRow1 + 1}/{row1.length}
-              </span>
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, 1)} disabled={pageRow1 === row1MaxPage} aria-label="Next single"><ChevronRight /></button>
-            </nav>
-          )}
-          {row2.length > 1 && (
-            <nav className="bubble-nav bubble-nav--inline" aria-label="Collections pages">
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(2, -1)} disabled={pageRow2 === 0} aria-label="Previous collection"><ChevronLeft /></button>
-              <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
-                <span className="sr-only">Collection page </span>{pageRow2 + 1}/{row2.length}
-              </span>
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(2, 1)} disabled={pageRow2 === row2MaxPage} aria-label="Next collection"><ChevronRight /></button>
-            </nav>
-          )}
-        </div>
+      {!isMobile && row0.length > 1 && (
+        <nav className="bw-rnav bw-rnav--0" aria-label="Albums & EPs pages">
+          <button className="bw-rnav__arrow bw-rnav__arrow--prev" onClick={() => advanceRow(0, -1)} disabled={pageRow0 === 0} aria-label="Previous album or EP"><ChevronLeft /></button>
+          <button className="bw-rnav__arrow bw-rnav__arrow--next" onClick={() => advanceRow(0, 1)} disabled={pageRow0 === row0MaxPage} aria-label="Next album or EP"><ChevronRight /></button>
+        </nav>
+      )}
+      {!isMobile && row1.length > 1 && (
+        <nav className="bw-rnav bw-rnav--1" aria-label="Singles pages">
+          <button className="bw-rnav__arrow bw-rnav__arrow--prev" onClick={() => advanceRow(1, -1)} disabled={pageRow1 === 0} aria-label="Previous single"><ChevronLeft /></button>
+          <button className="bw-rnav__arrow bw-rnav__arrow--next" onClick={() => advanceRow(1, 1)} disabled={pageRow1 === row1MaxPage} aria-label="Next single"><ChevronRight /></button>
+        </nav>
+      )}
+      {!isMobile && row2.length > 1 && (
+        <nav className="bw-rnav bw-rnav--2" aria-label="Collections pages">
+          <button className="bw-rnav__arrow bw-rnav__arrow--prev" onClick={() => advanceRow(2, -1)} disabled={pageRow2 === 0} aria-label="Previous collection"><ChevronLeft /></button>
+          <button className="bw-rnav__arrow bw-rnav__arrow--next" onClick={() => advanceRow(2, 1)} disabled={pageRow2 === row2MaxPage} aria-label="Next collection"><ChevronRight /></button>
+        </nav>
       )}
     </div>
   )

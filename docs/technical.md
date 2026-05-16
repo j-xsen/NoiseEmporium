@@ -30,20 +30,61 @@ src/hooks/
 
 **Tab navigation** (BottomNav): Home → Player → Library (Playlists)
 
-**Navigation state** is managed with `useState` IDs in `App.tsx` — no router. Switching tabs clears all detail-level state. Within the Home tab, the depth stack is:
+**Routing** uses React Router v6 (`BrowserRouter` in `main.tsx`). `App.tsx` wraps its content in `<Routes>` and defines the route tree. The bottom-nav tabs are driven by a `tab` state variable in `App.tsx`, but navigating into a release or collection uses real URL routes so the browser back button works.
 
 ```
-Home (Library.tsx)
-  ├── ReleaseDetail.tsx
-  ├── CollectionDetail.tsx
-  │     └── LyricsView.tsx
-  └── PlaylistDetail.tsx  (featured playlist)
+/                        BubbleWorld (3D) or Library (2D) depending on viewMode toggle
+/album/:slug             ReleaseDetail
+/ep/:slug                ReleaseDetail
+/single/:slug            ReleaseDetail
+/collection/:slug        CollectionDetail
+  └── LyricsView         rendered in-place over CollectionDetail (no route, local state)
+/playlist/:id            FeaturedPlaylistDetail
 ```
 
 **Player layout:**
 - Full-screen `NowPlaying` when on Player tab
 - `MiniPlayer` bar when on Home or Library tab (hidden on Player tab)
 - Both driven by the same `useAudio` state
+
+## Audio State and Re-render Budget
+
+`useAudio` returns a `player` object. Not all fields on it are equally stable — some change every tick, some only change when the user actually does something. This matters for performance because `App.tsx` re-renders every time any `useAudio` value changes.
+
+| Value | Changes when | Stability |
+|-------|-------------|-----------|
+| `player.currentSong` | Song changes (new track starts) | Stable between track changes |
+| `player.currentSong?.id` | Song changes | Stable string; safe as an effect dep |
+| `player.isPlaying` | Play/pause | Stable between user actions |
+| `player.currentTime` | Every `timeupdate` event (~4× per second) | **Noisy — changes constantly** |
+| `player.duration` | Song loads | Stable per track |
+
+Because `currentTime` ticks constantly, `App.tsx` re-renders ~4 times per second during playback. Components that don't need the current time should be wrapped in `React.memo()` and should not receive `player` directly — receive only the stable slices they need.
+
+**Current memo boundaries:**
+- `BubbleWorld` — `memo()`'d; receives `releases`, `collections` (both stable refs from `useSongs` useState), and `currentSongId` (stable string). Does **not** re-render on audio ticks.
+- `Library` — `memo()`'d; same pattern.
+
+**`useSongs` stability:** `releases` and `collections` are `useState` arrays that are set once on app load from Contentful. Their object references never change after the initial fetch, so `memo()` comparisons always pass for those props.
+
+### The auto-scroll pattern in BubbleWorld
+
+`BubbleWorld` auto-scrolls the release carousel to show whichever release contains the currently playing song. The effect is gated with a ref to prevent re-applying the same scroll within a single mount session:
+
+```ts
+const autoScrolledForRef = useRef<string | null>(null)
+
+useEffect(() => {
+  if (!currentSongId || currentSongId === autoScrolledForRef.current) return
+  const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
+  if (idx < 0) return
+  autoScrolledForRef.current = currentSongId
+  setPageRow0(idx)
+  row0Api.current?.settle(idx)
+}, [currentSongId])
+```
+
+Why the ref: React Strict Mode double-fires every effect, and BubbleWorld remounts on every route navigation. Without the guard, the scroll would re-apply on every render cycle that ran the effect, making it impossible to manually scroll away while a song is playing. The ref resets on unmount (every navigation away from `/`), so navigating back to home always gets one fresh auto-scroll, then the user can scroll freely.
 
 ## API Architecture
 

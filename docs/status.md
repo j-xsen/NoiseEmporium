@@ -21,7 +21,7 @@
 | Shop UI | ✅ Working | `Shop.tsx` — filter by category, Stripe Checkout flow for memberships; CD/download listings ready to populate |
 | Stripe Checkout + webhook | ✅ Working | `api/stripe/checkout.ts` creates sessions + fulfills; `api/stripe/webhook.ts` upgrades `users.tier` on `checkout.session.completed` |
 | Account modal | ✅ Working | `AccountModal.tsx` — shows tier, change password, delete account |
-| 3D bubble world | 🔧 In progress | `ReleaseBubble.tsx` done; `BubbleWorld.tsx` scaffolded; App.tsx wiring, detail page restyle, and CSS still needed |
+| 3D bubble world | ✅ Working | Two-row carousel (releases + collections); drag/swipe, arrow nav, auto-scroll to now-playing release, mobile + desktop layouts |
 
 ---
 
@@ -42,7 +42,7 @@ Items are ordered so each one unblocks or sets up the next.
 
 - [ ] **1. Wire up play count display** — endpoint exists (`api/plays/index.ts`), needs to display on song cards. Play data already accumulates.
 - [x] **2. Stripe account setup** — done; keys in Vercel env vars.
-- [ ] **3. 3D store environment** — `BubbleWorld.tsx` and `ReleaseBubble.tsx` exist; App.tsx wiring, detail page restyle, and CSS still needed.
+- [x] **3. 3D store environment** — `BubbleWorld.tsx` ships with drag/swipe carousels, mobile layout, auto-scroll, and cloud animation.
 - [ ] **4. CD listing pages** — tie each shelf/display item in the 3D environment to a Contentful release. Add CD entries to `shopData.ts`.
 - [ ] **5. Stripe Checkout for CDs** — Shop UI is ready; just needs CD products in `shopData.ts`.
 - [ ] **6. Name-your-price digital downloads** — $0 minimum, Stripe for any paid amount.

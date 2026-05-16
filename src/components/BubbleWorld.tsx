@@ -267,11 +267,16 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
   }, [isMobile])
 
-  // Auto-scroll to the release that contains the currently playing song.
+  // Auto-scroll to the release containing the now-playing song.
+  // The ref prevents re-applying the same scroll if the effect fires more than
+  // once for the same song ID (Strict Mode double-fire, rapid renders, etc.).
+  // It resets on unmount so navigating back to home always gets one auto-scroll.
+  const autoScrolledForRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!currentSongId) return
+    if (!currentSongId || currentSongId === autoScrolledForRef.current) return
     const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
     if (idx < 0) return
+    autoScrolledForRef.current = currentSongId
     setPageRow0(idx)
     row0Api.current?.settle(idx)
   }, [currentSongId]) // eslint-disable-line react-hooks/exhaustive-deps

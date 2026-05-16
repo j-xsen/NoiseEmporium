@@ -36,7 +36,7 @@ import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
-import { DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
+import { DownloadIcon, MinusCircleIcon, PlusIcon, UserIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release, Collection } from './types'
 
@@ -431,6 +431,16 @@ export default function App() {
               aria-pressed={viewMode === '2d'}
             >2D</button>
           </div>
+        )}
+
+        {tab === 'home' && !lyricsSong && viewMode === '3d' && auth.user && (
+          <button
+            className="bw-account-btn"
+            onClick={handleOpenAccount}
+            aria-label="Account settings"
+          >
+            <UserIcon size={20} />
+          </button>
         )}
 
         {lyricsSong ? (

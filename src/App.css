@@ -2230,3 +2230,24 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.bw-account-btn {
+  position: absolute;
+  top: calc(var(--safe-top) + 8px);
+  right: 14px;
+  z-index: 20;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(5, 12, 28, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+  transition: color 0.15s;
+}
+
+.bw-account-btn:active { color: #fff; }

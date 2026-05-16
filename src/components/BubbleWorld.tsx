@@ -68,16 +68,35 @@ function WorldScaleProbe({ scaleRef }: { scaleRef: MutableRefObject<number> }) {
 }
 
 // ── Y-scroll group (shifts rows without moving camera) ────────────────────────
-function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; children: ReactNode }) {
+interface ScrollGroupApi {
+  dragBy: (extraY: number) => void
+}
+
+function ScrollGroup({ targetOffsetY, children, apiRef }: { targetOffsetY: number; children: ReactNode; apiRef?: MutableRefObject<ScrollGroupApi | null> }) {
   const groupRef = useRef<THREE.Group>(null)
   const ty = useRef(targetOffsetY)
+  const baseY = useRef(targetOffsetY)
 
   useLayoutEffect(() => {
     if (groupRef.current) groupRef.current.position.y = targetOffsetY
     ty.current = targetOffsetY
+    baseY.current = targetOffsetY
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { ty.current = targetOffsetY }, [targetOffsetY])
+  useEffect(() => {
+    ty.current = targetOffsetY
+    baseY.current = targetOffsetY
+  }, [targetOffsetY])
+
+  useEffect(() => {
+    if (!apiRef) return
+    apiRef.current = {
+      dragBy: (extraY) => {
+        ty.current = baseY.current + extraY
+        if (groupRef.current) groupRef.current.position.y = ty.current
+      },
+    }
+  })
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -362,6 +381,10 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
   const mouseYRef = useRef(0.25)
   // Row targeted at drag-start — stays locked for the whole gesture
   const dragRowRef = useRef(0)
+  // Axis locked at drag-start on mobile: 'x' = carousel scroll, 'y' = row switch
+  const dragAxisRef = useRef<'x' | 'y'>('x')
+  // Imperative API for the mobile ScrollGroup
+  const scrollGroupApiRef = useRef<ScrollGroupApi | null>(null)
 
   const rowApis  = [row0Api,    row1Api,    row2Api]
   const rowMaxes = [row0MaxPage, row1MaxPage, row2MaxPage]
@@ -408,10 +431,39 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
 
   // ── Drag gesture ────────────────────────────────────────────────────────────
   const bind = useDrag(
-    ({ movement: [mx], first, last, velocity: [vx] }) => {
+    ({ movement: [mx, my], first, last, velocity: [vx, vy] }) => {
       const worldDx = mx * worldScaleRef.current
 
       if (isMobile) {
+        // Lock axis on first frame so the gesture stays purely horizontal or vertical
+        if (first) {
+          dragAxisRef.current = Math.abs(my) > Math.abs(mx) ? 'y' : 'x'
+        }
+
+        if (dragAxisRef.current === 'y') {
+          // Vertical drag — switch rows
+          // my < 0 means finger moved up → advance to next row (higher index)
+          const worldDy = -my * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY
+          const currentBaseY = MOBILE_ROW_Y[0] - MOBILE_ROW_Y[focusedRowRef.current]
+          const minOff = 0
+          const maxOff = MOBILE_ROW_Y[0] - MOBILE_ROW_Y[2]
+          const clampedExtra = Math.max(minOff - currentBaseY, Math.min(worldDy, maxOff - currentBaseY))
+          scrollGroupApiRef.current?.dragBy(clampedExtra)
+
+          if (last) {
+            const fr = focusedRowRef.current
+            let newRow = fr
+            if (Math.abs(vy) > 0.3 || Math.abs(my) > 40) {
+              const dir = my < 0 ? 1 : -1
+              newRow = Math.max(0, Math.min(fr + dir, 2))
+            }
+            focusedRowRef.current = newRow
+            setFocusedRow(newRow)
+          }
+          return
+        }
+
+        // Horizontal drag — carousel scroll within the focused row
         const fr        = focusedRowRef.current
         const activeApi = rowApis[fr]
         const activePage = getPageRefForRow(fr)
@@ -527,7 +579,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           <ScrollingClouds />
 
           {isMobile ? (
-            <ScrollGroup targetOffsetY={MOBILE_ROW_Y[0] - MOBILE_ROW_Y[focusedRow]}>
+            <ScrollGroup targetOffsetY={MOBILE_ROW_Y[0] - MOBILE_ROW_Y[focusedRow]} apiRef={scrollGroupApiRef}>
               <CarouselRow
                 items={row0}
                 page={pageRow0}

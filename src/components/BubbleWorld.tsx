@@ -114,10 +114,16 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
     api.start({ x: -page * spacing })
   }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Snap immediately whenever focus changes — stops any in-progress animation
-  // so the row isn't seen mid-transition while the scroll group slides it off-screen.
+  // When a row goes OFF-screen (mobile row switch), stop any in-progress animation
+  // so it isn't seen mid-slide. Skip on mount and skip when becoming focused —
+  // the [page, spacing] effect above already positions the spring correctly.
+  const prevRowFocusedRef = useRef(rowFocused)
   useEffect(() => {
-    api.start({ x: -page * spacing, immediate: true })
+    const wasRowFocused = prevRowFocusedRef.current
+    prevRowFocusedRef.current = rowFocused
+    if (!rowFocused && wasRowFocused) {
+      api.start({ x: -page * spacing, immediate: true })
+    }
   }, [rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -268,15 +274,10 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
   }, [isMobile])
 
   // Auto-scroll to the release containing the now-playing song.
-  // The ref prevents re-applying the same scroll if the effect fires more than
-  // once for the same song ID (Strict Mode double-fire, rapid renders, etc.).
-  // It resets on unmount so navigating back to home always gets one auto-scroll.
-  const autoScrolledForRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!currentSongId || currentSongId === autoScrolledForRef.current) return
+    if (!currentSongId) return
     const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
     if (idx < 0) return
-    autoScrolledForRef.current = currentSongId
     setPageRow0(idx)
     row0Api.current?.settle(idx)
   }, [currentSongId]) // eslint-disable-line react-hooks/exhaustive-deps

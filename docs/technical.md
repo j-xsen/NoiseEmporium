@@ -72,19 +72,18 @@ Because `currentTime` ticks constantly, `App.tsx` re-renders ~4 times per second
 `BubbleWorld` auto-scrolls the release carousel to show whichever release contains the currently playing song. The effect is gated with a ref to prevent re-applying the same scroll within a single mount session:
 
 ```ts
-const autoScrolledForRef = useRef<string | null>(null)
-
 useEffect(() => {
-  if (!currentSongId || currentSongId === autoScrolledForRef.current) return
+  if (!currentSongId) return
   const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
   if (idx < 0) return
-  autoScrolledForRef.current = currentSongId
   setPageRow0(idx)
   row0Api.current?.settle(idx)
 }, [currentSongId])
 ```
 
-Why the ref: React Strict Mode double-fires every effect, and BubbleWorld remounts on every route navigation. Without the guard, the scroll would re-apply on every render cycle that ran the effect, making it impossible to manually scroll away while a song is playing. The ref resets on unmount (every navigation away from `/`), so navigating back to home always gets one fresh auto-scroll, then the user can scroll freely.
+The effect only has `currentSongId` as a dep (releases is intentionally omitted — it's stable and including it would cause a double-scroll on load). Because `currentSongId` is a stable string while the same song plays, this fires once per song change, not continuously. BubbleWorld remounts on every route navigation, so returning to home always triggers one fresh auto-scroll.
+
+**Pitfall — `[rowFocused]` stale closure:** `CarouselRow` had an effect that snapped the spring to `-page * spacing` whenever `rowFocused` changed, but `page` wasn't in the deps (intentional stale closure for the mobile row-switch case). React Strict Mode double-fires effects; the second fire used the stale `page = 0` from the initial render, snapping the spring to 0 even after auto-scroll had moved it to the correct position. Fixed by only snapping when a row goes **off**-screen (`!rowFocused && wasRowFocused`), skipping mount and focus-gain entirely.
 
 ## API Architecture
 

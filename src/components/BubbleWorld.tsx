@@ -219,14 +219,14 @@ interface Item {
 
 // ── Scrolling clouds ──────────────────────────────────────────────────────────
 const CLOUD_DEFS = [
-  { seed: 22, x:  -45, y: 14.5, z: -22, dx: 0.40, bounds: [7, 2, 2] as [number,number,number] },
-  { seed: 77, x:  -20, y: 16.0, z: -24, dx: 0.28, bounds: [8, 2, 2] as [number,number,number] },
-  { seed: 11, x:    5, y: 15.2, z: -23, dx: 0.35, bounds: [6, 2, 2] as [number,number,number] },
-  { seed: 44, x:   30, y: 15.8, z: -25, dx: 0.22, bounds: [9, 2, 2] as [number,number,number] },
-  { seed: 63, x:   55, y: 14.8, z: -21, dx: 0.32, bounds: [7, 2, 2] as [number,number,number] },
+  { seed: 22, x:  -80, y: 14.5, z: -22, dx: 0.40, bounds: [7, 2, 2] as [number,number,number] },
+  { seed: 77, x:  -42, y: 16.0, z: -24, dx: 0.28, bounds: [8, 2, 2] as [number,number,number] },
+  { seed: 11, x:   -4, y: 15.2, z: -23, dx: 0.35, bounds: [6, 2, 2] as [number,number,number] },
+  { seed: 44, x:   36, y: 15.8, z: -25, dx: 0.22, bounds: [9, 2, 2] as [number,number,number] },
+  { seed: 63, x:   80, y: 14.8, z: -21, dx: 0.32, bounds: [7, 2, 2] as [number,number,number] },
 ]
 const CLOUD_SCALE = 2.8
-const CLOUD_BUFFER = 20  // world units past screen edge before wrapping
+const CLOUD_BUFFER = 55  // world units past screen edge before wrapping
 
 function ScrollingClouds() {
   const refs = useRef<(THREE.Group | null)[]>(CLOUD_DEFS.map(() => null))

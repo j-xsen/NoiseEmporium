@@ -418,7 +418,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="screen">
-        {tab === 'home' && !lyricsSong && (
+        {tab === 'home' && !lyricsSong && location.pathname === '/' && (
           <div className="view-toggle" role="group" aria-label="Choose view mode">
             <button
               className={`view-toggle__opt${viewMode === '3d' ? ' view-toggle__opt--active' : ''}`}
@@ -433,7 +433,7 @@ export default function App() {
           </div>
         )}
 
-        {tab === 'home' && !lyricsSong && viewMode === '3d' && auth.user && (
+        {tab === 'home' && !lyricsSong && location.pathname === '/' && viewMode === '3d' && auth.user && (
           <button
             className="bw-account-btn"
             onClick={handleOpenAccount}

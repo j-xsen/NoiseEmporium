@@ -449,6 +449,10 @@
   flex-shrink: 0;
 }
 
+.song-track--active .song-track__dl-check {
+  color: #fff;
+}
+
 .song-track--locked {
   opacity: 0.45;
 }

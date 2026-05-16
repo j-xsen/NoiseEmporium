@@ -90,18 +90,20 @@ function Library({
             {singles.length > 0 && (
               <section className="home-section">
                 <h2 className="home-section__title">Singles</h2>
-                <ul className="singles-list">
+                <ul className="release-grid">
                   {singles.map(release => {
                     const year = release.date ? new Date(release.date).getFullYear() : null
                     const isActive = release.songs.some(s => s.id === currentSongId)
                     return (
-                      <li key={release.id} className={`single-row ${isActive ? 'single-row--active' : ''}`}>
-                        <button className="single-row__btn" onClick={() => onSelectRelease(release.id)}>
-                          <div className="single-row__art-wrap">
-                            <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="single-row__art" />
+                      <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
+                        <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
+                          <div className="release-card__art-wrap">
+                            <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
                           </div>
-                          <span className="single-row__name">{release.name}</span>
-                          {year && <span className="single-row__year">{year}</span>}
+                          <div className="release-card__info">
+                            <span className="release-card__name">{release.name}</span>
+                            <span className="release-card__meta">Single{year ? ` · ${year}` : ''}</span>
+                          </div>
                         </button>
                       </li>
                     )

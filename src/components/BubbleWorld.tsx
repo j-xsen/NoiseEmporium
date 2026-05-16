@@ -9,15 +9,26 @@ import * as THREE from 'three'
 
 // ── Desktop: camera at z=26 ──────────────────────────────────────────────────
 const COL_SPACING = 4.5
-const ROW_Y: [number, number] = [4.0, -2.5]
+const ROW_Y: [number, number, number] = [5.0, 0.0, -5.0]
 
-// ── Mobile: two independent carousels, camera at z=10 y=1.2 ─────────────────
+// ── Mobile: three independent carousels, camera at z=10 y=1.2 ───────────────
 const MOBILE_BREAKPOINT = 640
-const MOBILE_ROW_Y: [number, number] = [1.2, -8.0]
+const MOBILE_ROW_Y: [number, number, number] = [1.2, -8.0, -17.2]
 const MOBILE_SPACING = 5.5
 // Amplify pixel→world conversion on mobile so a short swipe snaps to the next bubble
 const MOBILE_DRAG_SENSITIVITY = 2.0
 
+function hashForRow(row: number): string {
+  if (row === 1) return '#singles'
+  if (row === 2) return '#collections'
+  return ''
+}
+
+function rowForHash(hash: string): number {
+  if (hash === '#singles') return 1
+  if (hash === '#collections') return 2
+  return 0
+}
 
 // ── Camera controller ─────────────────────────────────────────────────────────
 function CameraController({ targetY, targetZ }: { targetY: number; targetZ: number }) {
@@ -254,25 +265,25 @@ interface BubbleWorldProps {
   currentSongId?: string
 }
 
+
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
 function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
   const [pageRow0, setPageRow0] = useState(0)
   const [pageRow1, setPageRow1] = useState(0)
+  const [pageRow2, setPageRow2] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
-  const [focusedRow, setFocusedRow] = useState(() =>
-    window.location.hash === '#collections' ? 1 : 0
-  )
+  const [focusedRow, setFocusedRow] = useState(() => rowForHash(window.location.hash))
 
   // hash ↔ focusedRow sync
   useEffect(() => {
-    const onHash = () => setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
+    const onHash = () => setFocusedRow(rowForHash(window.location.hash))
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
   useEffect(() => {
-    const hash = focusedRow === 1 ? '#collections' : ''
+    const hash = hashForRow(focusedRow)
     if (window.location.hash !== hash) {
       history.replaceState(null, '', hash || window.location.pathname)
     }
@@ -287,21 +298,35 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
   useEffect(() => {
     setPageRow0(0)
     setPageRow1(0)
-    setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
+    setPageRow2(0)
+    setFocusedRow(rowForHash(window.location.hash))
   }, [isMobile])
 
+  const row0: Item[] = releases
+    .filter(r => r.releaseType === 'album' || r.releaseType === 'ep')
+    .map(r => ({
+      id: r.id,
+      name: r.name,
+      label: `${r.name} — ${r.releaseType.charAt(0).toUpperCase() + r.releaseType.slice(1)}`,
+      cover: r.cover,
+      radius: r.releaseType === 'album' ? 2.0 : 1.5,
+      isActive: r.songs.some(s => s.id === currentSongId),
+      onClick: () => navigate(`/${r.releaseType}/${r.slug}`),
+    }))
 
-  const row0: Item[] = releases.map(r => ({
-    id: r.id,
-    name: r.name,
-    label: `${r.name} — ${r.releaseType.charAt(0).toUpperCase() + r.releaseType.slice(1)}`,
-    cover: r.cover,
-    radius: r.releaseType === 'album' ? 2.0 : r.releaseType === 'ep' ? 1.5 : 1.2,
-    isActive: r.songs.some(s => s.id === currentSongId),
-    onClick: () => navigate(`/${r.releaseType}/${r.slug}`),
-  }))
+  const row1: Item[] = releases
+    .filter(r => r.releaseType === 'single')
+    .map(r => ({
+      id: r.id,
+      name: r.name,
+      label: `${r.name} — Single`,
+      cover: r.cover,
+      radius: 1.2,
+      isActive: r.songs.some(s => s.id === currentSongId),
+      onClick: () => navigate(`/single/${r.slug}`),
+    }))
 
-  const row1: Item[] = collections.map(c => ({
+  const row2: Item[] = collections.map(c => ({
     id: c.id,
     name: c.title,
     label: `${c.title} — Collection`,
@@ -313,17 +338,21 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
 
   const row0MaxPage = Math.max(0, row0.length - 1)
   const row1MaxPage = Math.max(0, row1.length - 1)
+  const row2MaxPage = Math.max(0, row2.length - 1)
 
-  // Spring APIs exposed by CarouselRow children — written to from useDrag
+  // Carousel APIs exposed by CarouselRow children — written to from useDrag
   const row0Api = useRef<CarouselApi | null>(null)
   const row1Api = useRef<CarouselApi | null>(null)
+  const row2Api = useRef<CarouselApi | null>(null)
   // Refs so the useDrag closure always reads current values (avoids stale captures)
   const focusedRowRef = useRef(focusedRow)
   const pageRow0Ref   = useRef(pageRow0)
   const pageRow1Ref   = useRef(pageRow1)
+  const pageRow2Ref   = useRef(pageRow2)
   useEffect(() => { focusedRowRef.current = focusedRow }, [focusedRow])
   useEffect(() => { pageRow0Ref.current   = pageRow0   }, [pageRow0])
   useEffect(() => { pageRow1Ref.current   = pageRow1   }, [pageRow1])
+  useEffect(() => { pageRow2Ref.current   = pageRow2   }, [pageRow2])
   // World-units-per-pixel, updated every frame by WorldScaleProbe
   const worldScaleRef = useRef(0.024)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -334,75 +363,88 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
   // Row targeted at drag-start — stays locked for the whole gesture
   const dragRowRef = useRef(0)
 
-  function advanceRow(row: 0 | 1, dir: number) {
-    if (row === 0) {
-      const np = Math.max(0, Math.min(pageRow0 + dir, row0MaxPage))
-      setPageRow0(np)
-      row0Api.current?.settle(np)
-    } else {
-      const np = Math.max(0, Math.min(pageRow1 + dir, row1MaxPage))
-      setPageRow1(np)
-      row1Api.current?.settle(np)
-    }
+  const rowApis  = [row0Api,    row1Api,    row2Api]
+  const rowMaxes = [row0MaxPage, row1MaxPage, row2MaxPage]
+
+  function getPageForRow(row: number) {
+    if (row === 0) return pageRow0
+    if (row === 1) return pageRow1
+    return pageRow2
+  }
+  function getPageRefForRow(row: number) {
+    if (row === 0) return pageRow0Ref.current
+    if (row === 1) return pageRow1Ref.current
+    return pageRow2Ref.current
+  }
+  function setPageForRow(row: number, page: number) {
+    if (row === 0) setPageRow0(page)
+    else if (row === 1) setPageRow1(page)
+    else setPageRow2(page)
+  }
+
+  function advanceRow(row: number, dir: number) {
+    const np = Math.max(0, Math.min(getPageForRow(row) + dir, rowMaxes[row]))
+    setPageForRow(row, np)
+    rowApis[row].current?.settle(np)
+  }
+
+  // Map mouseY (0=top, 1=bottom) to a row index across 3 rows
+  function rowFromMouseY(y: number): number {
+    if (y < 0.36) return 0
+    if (y < 0.67) return 1
+    return 2
   }
 
   function handleWheel(e: React.WheelEvent) {
     if (isMobile) return
     e.preventDefault()
     wheelAccumRef.current += e.deltaY
-    // Fire once per ~80px of accumulated scroll so trackpads feel continuous
-    // and mice (which send ~100px per tick) advance one step per notch
     if (Math.abs(wheelAccumRef.current) >= 80) {
       const dir = wheelAccumRef.current > 0 ? 1 : -1
       wheelAccumRef.current = 0
-      advanceRow(mouseYRef.current < 0.52 ? 0 : 1, dir)
+      advanceRow(rowFromMouseY(mouseYRef.current), dir)
     }
   }
 
   // ── Drag gesture ────────────────────────────────────────────────────────────
-  // filterTaps suppresses click-sized drags; threshold ignores micro-movements.
   const bind = useDrag(
     ({ movement: [mx], first, last, velocity: [vx] }) => {
       const worldDx = mx * worldScaleRef.current
 
       if (isMobile) {
         const fr        = focusedRowRef.current
-        const activeApi = fr === 0 ? row0Api : row1Api
-        const activePage = fr === 0 ? pageRow0Ref.current : pageRow1Ref.current
-        const maxPage   = fr === 0 ? row0MaxPage : row1MaxPage
+        const activeApi = rowApis[fr]
+        const activePage = getPageRefForRow(fr)
+        const maxPage   = rowMaxes[fr]
         const mobileDx  = worldDx * MOBILE_DRAG_SENSITIVITY
 
         if (!last) {
           activeApi.current?.drag(mobileDx)
         } else {
           let newPage: number
-          // vx from use-gesture is unsigned (speed, not signed velocity), so always use mx for direction.
-          // Treat as a deliberate page-change if fast flick OR moved > 40px.
           if (Math.abs(vx) > 0.3 || Math.abs(mx) > 40) {
             const dir = mx < 0 ? 1 : -1
             newPage = Math.max(0, Math.min(activePage + dir, maxPage))
           } else {
-            // Slow deliberate drag: project forward by 200ms of velocity, snap to nearest
             const projected = mobileDx + vx * worldScaleRef.current * MOBILE_DRAG_SENSITIVITY * 200
             newPage = Math.max(0, Math.min(Math.round(activePage - projected / MOBILE_SPACING), maxPage))
           }
-          if (fr === 0) setPageRow0(newPage)
-          else setPageRow1(newPage)
+          setPageForRow(fr, newPage)
           activeApi.current?.settle(newPage)
         }
       } else {
-        if (first) dragRowRef.current = mouseYRef.current < 0.52 ? 0 : 1
-        const activeApi = dragRowRef.current === 0 ? row0Api : row1Api
-        const activePage = dragRowRef.current === 0 ? pageRow0 : pageRow1
-        const maxPage = dragRowRef.current === 0 ? row0MaxPage : row1MaxPage
+        if (first) dragRowRef.current = rowFromMouseY(mouseYRef.current)
+        const dr = dragRowRef.current
+        const activeApi = rowApis[dr]
+        const activePage = getPageForRow(dr)
+        const maxPage = rowMaxes[dr]
 
         if (!last) {
           activeApi.current?.drag(worldDx)
         } else {
           const projected = worldDx + vx * worldScaleRef.current * 200
           const newPage = Math.max(0, Math.min(Math.round(activePage - projected / COL_SPACING), maxPage))
-          if (dragRowRef.current === 0) setPageRow0(newPage)
-          else setPageRow1(newPage)
+          setPageForRow(dr, newPage)
           activeApi.current?.settle(newPage)
         }
       }
@@ -416,8 +458,8 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       {/* ── Accessible navigation (visually hidden) ───────────────────────── */}
       <nav aria-label="Browse music" className="sr-only">
         {row0.length > 0 && (
-          <section aria-labelledby="bw-releases-heading">
-            <h2 id="bw-releases-heading">Releases</h2>
+          <section aria-labelledby="bw-albums-heading">
+            <h2 id="bw-albums-heading">Albums & EPs</h2>
             <ul>
               {row0.map(item => (
                 <li key={item.id}><button onClick={item.onClick}>{item.label}</button></li>
@@ -426,10 +468,20 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           </section>
         )}
         {row1.length > 0 && (
+          <section aria-labelledby="bw-singles-heading">
+            <h2 id="bw-singles-heading">Singles</h2>
+            <ul>
+              {row1.map(item => (
+                <li key={item.id}><button onClick={item.onClick}>{item.label}</button></li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {row2.length > 0 && (
           <section aria-labelledby="bw-collections-heading">
             <h2 id="bw-collections-heading">Collections</h2>
             <ul>
-              {row1.map(item => (
+              {row2.map(item => (
                 <li key={item.id}><button onClick={item.onClick}>{item.label}</button></li>
               ))}
             </ul>
@@ -454,7 +506,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           dpr={[1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
         >
-          <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? (row1.length > 0 ? 13 : 10) : 26} />
+          <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 13 : 26} />
           <WorldScaleProbe scaleRef={worldScaleRef} />
 
           <mesh position={[0, 0, -30]} scale={[220, 60, 1]}>
@@ -475,7 +527,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           <ScrollingClouds />
 
           {isMobile ? (
-            <ScrollGroup targetOffsetY={focusedRow === 0 ? 0 : MOBILE_ROW_Y[0] - MOBILE_ROW_Y[1]}>
+            <ScrollGroup targetOffsetY={MOBILE_ROW_Y[0] - MOBILE_ROW_Y[focusedRow]}>
               <CarouselRow
                 items={row0}
                 page={pageRow0}
@@ -493,6 +545,15 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
                 phaseBase={1.5}
                 apiRef={row1Api}
                 rowFocused={focusedRow === 1}
+              />
+              <CarouselRow
+                items={row2}
+                page={pageRow2}
+                rowY={MOBILE_ROW_Y[2]}
+                spacing={MOBILE_SPACING}
+                phaseBase={3.0}
+                apiRef={row2Api}
+                rowFocused={focusedRow === 2}
               />
             </ScrollGroup>
           ) : (
@@ -515,6 +576,15 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
                 apiRef={row1Api}
                 rowFocused={true}
               />
+              <CarouselRow
+                items={row2}
+                page={pageRow2}
+                rowY={ROW_Y[2]}
+                spacing={COL_SPACING}
+                phaseBase={3.0}
+                apiRef={row2Api}
+                rowFocused={true}
+              />
             </>
           )}
 
@@ -522,42 +592,50 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
         </Canvas>
       </div>
 
-      {/* ── Mobile: row toggle arrow ──────────────────────────────────────── */}
-      {isMobile && (
-        <button
-          className="bubble-row-toggle"
-          onClick={() => {
-            const next = focusedRowRef.current === 0 ? 1 : 0
-            focusedRowRef.current = next   // synchronous — no gap before drag handler reads it
-            setFocusedRow(next)
-          }}
-          aria-label={focusedRow === 0 ? 'View Collections' : 'View Releases'}
-        >
-          {focusedRow === 0 ? (
-            <>
-              <span>Collections</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
-            </>
-          ) : (
-            <>
+      {/* ── Mobile: row toggle arrows ─────────────────────────────────────── */}
+      {isMobile && (() => {
+        const ROW_NAMES = ['Albums & EPs', 'Singles', 'Collections']
+        const nextRow = ((focusedRow + 1) % 3) as 0 | 1 | 2
+        const prevRow = ((focusedRow + 2) % 3) as 0 | 1 | 2
+        return (
+          <>
+            <button
+              className="bubble-row-toggle bubble-row-toggle--left"
+              onClick={() => { focusedRowRef.current = prevRow; setFocusedRow(prevRow) }}
+              aria-label={`View ${ROW_NAMES[prevRow]}`}
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15" /></svg>
-              <span>Releases</span>
-            </>
-          )}
-        </button>
-      )}
+              <span>{ROW_NAMES[prevRow]}</span>
+            </button>
+            <button
+              className="bubble-row-toggle bubble-row-toggle--right"
+              onClick={() => { focusedRowRef.current = nextRow; setFocusedRow(nextRow) }}
+              aria-label={`View ${ROW_NAMES[nextRow]}`}
+            >
+              <span>{ROW_NAMES[nextRow]}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+          </>
+        )
+      })()}
 
       {/* ── Mobile: side arrows ───────────────────────────────────────────── */}
       {isMobile && focusedRow === 0 && row0.length > 1 && (
         <>
-          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow0(p => p - 1)} disabled={pageRow0 === 0} aria-label="Previous release"><ChevronLeft /></button>
-          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow0(p => p + 1)} disabled={pageRow0 === row0.length - 1} aria-label="Next release"><ChevronRight /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow0(p => p - 1)} disabled={pageRow0 === 0} aria-label="Previous album or EP"><ChevronLeft /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow0(p => p + 1)} disabled={pageRow0 === row0.length - 1} aria-label="Next album or EP"><ChevronRight /></button>
         </>
       )}
       {isMobile && focusedRow === 1 && row1.length > 1 && (
         <>
-          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow1(p => p - 1)} disabled={pageRow1 === 0} aria-label="Previous collection"><ChevronLeft /></button>
-          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow1(p => p + 1)} disabled={pageRow1 === row1.length - 1} aria-label="Next collection"><ChevronRight /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow1(p => p - 1)} disabled={pageRow1 === 0} aria-label="Previous single"><ChevronLeft /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow1(p => p + 1)} disabled={pageRow1 === row1.length - 1} aria-label="Next single"><ChevronRight /></button>
+        </>
+      )}
+      {isMobile && focusedRow === 2 && row2.length > 1 && (
+        <>
+          <button className="bubble-side-arrow bubble-side-arrow--left" onClick={() => setPageRow2(p => p - 1)} disabled={pageRow2 === 0} aria-label="Previous collection"><ChevronLeft /></button>
+          <button className="bubble-side-arrow bubble-side-arrow--right" onClick={() => setPageRow2(p => p + 1)} disabled={pageRow2 === row2.length - 1} aria-label="Next collection"><ChevronRight /></button>
         </>
       )}
 
@@ -565,21 +643,30 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       {!isMobile && (
         <div className="bubble-nav-dual">
           {row0.length > 1 && (
-            <nav className="bubble-nav bubble-nav--inline" aria-label="Releases pages">
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, -1)} disabled={pageRow0 === 0} aria-label="Previous release"><ChevronLeft /></button>
+            <nav className="bubble-nav bubble-nav--inline" aria-label="Albums & EPs pages">
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, -1)} disabled={pageRow0 === 0} aria-label="Previous album or EP"><ChevronLeft /></button>
               <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
-                <span className="sr-only">Release page </span>{pageRow0 + 1}/{row0.length}
+                <span className="sr-only">Albums & EPs page </span>{pageRow0 + 1}/{row0.length}
               </span>
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, 1)} disabled={pageRow0 === row0MaxPage} aria-label="Next release"><ChevronRight /></button>
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(0, 1)} disabled={pageRow0 === row0MaxPage} aria-label="Next album or EP"><ChevronRight /></button>
             </nav>
           )}
           {row1.length > 1 && (
-            <nav className="bubble-nav bubble-nav--inline" aria-label="Collections pages">
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, -1)} disabled={pageRow1 === 0} aria-label="Previous collection"><ChevronLeft /></button>
+            <nav className="bubble-nav bubble-nav--inline" aria-label="Singles pages">
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, -1)} disabled={pageRow1 === 0} aria-label="Previous single"><ChevronLeft /></button>
               <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
-                <span className="sr-only">Collection page </span>{pageRow1 + 1}/{row1.length}
+                <span className="sr-only">Singles page </span>{pageRow1 + 1}/{row1.length}
               </span>
-              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, 1)} disabled={pageRow1 === row1MaxPage} aria-label="Next collection"><ChevronRight /></button>
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(1, 1)} disabled={pageRow1 === row1MaxPage} aria-label="Next single"><ChevronRight /></button>
+            </nav>
+          )}
+          {row2.length > 1 && (
+            <nav className="bubble-nav bubble-nav--inline" aria-label="Collections pages">
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(2, -1)} disabled={pageRow2 === 0} aria-label="Previous collection"><ChevronLeft /></button>
+              <span className="bubble-nav__page" aria-live="polite" aria-atomic="true">
+                <span className="sr-only">Collection page </span>{pageRow2 + 1}/{row2.length}
+              </span>
+              <button className="bubble-nav__arrow" onClick={() => advanceRow(2, 1)} disabled={pageRow2 === row2MaxPage} aria-label="Next collection"><ChevronRight /></button>
             </nav>
           )}
         </div>

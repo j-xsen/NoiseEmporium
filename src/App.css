@@ -1789,12 +1789,11 @@
 .bubble-row-label--top    { top: 18%; }
 .bubble-row-label--bottom { top: 62%; }
 
-/* ── Mobile row toggle arrow ─────────────────────────────────────────────────── */
+/* ── Mobile row toggle arrows ────────────────────────────────────────────────── */
 
 .bubble-row-toggle {
   position: absolute;
   bottom: 80px;
-  right: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1812,6 +1811,9 @@
   z-index: 15;
   white-space: nowrap;
 }
+
+.bubble-row-toggle--left  { left: 16px; }
+.bubble-row-toggle--right { right: 16px; }
 
 .bubble-row-toggle:hover {
   background: rgba(5, 12, 28, 0.85);

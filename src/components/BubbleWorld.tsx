@@ -126,8 +126,13 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
     }
   }, [rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const groupRef = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (groupRef.current) groupRef.current.position.x = spring.x.get()
+  })
+
   return (
-    <animated.group position-x={spring.x}>
+    <group ref={groupRef}>
       {items.map((item, i) => {
         if (Math.abs(i - page) > 2) return null
         return (
@@ -145,7 +150,7 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
           />
         )
       })}
-    </animated.group>
+    </group>
   )
 }
 

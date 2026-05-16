@@ -2,7 +2,6 @@ import { memo, useState, useEffect, useLayoutEffect, useRef, type ReactNode, typ
 import { useNavigate } from 'react-router-dom'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, GradientTexture, Environment, Clouds, Cloud } from '@react-three/drei'
-import { useSpring, animated } from '@react-spring/three'
 import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release, Collection } from '../types'
@@ -95,40 +94,53 @@ interface CarouselRowProps {
 }
 
 function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused }: CarouselRowProps) {
-  const [spring, api] = useSpring(() => ({
-    x: -page * spacing,
-    config: { tension: 58, friction: 22, mass: 1.1 },
-  }))
+  const groupRef = useRef<THREE.Group>(null)
+  const targetX = useRef(-page * spacing)
+  const currentX = useRef(-page * spacing)
 
-  // Expose the spring API — drag is gated so unfocused rows never move.
+  // Keep target in sync when page changes via buttons / arrows
+  useEffect(() => {
+    targetX.current = -page * spacing
+  }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expose API — drag is gated so unfocused rows never move
   useEffect(() => {
     apiRef.current = {
-      drag:   (worldX)  => { if (!rowFocused) return; api.start({ x: -page * spacing + worldX, immediate: true }) },
-      settle: (newPage) => api.start({ x: -newPage * spacing, immediate: false }),
-      snap:   (newPage) => api.start({ x: -newPage * spacing, immediate: true }),
+      drag: (worldX) => {
+        if (!rowFocused) return
+        const x = -page * spacing + worldX
+        targetX.current = x
+        currentX.current = x   // immediate — no lerp lag during drag
+        if (groupRef.current) groupRef.current.position.x = x
+      },
+      settle: (newPage) => {
+        targetX.current = -newPage * spacing  // useFrame lerps there smoothly
+      },
+      snap: (newPage) => {
+        const x = -newPage * spacing
+        targetX.current = x
+        currentX.current = x
+        if (groupRef.current) groupRef.current.position.x = x
+      },
     }
   }, [page, spacing, rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep spring in sync when page changes via buttons / arrow keys
-  useEffect(() => {
-    api.start({ x: -page * spacing })
-  }, [page, spacing]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // When a row goes OFF-screen (mobile row switch), stop any in-progress animation
-  // so it isn't seen mid-slide. Skip on mount and skip when becoming focused —
-  // the [page, spacing] effect above already positions the spring correctly.
+  // Snap to correct position when row goes OFF-screen (mobile row switch)
   const prevRowFocusedRef = useRef(rowFocused)
   useEffect(() => {
     const wasRowFocused = prevRowFocusedRef.current
     prevRowFocusedRef.current = rowFocused
     if (!rowFocused && wasRowFocused) {
-      api.start({ x: -page * spacing, immediate: true })
+      const x = -page * spacing
+      targetX.current = x
+      currentX.current = x
     }
   }, [rowFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const groupRef = useRef<THREE.Group>(null)
   useFrame(() => {
-    if (groupRef.current) groupRef.current.position.x = spring.x.get()
+    if (!groupRef.current) return
+    currentX.current += (targetX.current - currentX.current) * 0.12
+    groupRef.current.position.x = currentX.current
   })
 
   return (

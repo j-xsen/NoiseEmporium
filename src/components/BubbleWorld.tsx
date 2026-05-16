@@ -240,11 +240,7 @@ interface BubbleWorldProps {
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
 function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
-  const [pageRow0, setPageRow0] = useState(() => {
-    if (!currentSongId) return 0
-    const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
-    return idx >= 0 ? idx : 0
-  })
+  const [pageRow0, setPageRow0] = useState(0)
   const [pageRow1, setPageRow1] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
   const [focusedRow, setFocusedRow] = useState(() =>
@@ -277,14 +273,6 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     setFocusedRow(window.location.hash === '#collections' ? 1 : 0)
   }, [isMobile])
 
-  // When the song changes to a different release while on this screen, scroll to it.
-  // pageRow0 is already initialized correctly on mount, so this only fires on change.
-  useEffect(() => {
-    if (!currentSongId) return
-    const idx = releases.findIndex(r => r.songs.some(s => s.id === currentSongId))
-    if (idx < 0) return
-    setPageRow0(idx)
-  }, [currentSongId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const row0: Item[] = releases.map(r => ({
     id: r.id,

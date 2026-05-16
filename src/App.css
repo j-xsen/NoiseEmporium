@@ -374,7 +374,10 @@
   border-bottom: 1px solid var(--border);
 }
 
-.song-track--active .song-track__title { color: var(--accent); }
+.song-track--active { background: var(--accent); }
+.song-track--active .song-track__title,
+.song-track--active .song-track__subtitle,
+.song-track--active .song-track__num { color: #fff; }
 .song-track:active { background: var(--surface); }
 
 .song-track__main {
@@ -1200,7 +1203,8 @@
 }
 
 .release-card--active {
-  border-color: var(--accent-border);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .release-card:active { opacity: 0.85; }
@@ -1246,7 +1250,8 @@
   transition: color 0.15s;
 }
 
-.release-card--active .release-card__name { color: var(--accent); }
+.release-card--active .release-card__name { color: #fff; }
+.release-card--active .release-card__meta { color: rgba(255, 255, 255, 0.8); }
 
 .release-card__meta {
   font-size: 13px;

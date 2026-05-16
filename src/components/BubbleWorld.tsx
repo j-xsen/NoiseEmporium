@@ -81,7 +81,7 @@ function ScrollGroup({ targetOffsetY, children }: { targetOffsetY: number; child
 
   useFrame(() => {
     if (!groupRef.current) return
-    groupRef.current.position.y += (ty.current - groupRef.current.position.y) * 0.09
+    groupRef.current.position.y += (ty.current - groupRef.current.position.y) * 0.18
   })
 
   return <group ref={groupRef}>{children}</group>

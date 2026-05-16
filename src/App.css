@@ -1793,7 +1793,7 @@
 }
 
 .bubble-row-toggle--left  { left: 16px; }
-.bubble-row-toggle--right { right: 16px; }
+.bubble-row-toggle--right { right: 16px; background: rgba(5, 12, 28, 0.85); color: #ffffff; }
 
 .bubble-row-toggle:hover {
   background: rgba(5, 12, 28, 0.85);

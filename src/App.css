@@ -1862,8 +1862,7 @@
   max-width: 560px;
   width: 100%;
   margin: 0 auto;
-  padding: 20px 40px 0;
-  align-items: center;
+  padding: 20px 0 0;
   text-align: center;
 }
 
@@ -1871,10 +1870,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.release-detail-ps2--no-cover .rps2-tracks-scroll {
-  width: 100%;
+  padding: 0 40px;
 }
 
 .rps2-bg {
@@ -1981,6 +1977,14 @@
   }
 
   .rps2-info-col {
+    padding: 0;
+  }
+
+  .rps2-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 0 20px;
   }
 }

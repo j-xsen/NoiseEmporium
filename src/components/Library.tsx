@@ -3,10 +3,23 @@
 // Releases are split by releaseType: albums/EPs render as art cards; singles
 // render as a compact list so they don't take up full card real estate.
 
-import { memo, useEffect } from 'react'
+import { memo, useEffect, useState } from 'react'
 import CoverArt from './CoverArt'
-import { LockIcon } from './Icons'
+import { ChevronDownIcon, LockIcon } from './Icons'
 import type { Collection, Playlist, Release, Song } from '../types'
+
+function useSectionOpen(key: string, defaultOpen = true) {
+  const lsKey = `noise-section-${key}`
+  const [open, setOpen] = useState(() => {
+    const stored = localStorage.getItem(lsKey)
+    return stored === null ? defaultOpen : stored === 'true'
+  })
+  const toggle = () => setOpen(v => {
+    localStorage.setItem(lsKey, String(!v))
+    return !v
+  })
+  return [open, toggle] as const
+}
 
 interface LibraryProps {
   releases: Release[]
@@ -27,6 +40,10 @@ function Library({
 }: LibraryProps) {
   const albums  = releases.filter(r => r.releaseType !== 'single')
   const singles = releases.filter(r => r.releaseType === 'single')
+
+  const [releasesOpen, toggleReleases]    = useSectionOpen('releases')
+  const [singlesOpen, toggleSingles]      = useSectionOpen('singles')
+  const [collectionsOpen, toggleCollections] = useSectionOpen('collections')
 
   useEffect(() => {
     if (window.location.hash === '#collections') {
@@ -60,106 +77,129 @@ function Library({
             {/* ── Albums & EPs ── */}
             {albums.length > 0 && (
               <section className={hasMultipleSections ? 'home-section' : undefined}>
-                {hasMultipleSections && <h2 className="home-section__title">Releases</h2>}
-                <ul className="release-grid">
-                  {albums.map(release => {
-                    const year = release.date ? new Date(release.date).getFullYear() : null
-                    const count = release.songs.length
-                    const isActive = release.songs.some(s => s.id === currentSongId)
-                    return (
-                      <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
-                        <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
-                          <div className="release-card__art-wrap">
-                            <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
-                          </div>
-                          <div className="release-card__info">
-                            <span className="release-card__name">{release.name}</span>
-                            <span className="release-card__meta">
-                              {release.releaseType === 'ep' ? 'EP · ' : ''}{year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
-                            </span>
-                          </div>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                {hasMultipleSections && (
+                  <h2 className="home-section__title">
+                    <button className="home-section__toggle" onClick={toggleReleases} aria-expanded={releasesOpen}>
+                      Releases
+                      <ChevronDownIcon size={14} className={releasesOpen ? undefined : 'section-chevron--collapsed'} />
+                    </button>
+                  </h2>
+                )}
+                <div className={`home-section__body${releasesOpen ? '' : ' home-section__body--collapsed'}`}>
+                  <ul className="release-grid">
+                    {albums.map(release => {
+                      const year = release.date ? new Date(release.date).getFullYear() : null
+                      const count = release.songs.length
+                      const isActive = release.songs.some(s => s.id === currentSongId)
+                      return (
+                        <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
+                          <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
+                            <div className="release-card__art-wrap">
+                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                            </div>
+                            <div className="release-card__info">
+                              <span className="release-card__name">{release.name}</span>
+                              <span className="release-card__meta">
+                                {release.releaseType === 'ep' ? 'EP · ' : ''}{year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
+                              </span>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
               </section>
             )}
 
             {/* ── Singles ── */}
             {singles.length > 0 && (
               <section className="home-section">
-                <h2 className="home-section__title">Singles</h2>
-                <ul className="release-grid">
-                  {singles.map(release => {
-                    const year = release.date ? new Date(release.date).getFullYear() : null
-                    const isActive = release.songs.some(s => s.id === currentSongId)
-                    return (
-                      <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
-                        <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
-                          <div className="release-card__art-wrap">
-                            <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
-                          </div>
-                          <div className="release-card__info">
-                            <span className="release-card__name">{release.name}</span>
-                            <span className="release-card__meta">Single{year ? ` · ${year}` : ''}</span>
-                          </div>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <h2 className="home-section__title">
+                  <button className="home-section__toggle" onClick={toggleSingles} aria-expanded={singlesOpen}>
+                    Singles
+                    <ChevronDownIcon size={14} className={singlesOpen ? undefined : 'section-chevron--collapsed'} />
+                  </button>
+                </h2>
+                <div className={`home-section__body${singlesOpen ? '' : ' home-section__body--collapsed'}`}>
+                  <ul className="release-grid">
+                    {singles.map(release => {
+                      const year = release.date ? new Date(release.date).getFullYear() : null
+                      const isActive = release.songs.some(s => s.id === currentSongId)
+                      return (
+                        <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
+                          <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
+                            <div className="release-card__art-wrap">
+                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                            </div>
+                            <div className="release-card__info">
+                              <span className="release-card__name">{release.name}</span>
+                              <span className="release-card__meta">Single{year ? ` · ${year}` : ''}</span>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
               </section>
             )}
 
             {/* ── Collections & playlists ── */}
             {hasCollections && (
               <section id="collections" className="home-section">
-                <h2 className="home-section__title">Collections</h2>
-                <ul className="release-grid">
-                  {collections.map(collection => {
-                    const locked = collection.premiumOnly && !isPremium
-                    return (
-                      <li key={collection.id} className="release-card">
-                        <button className="release-card__select" onClick={() => onSelectCollection(collection.id)}>
+                <h2 className="home-section__title">
+                  <button className="home-section__toggle" onClick={toggleCollections} aria-expanded={collectionsOpen}>
+                    Collections
+                    <ChevronDownIcon size={14} className={collectionsOpen ? undefined : 'section-chevron--collapsed'} />
+                  </button>
+                </h2>
+                <div className={`home-section__body${collectionsOpen ? '' : ' home-section__body--collapsed'}`}>
+                  <ul className="release-grid">
+                    {collections.map(collection => {
+                      const locked = collection.premiumOnly && !isPremium
+                      return (
+                        <li key={collection.id} className="release-card">
+                          <button className="release-card__select" onClick={() => onSelectCollection(collection.id)}>
+                            <div className="release-card__art-wrap">
+                              {collection.cover
+                                ? <img src={collection.cover} alt={collection.title} className="release-card__art" />
+                                : <CoverArt song={{ id: collection.id, title: collection.title, src: '' }} className="release-card__art" />
+                              }
+                              {locked && (
+                                <div className="release-card__lock">
+                                  <LockIcon size={14} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="release-card__info">
+                              <span className="release-card__name">{collection.title}</span>
+                              <span className="release-card__meta">
+                                {locked ? 'Members only' : `${collection.tracks.length} ${collection.tracks.length === 1 ? 'track' : 'tracks'}`}
+                              </span>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+
+                    {featuredPlaylists.map(playlist => (
+                      <li key={playlist.id} className="release-card">
+                        <button className="release-card__select" onClick={() => onSelectFeaturedPlaylist(playlist.id)}>
                           <div className="release-card__art-wrap">
-                            {collection.cover
-                              ? <img src={collection.cover} alt={collection.title} className="release-card__art" />
-                              : <CoverArt song={{ id: collection.id, title: collection.title, src: '' }} className="release-card__art" />
-                            }
-                            {locked && (
-                              <div className="release-card__lock">
-                                <LockIcon size={14} />
-                              </div>
-                            )}
+                            <CoverArt song={{ id: playlist.id, title: playlist.name, src: '' }} className="release-card__art" />
                           </div>
                           <div className="release-card__info">
-                            <span className="release-card__name">{collection.title}</span>
+                            <span className="release-card__name">{playlist.name}</span>
                             <span className="release-card__meta">
-                              {locked ? 'Members only' : `${collection.tracks.length} ${collection.tracks.length === 1 ? 'track' : 'tracks'}`}
+                              {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
                             </span>
                           </div>
                         </button>
                       </li>
-                    )
-                  })}
-
-                  {featuredPlaylists.map(playlist => (
-                    <li key={playlist.id} className="release-card">
-                      <button className="release-card__select" onClick={() => onSelectFeaturedPlaylist(playlist.id)}>
-                        <div className="release-card__art-wrap">
-                          <CoverArt song={{ id: playlist.id, title: playlist.name, src: '' }} className="release-card__art" />
-                        </div>
-                        <div className="release-card__info">
-                          <span className="release-card__name">{playlist.name}</span>
-                          <span className="release-card__meta">
-                            {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
-                          </span>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                  </ul>
+                </div>
               </section>
             )}
           </>

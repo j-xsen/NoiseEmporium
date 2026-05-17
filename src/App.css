@@ -1323,6 +1323,65 @@
   opacity: 0.35;
 }
 
+.home-section__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.home-section__toggle svg {
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.home-section__toggle .section-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.home-section__body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.home-section__body--collapsed {
+  grid-template-rows: 0fr;
+}
+
+.home-section__body--collapsed .release-grid {
+  padding-top: 4px;
+}
+
+.home-section__body--collapsed .release-card {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.1);
+  animation: cloud-float 6s ease-in-out infinite;
+}
+
+.home-section__body--collapsed .release-card:nth-child(2n) {
+  animation-delay: -1s;
+}
+
+.home-section__body--collapsed .release-card:nth-child(3n) {
+  animation-delay: -2s;
+}
+
+@keyframes cloud-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+.home-section__body > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* ── Collection description ─────────────────────────────────────────────────── */
 
 .collection-description {

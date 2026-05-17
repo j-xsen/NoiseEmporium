@@ -77,7 +77,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const songs: Song[] = []
     for (const track of resolved) {
       const tf = track.fields
-      const memberOnly = tf.memberOnly === true
+const memberOnly = tf.memberOnly === true
       // For member-only tracks, use the server-side stream proxy so the real CDN
       // URL is never sent to the client. The token is appended at play time in
       // App.tsx once we know the user is authenticated and premium.
@@ -94,6 +94,7 @@ export async function fetchReleases(): Promise<Release[]> {
         src,
         memberOnly,
         lyrics: tf.lyrics as string | undefined,
+        duration: tf.duration as number | undefined,
       })
     }
 
@@ -148,6 +149,7 @@ export async function fetchCollections(): Promise<Collection[]> {
         cover: coverUrl,
         memberOnly,
         lyrics: tf.lyrics as string | undefined,
+        duration: tf.duration as number | undefined,
       })
     }
 

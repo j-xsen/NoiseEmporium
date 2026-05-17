@@ -28,6 +28,7 @@ async function handle(
 }
 
 // ── Plays ─────────────────────────────────────────────────────────────────────
+app.get( '/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res))
 app.post('/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res))
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

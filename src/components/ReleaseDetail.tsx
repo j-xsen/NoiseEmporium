@@ -3,7 +3,7 @@
 // Premium users see and can play everything.
 
 import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
-import { songSubtitle } from '../utils/format'
+import { formatTime, songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
@@ -54,6 +54,9 @@ export default function ReleaseDetail({
         </button>
         {!locked && (
           <div className="song-track__actions">
+            {song.duration != null && (
+              <span className="song-track__duration">{formatTime(song.duration)}</span>
+            )}
             {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
             <button
               className="song-track__more"

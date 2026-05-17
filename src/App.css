@@ -444,6 +444,15 @@
   color: var(--text);
 }
 
+.song-track__duration {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  min-width: 28px;
+  text-align: right;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+
 .song-track__dl-check {
   color: var(--accent);
   flex-shrink: 0;

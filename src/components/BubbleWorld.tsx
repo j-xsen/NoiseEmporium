@@ -17,8 +17,8 @@ const MOBILE_ROW_Y: [number, number, number] = [1.2, -8.0, -17.2]
 const MOBILE_SPACING = 5.5
 const MOBILE_DRAG_SENSITIVITY = 2.0  // amplifies pixel→world so a short swipe snaps to next bubble
 
-const ROW_NAMES = ['Albums & EPs', 'Singles', 'Collections'] as const
-const ROW_ITEM_LABELS = ['album or EP', 'single', 'collection'] as const
+const ROW_NAMES = ['EPs', 'Singles', 'Collections'] as const
+const ROW_ITEM_LABELS = ['EP', 'single', 'collection'] as const
 
 function hashForRow(row: number): string {
   if (row === 1) return '#singles'

@@ -11,6 +11,8 @@ export interface Song {
   memberOnly?: boolean
   /** Song lyrics as HTML from Contentful. */
   lyrics?: string
+  /** Duration in seconds from Contentful. */
+  duration?: number
 }
 
 export interface Release {

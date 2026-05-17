@@ -20,6 +20,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Current and new password are required' })
     }
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'Invalid input' })
+    }
     if (newPassword.length < 8) {
       return res.status(400).json({ error: 'New password must be at least 8 characters' })
     }
@@ -41,6 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'DELETE') {
     const { password } = req.body ?? {}
     if (!password) return res.status(400).json({ error: 'Password is required' })
+    if (typeof password !== 'string') return res.status(400).json({ error: 'Invalid input' })
     try {
       const rows = await sql`SELECT password_hash FROM users WHERE id = ${userId}`
       if (!rows[0]) return res.status(404).json({ error: 'User not found' })

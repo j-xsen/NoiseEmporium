@@ -19,23 +19,40 @@ import { requireAuth } from '../_auth.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
+// Server-side allowlist of valid Stripe Price IDs.
+// Set STRIPE_ALLOWED_PRICE_IDS in Vercel env vars as a comma-separated list
+// (e.g. "price_abc123,price_def456"). Requests with any other priceId are rejected.
+const ALLOWED_PRICE_IDS = new Set(
+  (process.env.STRIPE_ALLOWED_PRICE_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
+)
+
+function appOrigin(req: VercelRequest): string {
+  const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
+  const host  = req.headers.host ?? 'noise.jaxsenville.com'
+  return `${proto}://${host}`
+}
+
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
-  const { priceId, mode, successUrl, cancelUrl } = req.body ?? {}
-  if (!priceId || !mode || !successUrl || !cancelUrl) {
+  const { priceId, mode } = req.body ?? {}
+  if (!priceId || !mode) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
   if (mode !== 'payment' && mode !== 'subscription') {
     return res.status(400).json({ error: 'Invalid mode' })
   }
+  if (!ALLOWED_PRICE_IDS.has(priceId)) {
+    return res.status(400).json({ error: 'Invalid price' })
+  }
 
   const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
   const customerEmail = rows[0]?.email as string | undefined
 
+  const origin = appOrigin(req)
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
+    success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
     ...(customerEmail && { customer_email: customerEmail }),
   })
@@ -46,10 +63,17 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
   const { sessionId } = req.body ?? {}
   if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' })
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['line_items'],
+  })
   if (session.status !== 'complete') return res.status(400).json({ error: 'Session not complete' })
   if (session.client_reference_id !== userId) return res.status(403).json({ error: 'Session mismatch' })
+
   if (session.mode === 'subscription') {
+    const purchasedPriceId = session.line_items?.data[0]?.price?.id
+    if (!purchasedPriceId || !ALLOWED_PRICE_IDS.has(purchasedPriceId)) {
+      return res.status(400).json({ error: 'Invalid purchase' })
+    }
     await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
   }
   res.json({ ok: true })

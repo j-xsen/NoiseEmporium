@@ -10,6 +10,7 @@
 // safe here because Contentful is a trusted internal CMS, not user input.
 
 import { useEffect } from 'react'
+import DOMPurify from 'dompurify'
 import { ChevronLeftIcon, PlayIcon, PauseIcon } from './Icons'
 import CoverArt from './CoverArt'
 import type { Song } from '../types'
@@ -60,7 +61,7 @@ export default function LyricsView({ song, player, onBack, onPlay }: LyricsViewP
         </div>
 
         {song.lyrics ? (
-          <div className="lyrics-body" dangerouslySetInnerHTML={{ __html: song.lyrics }} />
+          <div className="lyrics-body" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(song.lyrics) }} />
         ) : (
           <div className="empty-state">
             <p className="empty-title">No lyrics</p>

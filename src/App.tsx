@@ -346,11 +346,16 @@ export default function App() {
     if (q.length === 0) return
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)
-      return localSrc ? { ...s, src: localSrc } : s
+      if (localSrc) return { ...s, src: localSrc }
+      // Append the auth token so the stream proxy can verify identity without headers.
+      if (s.memberOnly && s.src.startsWith('/api/plays?stream=') && auth.token) {
+        return { ...s, src: `${s.src}&token=${auth.token}` }
+      }
+      return s
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
-  }, [dl.getLocalSrc, player.playSong, isPremium])
+  }, [dl.getLocalSrc, player.playSong, isPremium, auth.token])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.

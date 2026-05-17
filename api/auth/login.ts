@@ -11,6 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { email, password } = req.body ?? {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' })
+  if (typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Invalid input' })
 
   try {
     const rows = await sql`

@@ -77,7 +77,13 @@ export async function fetchReleases(): Promise<Release[]> {
     const songs: Song[] = []
     for (const track of resolved) {
       const tf = track.fields
-      const src = assetUrl(tf.file?.fields?.file?.url)
+      const memberOnly = tf.memberOnly === true
+      // For member-only tracks, use the server-side stream proxy so the real CDN
+      // URL is never sent to the client. The token is appended at play time in
+      // App.tsx once we know the user is authenticated and premium.
+      const src = memberOnly
+        ? `/api/plays?stream=${track.sys.id}`
+        : (assetUrl(tf.file?.fields?.file?.url) ?? '')
       if (!src) continue
       songs.push({
         id: track.sys.id,
@@ -86,7 +92,7 @@ export async function fetchReleases(): Promise<Release[]> {
         album: name,
         cover: coverUrl,
         src,
-        memberOnly: tf.memberOnly === true,
+        memberOnly,
         lyrics: tf.lyrics as string | undefined,
       })
     }
@@ -129,7 +135,10 @@ export async function fetchCollections(): Promise<Collection[]> {
     const tracks: Song[] = []
     for (const track of resolved) {
       const tf = track.fields
-      const src = assetUrl(tf.file?.fields?.file?.url)
+      const memberOnly = tf.memberOnly === true
+      const src = memberOnly
+        ? `/api/plays?stream=${track.sys.id}`
+        : (assetUrl(tf.file?.fields?.file?.url) ?? '')
       if (!src) continue
       tracks.push({
         id: track.sys.id,
@@ -137,7 +146,7 @@ export async function fetchCollections(): Promise<Collection[]> {
         artist: (tf.artist as string | undefined) ?? collectionArtist,
         src,
         cover: coverUrl,
-        memberOnly: tf.memberOnly === true,
+        memberOnly,
         lyrics: tf.lyrics as string | undefined,
       })
     }

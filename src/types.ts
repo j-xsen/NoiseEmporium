@@ -24,6 +24,8 @@ export interface Release {
   date: string
   cover?: string
   spotify?: string
+  /** URL to the high-fidelity ZIP download (WAV/FLAC), set via Contentful downloadFile asset. */
+  downloadFile?: string
   songs: Song[]
 }
 

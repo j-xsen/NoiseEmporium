@@ -81,7 +81,7 @@ CREATE TABLE release_assets (
 CREATE TABLE orders (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  contentful_id     TEXT        NOT NULL,
   stripe_session_id TEXT        NOT NULL UNIQUE,
   amount_total      INTEGER     NOT NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),

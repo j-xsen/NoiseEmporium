@@ -52,9 +52,16 @@ export default function CollectionDetail({
       <div className="rps2-info-col">
         <div className="rps2-header">
           <h1 className="rps2-title">{collection.title}</h1>
+          {collection.description && (
+            <p className="rps2-description">{collection.description}</p>
+          )}
           {!locked && (
             <p className="rps2-meta">
               {collection.tracks.length} {collection.tracks.length === 1 ? 'track' : 'tracks'}
+              {(() => {
+                const total = collection.tracks.reduce((sum, s) => sum + (s.duration ?? 0), 0)
+                return total > 0 ? ` · ${formatTime(total)}` : ''
+              })()}
             </p>
           )}
           {!locked && collection.tracks.length > 0 && (
@@ -77,9 +84,6 @@ export default function CollectionDetail({
                 <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
               </button>
             </div>
-          )}
-          {collection.description && !locked && (
-            <p className="rps2-description">{collection.description}</p>
           )}
         </div>
 

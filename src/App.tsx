@@ -476,15 +476,24 @@ export default function App() {
             onPlay={song => handlePlay(song)}
           />
         ) : (
-          <Routes>
-            <Route path="/" element={
-              viewMode === '3d' ? (
+          <>
+            {/* Persistent canvas — stays mounted across detail routes so WebGL context and textures survive navigation.
+                Only unmounts when the user explicitly switches to 2D mode. */}
+            {viewMode === '3d' && (
+              <div
+                aria-hidden={location.pathname !== '/'}
+                style={location.pathname !== '/' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+              >
                 <BubbleWorld
                   releases={releases}
                   collections={collections}
                   currentSongId={player.currentSong?.id}
                 />
-              ) : (
+              </div>
+            )}
+          <Routes>
+            <Route path="/" element={
+              viewMode === '2d' ? (
                 <Library
                   releases={releases}
                   collections={collections}
@@ -497,7 +506,7 @@ export default function App() {
                   onSelectFeaturedPlaylist={handleSelectFeaturedPlaylist}
                   onOpenAccount={handleOpenAccount}
                 />
-              )
+              ) : null
             } />
 
             <Route path="/ep/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />
@@ -563,6 +572,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </>
         )}
         <div className="grass-divider" aria-hidden="true" />
       </div>

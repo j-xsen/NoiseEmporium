@@ -296,9 +296,30 @@ interface BubbleWorldProps {
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
 function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
-  const [pageRow0, setPageRow0] = useState(0)
-  const [pageRow1, setPageRow1] = useState(0)
-  const [pageRow2, setPageRow2] = useState(0)
+  const [pageRow0, setPageRow0] = useState(() => {
+    try {
+      const slug = sessionStorage.getItem('bw-restore-slug')
+      if (!slug || sessionStorage.getItem('bw-restore-row') !== '0') return 0
+      const idx = releases.filter(r => r.releaseType === 'album' || r.releaseType === 'ep').findIndex(r => r.slug === slug)
+      return idx >= 0 ? idx : 0
+    } catch { return 0 }
+  })
+  const [pageRow1, setPageRow1] = useState(() => {
+    try {
+      const slug = sessionStorage.getItem('bw-restore-slug')
+      if (!slug || sessionStorage.getItem('bw-restore-row') !== '1') return 0
+      const idx = releases.filter(r => r.releaseType === 'single').findIndex(r => r.slug === slug)
+      return idx >= 0 ? idx : 0
+    } catch { return 0 }
+  })
+  const [pageRow2, setPageRow2] = useState(() => {
+    try {
+      const slug = sessionStorage.getItem('bw-restore-slug')
+      if (!slug || sessionStorage.getItem('bw-restore-row') !== '2') return 0
+      const idx = collections.findIndex(c => c.slug === slug)
+      return idx >= 0 ? idx : 0
+    } catch { return 0 }
+  })
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
   const [focusedRow, setFocusedRow] = useState(() => rowForHash(window.location.hash))
   const [sceneReady, setSceneReady] = useState(false)
@@ -341,7 +362,11 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       cover: r.cover,
       radius: r.releaseType === 'album' ? 2.0 : 1.5,
       isActive: r.songs.some(s => s.id === currentSongId),
-      onClick: () => navigate(`/${r.releaseType}/${r.slug}`),
+      onClick: () => {
+        sessionStorage.setItem('bw-restore-slug', r.slug)
+        sessionStorage.setItem('bw-restore-row', '0')
+        navigate(`/${r.releaseType}/${r.slug}`)
+      },
     }))
 
   const row1: Item[] = releases
@@ -353,7 +378,11 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       cover: r.cover,
       radius: 1.2,
       isActive: r.songs.some(s => s.id === currentSongId),
-      onClick: () => navigate(`/single/${r.slug}`),
+      onClick: () => {
+        sessionStorage.setItem('bw-restore-slug', r.slug)
+        sessionStorage.setItem('bw-restore-row', '1')
+        navigate(`/single/${r.slug}`)
+      },
     }))
 
   const row2: Item[] = collections.map(c => ({
@@ -363,7 +392,11 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     cover: c.cover,
     radius: 1.1,
     isActive: c.tracks.some(s => s.id === currentSongId),
-    onClick: () => navigate(`/collection/${c.slug}`),
+    onClick: () => {
+      sessionStorage.setItem('bw-restore-slug', c.slug)
+      sessionStorage.setItem('bw-restore-row', '2')
+      navigate(`/collection/${c.slug}`)
+    },
   }))
 
   // Arrays indexed by row number — eliminates parallel state helpers

@@ -1520,6 +1520,40 @@
 
 .release-hero__play:active { opacity: 0.8; }
 
+.rps2-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.rps2-header-actions .release-hero__play {
+  margin-top: 0;
+}
+
+.release-hero__dl-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.release-hero__dl-all:active { opacity: 0.7; }
+.release-hero__dl-all:disabled { opacity: 0.5; cursor: default; }
+
+.release-hero__dl-all--done {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
 /* ── Playlist header rename ─────────────────────────────────────────────────── */
 
 .header-actions {

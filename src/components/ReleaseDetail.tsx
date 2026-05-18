@@ -88,6 +88,16 @@ export default function ReleaseDetail({
   }
 
   const count = release.songs.length
+  const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
+  const anyDownloading = playableSongs.some(s => dlStatuses[s.id] === 'downloading')
+
+  function handleDownloadAll() {
+    if (allDone) {
+      playableSongs.forEach(s => onRemoveDownload(s.id))
+    } else {
+      playableSongs.filter(s => dlStatuses[s.id] !== 'done').forEach(s => onDownload(s))
+    }
+  }
 
   return (
     <div className={`release-detail-ps2${release.cover ? '' : ' release-detail-ps2--no-cover'}`}>
@@ -111,14 +121,25 @@ export default function ReleaseDetail({
             {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
           </p>
           {playableSongs.length > 0 && (
-            <button
-              className="release-hero__play"
-              onClick={() => onPlay(playableSongs[0], playableSongs)}
-              aria-label="Play all"
-            >
-              <PlayIcon size={20} />
-              <span>Play</span>
-            </button>
+            <div className="rps2-header-actions">
+              <button
+                className="release-hero__play"
+                onClick={() => onPlay(playableSongs[0], playableSongs)}
+                aria-label="Play all"
+              >
+                <PlayIcon size={20} />
+                <span>Play</span>
+              </button>
+              <button
+                className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
+                onClick={handleDownloadAll}
+                disabled={anyDownloading}
+                aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
+              >
+                {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
+                <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
+              </button>
+            </div>
           )}
         </div>
 

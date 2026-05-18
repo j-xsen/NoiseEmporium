@@ -39,6 +39,7 @@ export const contentfulClient = createClient({
 //   description — Symbol   (optional subtitle)
 //   coverImage  — Asset    (optional cover art)
 //   premiumOnly — Boolean  (if true, only premium members can enter)
+//   sortOrder   — Integer  (optional; lower = earlier; ties broken by title)
 //   tracks      — Array of Links → Song entries (ordered)
 
 function assetUrl(url: string | undefined): string | undefined {
@@ -114,7 +115,7 @@ export async function fetchCollections(): Promise<Collection[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const res = await contentfulClient.getEntries<any>({
     content_type: 'collection',
-    order: ['fields.title'],
+    order: ['fields.sortOrder', 'fields.title'],
     include: 2,
     limit: 200,
   })

@@ -9,7 +9,9 @@
 | API | Vercel Serverless Functions | `api/` directory; Express used locally |
 | Database | **Neon** (serverless PostgreSQL) | |
 | CMS | Contentful | Music metadata + audio file hosting |
+| File storage | Vercel Blob | WAV ZIP downloads (private blobs, UUID-based URLs) |
 | Auth | JWT (jsonwebtoken) | 30-day tokens, localStorage |
+| Email | Resend | Purchase confirmation emails |
 | Package manager | pnpm | |
 
 ## Frontend Architecture
@@ -24,6 +26,7 @@ src/hooks/
   useFeaturedPlaylists.ts  Fetches featured playlists from /api/playlists/featured (public, no auth)
   useAudio.ts              HTML5 audio, queue, playback state, volume
   useDownloads.ts          IndexedDB cache for offline songs
+  usePurchases.ts          Fetches purchased release IDs from /api/downloads?purchases on login; exposes hasPurchased(contentfulId)
 ```
 
 `App.tsx` wires these hooks together and passes state down to components. No prop drilling — hooks are called at the top level and relevant slices are passed to child components.
@@ -89,19 +92,25 @@ The effect only has `currentSongId` as a dep (releases is intentionally omitted 
 
 Handlers live in `api/` and are written as Vercel Serverless Functions. Locally, `server.ts` wraps them in Express.
 
-> **Function limit:** The current plan allows a maximum of **12 serverless functions**. Files prefixed with `_` (`_auth.ts`, `_db.ts`) are shared utilities and do not count toward the limit. All other files in `api/` count as one function each. **The project is currently at 12/12.** Before adding a new route file, consolidate an existing one instead (e.g. combine two related endpoints into one handler that branches on method/action).
+> **Function limit:** The current plan allows a maximum of **12 serverless functions**. Files prefixed with `_` (`_auth.ts`, `_db.ts`) are shared utilities and do not count toward the limit. All other files in `api/` count as one function each. **The project is currently at 11/12.** Before adding a new route file, consolidate an existing one instead (e.g. combine two related endpoints into one handler that branches on method/action).
+>
+> The three original auth files (login/me/register) were merged into a single `api/auth/[action].ts` catch-all, freeing 2 slots. Vercel routes `/api/auth/login`, `/api/auth/me`, and `/api/auth/register` through `req.query.action` — the URLs are unchanged.
 
 ```
 api/
   _auth.ts                      JWT sign/verify helpers
   _db.ts                        Neon database client
   auth/
-    register.ts                 POST /api/auth/register
-    login.ts                    POST /api/auth/login
-    me.ts                       GET  /api/auth/me
+    [action].ts                 POST /api/auth/login
+                                POST /api/auth/register
+                                GET  /api/auth/me
+                                (single file, routes on req.query.action)
   account/
     index.ts                    POST   /api/account   (change password; auth required)
                                 DELETE /api/account   (delete account; auth required)
+  downloads/
+    index.ts                    GET /api/downloads?purchases   (list purchased release IDs; auth required)
+                                GET /api/downloads?release=id  (verify purchase + return blob URL; auth required)
   playlists/
     index.ts                    GET/POST /api/playlists           (auth required)
     featured.ts                 GET      /api/playlists/featured  (public)
@@ -111,7 +120,8 @@ api/
       songs/
         [songId].ts             DELETE /api/playlists/:id/songs/:songId
   plays/
-    index.ts                    POST /api/plays  (record a song play; auth optional)
+    index.ts                    GET  /api/plays?stream=id  (stream proxy; checks premium OR purchase)
+                                POST /api/plays             (record a song play; auth optional)
   stripe/
     checkout.ts                 POST /api/stripe/checkout  (create session or fulfill; auth required)
     webhook.ts                  POST /api/stripe/webhook   (Stripe events; no auth — signature verified)
@@ -148,6 +158,10 @@ Song (content type: "song")
   memberOnly   — Boolean     (true = premium only; controls playback AND lyrics access)
   lyrics       — Long text   (optional; line breaks preserved)
 
+For `memberOnly` tracks in a release, `fetchReleases()` builds the stream proxy URL as
+`/api/plays?stream=<songId>&releaseId=<releaseContentfulId>`. The `releaseId` lets the
+stream proxy check purchase rights in addition to the premium tier (see `api/plays/index.ts`).
+
 Collection (content type: "collection")
   title        — Short text  (display field)
   description  — Short text  (optional subtitle)
@@ -181,12 +195,13 @@ const isPremium = auth.user?.tier === 'premium'
 
 This value is passed down to all components that need it. Enforcement points:
 
-1. **`handlePlay`** — filters `memberOnly` songs from the queue; blocks play entirely if the target song is locked. This is the primary guard — even if UI buttons are bypassed, playback won't start.
-2. **`ReleaseDetail`** — shows lock icon and disables buttons for `memberOnly` tracks
+1. **`handlePlay`** — filters `memberOnly` songs from the queue; blocks play entirely if the target song is locked. Checks `isPremium || hasPurchased(releaseId)` — the `releaseId` is parsed from the song's `src` URL. This is the primary guard — even if UI buttons are bypassed, playback won't start.
+2. **`ReleaseDetail`** — shows lock icon and disables buttons for `memberOnly` tracks; tracks are unlocked if `isPremium || hasPurchasedRelease`
 3. **`CollectionDetail`** — blocks the entire collection if `premiumOnly && !isPremium`; also locks individual `memberOnly` tracks within an accessible collection
 4. **`LyricsView`** — only reachable from `CollectionDetail`; `App.tsx` guards `setLyricsSong` with a `isPremium || !song.memberOnly` check
+5. **`api/plays` stream proxy** — server-side gate; validates JWT, then checks `users.tier = 'premium'` OR an `orders` row for the release. `releaseId` is embedded in the stream URL by `contentful.ts`.
 
-> **Note:** Contentful CDN URLs are public. This is all client-side enforcement. Server-side enforcement would require an audio proxy API that validates the JWT before serving the file.
+> **Note:** Contentful CDN URLs are public. Client-side enforcement (points 1–4) is the UX layer. The stream proxy (point 5) is server-side enforcement for the audio stream itself — it does not protect album art or metadata.
 
 ## Deployment
 
@@ -204,7 +219,10 @@ DATABASE_URL=                  # Neon connection string
 JWT_SECRET=                    # Strong random string
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
+STRIPE_ALLOWED_PRICE_IDS=      # Comma-separated list of valid Stripe Price IDs
 VITE_STRIPE_PUBLISHABLE_KEY=
+BLOB_READ_WRITE_TOKEN=         # Auto-set when a Vercel Blob store is created on the project
+RESEND_API_KEY=                # From resend.com — used for purchase confirmation emails
 ```
 
 ## Stripe Architecture (Part 2 — Artist Payouts)

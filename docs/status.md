@@ -22,6 +22,7 @@
 | Stripe Checkout + webhook | ✅ Working | `api/stripe/checkout.ts` creates sessions + fulfills; `api/stripe/webhook.ts` upgrades `users.tier` on `checkout.session.completed` |
 | Account modal | ✅ Working | `AccountModal.tsx` — shows tier, change password, delete account |
 | 3D bubble world | ✅ Working | Two-row carousel (releases + collections); drag/swipe, arrow nav, auto-scroll to now-playing release, mobile + desktop layouts |
+| Permanent download purchase | ✅ Working | One-time Stripe payment grants permanent streaming rights (bypasses `memberOnly` gate) + WAV ZIP download via Vercel Blob. `orders` + `release_assets` tables; `api/downloads/index.ts`; `usePurchases` hook; Buy/Download WAV buttons on release pages; Resend purchase confirmation email |
 
 ---
 
@@ -45,8 +46,8 @@ Items are ordered so each one unblocks or sets up the next.
 - [x] **3. 3D store environment** — `BubbleWorld.tsx` ships with drag/swipe carousels, mobile layout, auto-scroll, and cloud animation.
 - [ ] **4. CD listing pages** — tie each shelf/display item in the 3D environment to a Contentful release. Add CD entries to `shopData.ts`.
 - [ ] **5. Stripe Checkout for CDs** — Shop UI is ready; just needs CD products in `shopData.ts`.
-- [ ] **6. Name-your-price digital downloads** — $0 minimum, Stripe for any paid amount.
-- [ ] **7. Download delivery** — email buyer a download link on purchase.
+- [ ] **6. Name-your-price digital downloads** — $0 minimum, Stripe for any paid amount. (Distinct from the permanent purchase model already implemented — this is a guest/no-account flow, Bandcamp-style.)
+- [x] **7. Download delivery (permanent purchases)** — Resend sends a confirmation email with a link back to the app on permanent download purchase. Name-your-price guest download delivery is still pending.
 
 ### Part 2 — Artist Platform
 

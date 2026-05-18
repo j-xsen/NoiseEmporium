@@ -65,6 +65,50 @@ CREATE VIEW song_play_counts AS
   GROUP BY song_id;
 ```
 
+```sql
+-- ─── Permanent download purchases ────────────────────────────────────────────
+
+-- Admin-managed: one row per release that has a purchasable WAV ZIP.
+-- blob_url is the full Vercel Blob CDN URL (UUID-based path, effectively unguessable).
+-- Upload ZIPs via: npx vercel blob put releases/<contentful_id>/wav.zip ./file.zip
+CREATE TABLE release_assets (
+  contentful_id   TEXT        PRIMARY KEY,
+  stripe_price_id TEXT        NOT NULL UNIQUE,
+  blob_url        TEXT        NOT NULL,
+  release_name    TEXT        NOT NULL,   -- for email copy; avoids a Contentful API call in the webhook
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One row per completed purchase. UNIQUE on stripe_session_id makes the INSERT
+-- idempotent — safe to call from both the webhook and the fulfill redirect.
+CREATE TABLE orders (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE (user_id, contentful_id)
+);
+
+CREATE INDEX orders_user_id_idx ON orders (user_id);
+```
+
+### To activate a release for purchase
+
+1. Upload the WAV ZIP to Vercel Blob (create the store in the Vercel dashboard first):
+   ```
+   npx vercel blob put releases/<contentful_id>/wav.zip ./your-album-wav.zip
+   ```
+2. Insert a row into `release_assets`:
+   ```sql
+   INSERT INTO release_assets (contentful_id, stripe_price_id, blob_url, release_name)
+   VALUES ('<contentful_entry_id>', 'price_XXXX', 'https://...vercel-blob-url.../wav.zip', 'Album Name');
+   ```
+3. Add the product to `src/shopData.ts` with `contentfulId` matching the row above.
+4. Add `price_XXXX` to the `STRIPE_ALLOWED_PRICE_IDS` environment variable.
+
 ### Migrations applied (run these on an existing database)
 
 ```sql
@@ -72,6 +116,29 @@ CREATE VIEW song_play_counts AS
 ALTER TABLE playlists
   ADD COLUMN featured       BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN featured_order INTEGER;
+```
+
+```sql
+-- Add permanent download purchase tables
+CREATE TABLE release_assets (
+  contentful_id   TEXT        PRIMARY KEY,
+  stripe_price_id TEXT        NOT NULL UNIQUE,
+  blob_url        TEXT        NOT NULL,
+  release_name    TEXT        NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE orders (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, contentful_id)
+);
+
+CREATE INDEX orders_user_id_idx ON orders (user_id);
 ```
 
 ### Featuring a playlist (no admin UI yet)
@@ -133,33 +200,8 @@ CREATE TABLE memberships (
 );
 ```
 
-### Music Store (future)
-```sql
-CREATE TYPE product_type AS ENUM ('cd', 'download');
-
-CREATE TABLE products (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contentful_id   TEXT NOT NULL,     -- links to a Contentful release entry
-  type            product_type NOT NULL,
-  title           TEXT NOT NULL,
-  price_cents     INTEGER NOT NULL DEFAULT 0,  -- base price; 0 = free/name-your-price
-  active          BOOLEAN NOT NULL DEFAULT true,
-  created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE orders (
-  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id                UUID REFERENCES users(id) ON DELETE SET NULL,  -- null = guest
-  buyer_email            TEXT NOT NULL,
-  product_id             UUID NOT NULL REFERENCES products(id),
-  amount_cents           INTEGER NOT NULL DEFAULT 0,
-  stripe_payment_intent  TEXT,
-  status                 TEXT NOT NULL DEFAULT 'pending',  -- pending | complete | refunded
-  download_token         TEXT,
-  created_at             TIMESTAMPTZ DEFAULT NOW(),
-  fulfilled_at           TIMESTAMPTZ
-);
-```
+### Music Store (future — CD orders and name-your-price downloads)
+The `orders` table (already created above) covers permanent download purchases. When CD sales and name-your-price guest downloads are implemented, a separate `cd_orders` table and a guest download flow will be needed — those don't require a user account and have different fulfillment logic (physical shipping vs. single-use email link).
 
 ### Revenue distribution (future)
 ```sql

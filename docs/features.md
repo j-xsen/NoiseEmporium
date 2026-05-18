@@ -277,7 +277,17 @@ The store lets listeners buy physical CDs and download music — all from within
 - Orders fulfilled manually (Phase 2) or via a print/ship partner (Phase 3)
 - Each CD listing tied to a Contentful release entry (same cover art, tracklist)
 
-### Digital Downloads
+### Permanent Download Purchase (implemented)
+A one-time purchase that grants perpetual rights to a specific release — distinct from the recurring subscription:
+
+- **Permanent streaming rights** — all tracks in the release (including `memberOnly` ones) stream forever, even without an active premium subscription
+- **WAV ZIP download** — high-quality download delivered via Vercel Blob; the buyer gets a "Download WAV" button on the release page
+- Requires an account (the purchase is tied to a user ID)
+- One-time Stripe payment (mode: `payment`), not a subscription
+- After purchase: Resend sends a confirmation email with a link back to the app
+- To activate a release for purchase: create a Stripe Product + one-time Price, upload a WAV ZIP to Vercel Blob, add a row to `release_assets`, and add the product to `shopData.ts`
+
+### Digital Downloads (name-your-price, not yet implemented)
 - Every release available as a free download
 - **Name-your-price** — $0 minimum; buyers can choose to pay more
 - Buyer enters an email address to receive the download link (no account required to purchase)
@@ -306,5 +316,5 @@ Songs can be downloaded to the browser's IndexedDB for offline playback.
 - Player falls back to HTTP if not cached
 - `src/components/DownloadButton.tsx`
 
-### Future consideration
-- This feature may be re-evaluated once the membership model is active (licensing implications)
+### Interaction with permanent purchases
+Users who have purchased a release via the permanent download model can download its tracks to IndexedDB for offline playback like any other user. The `memberOnly` streaming gate is already bypassed for them server-side, so the offline copy works correctly too.

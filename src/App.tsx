@@ -555,7 +555,7 @@ export default function App() {
         />
       )}
 
-      <BottomNav tab={tab} onChange={changeTab} hasSong={!!player.currentSong} />
+      <BottomNav tab={tab} onChange={changeTab} />
 
       {accountModalOpen && auth.user && auth.token && (
         <AccountModal

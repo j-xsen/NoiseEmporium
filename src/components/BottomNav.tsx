@@ -1,20 +1,18 @@
-import { HomeIcon, PlayerIcon, LibraryIcon, ShopIcon } from './Icons'
+import { HomeIcon, LibraryIcon, ShopIcon } from './Icons'
 import type { Tab } from '../types'
 
 interface BottomNavProps {
   tab: Tab
   onChange: (tab: Tab) => void
-  hasSong: boolean
 }
 
 const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
-  { id: 'player', label: 'Now Playing', Icon: PlayerIcon },
   { id: 'library', label: 'Library', Icon: LibraryIcon },
   { id: 'shop', label: 'Shop', Icon: ShopIcon },
 ]
 
-export default function BottomNav({ tab, onChange, hasSong }: BottomNavProps) {
+export default function BottomNav({ tab, onChange }: BottomNavProps) {
   return (
     <nav className="bottom-nav">
       {tabs.map(({ id, label, Icon }) => (
@@ -27,9 +25,6 @@ export default function BottomNav({ tab, onChange, hasSong }: BottomNavProps) {
         >
           <Icon size={22} />
           <span className="nav-tab__label">{label}</span>
-          {id === 'player' && hasSong && tab !== 'player' && (
-            <span className="nav-tab__dot" aria-hidden="true" />
-          )}
         </button>
       ))}
     </nav>

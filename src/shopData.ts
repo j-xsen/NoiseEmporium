@@ -2,19 +2,21 @@
 // Replace the priceId values with real Stripe Price IDs from your dashboard.
 // Membership uses mode:'subscription'; CDs and downloads use mode:'payment'.
 
-export type ShopCategory = 'membership' | 'cd' | 'download'
+export type ShopCategory = 'membership' | 'cd' | 'download' | 'license'
 
 export interface ShopProduct {
   id: string
   category: ShopCategory
   name: string
   description: string
-  /** Price in cents (e.g. 500 = $5.00) */
-  price: number
-  /** Stripe Price ID — from your Stripe dashboard */
-  priceId: string
+  /** Price in cents (e.g. 500 = $5.00). Omit for negotiable/contact products. */
+  price?: number
+  /** Stripe Price ID — from your Stripe dashboard. Omit for contact-only products. */
+  priceId?: string
   mode: 'payment' | 'subscription'
   image?: string
+  /** If true, shows a "Contact to License" button instead of routing through Stripe. */
+  contact?: boolean
 }
 
 export const SHOP_PRODUCTS: ShopProduct[] = [
@@ -70,4 +72,22 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   mode: 'payment',
   //   image: '/covers/album.jpg',
   // },
+  // ── Licenses ──────────────────────────────────────────────────────────────
+  {
+    id: 'license-instrumental',
+    category: 'license',
+    name: 'Instrumental License',
+    description: 'Perpetual, non-exclusive license for any instrumental track. Use in YouTube videos, podcasts, streams, or personal projects. No expiration.',
+    price: 5000,
+    priceId: 'price_1TYLmpKHXukW25xlEcAHahta',
+    mode: 'payment',
+  },
+  {
+    id: 'license-release',
+    category: 'license',
+    name: 'Release License',
+    description: 'Want to use one of my full releases (vocals included)? Reach out and we\'ll figure out something fair.',
+    mode: 'payment',
+    contact: true,
+  },
 ]

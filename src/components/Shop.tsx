@@ -15,10 +15,18 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'membership', label: 'Memberships' },
   { id: 'cd', label: 'CDs' },
   { id: 'download', label: 'Downloads' },
+  { id: 'license', label: 'Licenses' },
 ]
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  membership: 'Membership',
+  cd: 'CD',
+  download: 'Download',
+  license: 'License',
 }
 
 export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) {
@@ -48,7 +56,7 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
   }, [onUpgradeSuccess, token])
 
   async function handleBuy(product: ShopProduct) {
-    if (!token) return
+    if (!token || !product.priceId) return
     setLoading(product.id)
     try {
       const r = await fetch('/api/stripe/checkout', {
@@ -133,7 +141,7 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
                       </div>
                     )}
                     <span className="shop-card__category-tag">
-                      {product.category === 'membership' ? 'Membership' : product.category === 'cd' ? 'CD' : 'Download'}
+                      {CATEGORY_LABELS[product.category] ?? product.category}
                     </span>
                   </div>
 
@@ -141,7 +149,7 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
                     <div className="shop-card__header">
                       <span className="shop-card__name">{product.name}</span>
                       <span className="shop-card__price">
-                        {formatPrice(product.price)}
+                        {product.contact ? 'Negotiable' : product.price != null ? formatPrice(product.price) : '—'}
                         {product.mode === 'subscription' && <span className="shop-card__period">/mo</span>}
                       </span>
                     </div>
@@ -152,6 +160,13 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
                         <CheckIcon size={14} />
                         <span>Active</span>
                       </div>
+                    ) : product.contact ? (
+                      <a
+                        className="shop-card__cta"
+                        href={`mailto:jaxsen@jxsen.com?subject=${encodeURIComponent('Commercial License Inquiry')}`}
+                      >
+                        Contact to License
+                      </a>
                     ) : (
                       <button
                         className="shop-card__cta"

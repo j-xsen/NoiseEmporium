@@ -226,6 +226,8 @@ function ReleaseBubble({
   const rotGroupRef = useRef<THREE.Group>(null)
   const microRefs = useRef<(THREE.Mesh | null)[]>([null, null, null, null])
   const [hovered, setHovered] = useState(false)
+  const _popping = useRef(false)
+  const poppingStart = useRef<number | null>(null)
 
   useEffect(() => {
     setHovered(false)
@@ -273,6 +275,17 @@ function ReleaseBubble({
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     if (posGroupRef.current) {
+      if (_popping.current) {
+        if (poppingStart.current === null) poppingStart.current = t
+        const elapsed = (t - poppingStart.current) * 1000
+        const s = elapsed < 100
+          ? THREE.MathUtils.lerp(1.0, 1.5, elapsed / 100)
+          : THREE.MathUtils.lerp(1.5, 0, (elapsed - 100) / 250)
+        posGroupRef.current.scale.setScalar(Math.max(s, 0))
+        posGroupRef.current.position.y = position[1] + Math.sin(t * bobSpeed + phaseOffset) * bobAmp
+        if (rotGroupRef.current) rotGroupRef.current.rotation.y = t * rotSpeed + phaseOffset
+        return
+      }
       posGroupRef.current.position.y = position[1] + Math.sin(t * bobSpeed + phaseOffset) * bobAmp
       const target = isFocused ? (hovered ? 1.62 : 1.50) : hovered ? 1.18 : isActive ? 1.08 : 1
       const s = posGroupRef.current.scale.x
@@ -303,7 +316,7 @@ function ReleaseBubble({
     <group
       ref={posGroupRef}
       position={position}
-      onClick={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; onClick() }}
+      onClick={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; _popping.current = true; poppingStart.current = null; onClick() }}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
     >

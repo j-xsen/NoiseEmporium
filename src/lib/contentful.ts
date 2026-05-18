@@ -77,12 +77,13 @@ export async function fetchReleases(): Promise<Release[]> {
     const songs: Song[] = []
     for (const track of resolved) {
       const tf = track.fields
-const memberOnly = tf.memberOnly === true
+      const memberOnly = tf.memberOnly === true
       // For member-only tracks, use the server-side stream proxy so the real CDN
       // URL is never sent to the client. The token is appended at play time in
       // App.tsx once we know the user is authenticated and premium.
+      // releaseId is embedded so the proxy can also check purchase rights.
       const src = memberOnly
-        ? `/api/plays?stream=${track.sys.id}`
+        ? `/api/plays?stream=${track.sys.id}&releaseId=${release.sys.id}`
         : (assetUrl(tf.file?.fields?.file?.url) ?? '')
       if (!src) continue
       songs.push({

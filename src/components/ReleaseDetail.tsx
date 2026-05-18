@@ -3,15 +3,18 @@
 // Premium users see and can play everything.
 
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, MoreIcon, PlayIcon, RetryIcon } from './Icons'
-import { formatTime, songSubtitle } from '../utils/format'
+import { formatTime, formatPrice, songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
+import type { ShopProduct } from '../shopData'
 
 interface ReleaseDetailProps {
   release: Release
   player: PlayerAPI
   isPremium: boolean
+  hasPurchasedRelease: boolean
+  releaseProduct?: ShopProduct
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
@@ -19,19 +22,23 @@ interface ReleaseDetailProps {
   onDownload: (song: Song) => void
   onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
+  onBuyRelease: (contentfulId: string) => void
+  onDownloadWav: (contentfulId: string) => void
 }
 
 export default function ReleaseDetail({
-  release, player, isPremium, dlStatuses,
+  release, player, isPremium, hasPurchasedRelease, releaseProduct, dlStatuses,
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
+  onBuyRelease, onDownloadWav,
 }: ReleaseDetailProps) {
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
     : null
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
+  const hasFullAccess = isPremium || hasPurchasedRelease
   // Queue passed to onPlay excludes locked tracks for free users so auto-advance skips them.
-  const playableSongs = isPremium ? release.songs : publicSongs
+  const playableSongs = hasFullAccess ? release.songs : publicSongs
 
   function renderTrack(song: Song, displayNum: number, locked: boolean) {
     const isActive = song.id === player.currentSong?.id
@@ -140,6 +147,25 @@ export default function ReleaseDetail({
                 {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
                 <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
               </button>
+              {hasPurchasedRelease && (
+                <button
+                  className="release-hero__wav-dl"
+                  onClick={() => onDownloadWav(release.id)}
+                  aria-label="Download WAV ZIP"
+                >
+                  <DownloadIcon size={16} />
+                  <span>Download WAV</span>
+                </button>
+              )}
+              {!hasFullAccess && releaseProduct?.priceId && (
+                <button
+                  className="release-hero__buy"
+                  onClick={() => onBuyRelease(release.id)}
+                  aria-label="Buy permanent download"
+                >
+                  <span>Buy {formatPrice(releaseProduct.price ?? 0)}</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -160,7 +186,7 @@ export default function ReleaseDetail({
                     <span>Members Only</span>
                   </li>
                   {memberSongs.map((song, i) =>
-                    renderTrack(song, publicSongs.length + i + 1, !isPremium)
+                    renderTrack(song, publicSongs.length + i + 1, !hasFullAccess)
                   )}
                 </>
               )}

@@ -2,6 +2,10 @@ export function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+export function formatPrice(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`
+}
+
 export function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00'
   const m = Math.floor(seconds / 60)

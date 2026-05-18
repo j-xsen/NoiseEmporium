@@ -23,6 +23,8 @@ import { usePlaylists } from './hooks/usePlaylists'
 import { useFeaturedPlaylists } from './hooks/useFeaturedPlaylists'
 import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
+import { usePurchases } from './hooks/usePurchases'
+import { SHOP_PRODUCTS } from './shopData'
 import AuthScreen from './components/AuthScreen'
 import BubbleWorld from './components/BubbleWorld'
 import Library from './components/Library'
@@ -187,18 +189,24 @@ interface ReleaseRouteProps {
   onDownload: (song: Song) => void
   onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
+  hasPurchased: (contentfulId: string) => boolean
+  onBuyRelease: (contentfulId: string) => void
+  onDownloadWav: (contentfulId: string) => void
 }
 
-function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload }: ReleaseRouteProps) {
+function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload, hasPurchased, onBuyRelease, onDownloadWav }: ReleaseRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
   if (!release) return <Navigate to="/" replace />
+  const releaseProduct = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === release.id)
   return (
     <ReleaseDetail
       release={release}
       player={player}
       isPremium={isPremium}
+      hasPurchasedRelease={hasPurchased(release.id)}
+      releaseProduct={releaseProduct}
       dlStatuses={dlStatuses}
       onPlay={onPlay}
       onBack={() => navigate('/')}
@@ -206,6 +214,8 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
       onDownload={onDownload}
       onDownloadAll={onDownloadAll}
       onRemoveDownload={onRemoveDownload}
+      onBuyRelease={onBuyRelease}
+      onDownloadWav={onDownloadWav}
     />
   )
 }
@@ -332,6 +342,7 @@ export default function App() {
   const pm = usePlaylists(auth.token)
   const featuredPlaylists = useFeaturedPlaylists()
   const dl = useDownloads()
+  const purchases = usePurchases(auth.token)
 
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
@@ -360,9 +371,22 @@ export default function App() {
     navigate(t === 'home' ? '/' : `/${t}`)
   }
 
+  // Extracts the releaseId param embedded in member-only stream proxy URLs.
+  // Format: /api/plays?stream=<songId>&releaseId=<releaseId>
+  function releaseIdFromSrc(src: string): string | undefined {
+    if (!src.includes('releaseId=')) return undefined
+    return new URLSearchParams(src.split('?')[1] ?? '').get('releaseId') ?? undefined
+  }
+
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
-    if (!isPremium && song.memberOnly) return
-    const q = (queue ?? [song]).filter(s => isPremium || !s.memberOnly)
+    const canPlay = (s: Song) => {
+      if (!s.memberOnly) return true
+      if (isPremium) return true
+      const rId = releaseIdFromSrc(s.src)
+      return rId ? purchases.hasPurchased(rId) : false
+    }
+    if (!canPlay(song)) return
+    const q = (queue ?? [song]).filter(canPlay)
     if (q.length === 0) return
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)
@@ -375,7 +399,7 @@ export default function App() {
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
-  }, [dl.getLocalSrc, player.playSong, isPremium, auth.token])
+  }, [dl.getLocalSrc, player.playSong, isPremium, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.
@@ -396,6 +420,37 @@ export default function App() {
   const handleOpenAccount = useCallback(() => {
     setAccountModalOpen(true)
   }, [])
+
+  const handleBuyRelease = useCallback(async (contentfulId: string) => {
+    if (!auth.token) return
+    const product = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === contentfulId)
+    if (!product?.priceId) return
+    try {
+      const r = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+        body: JSON.stringify({ priceId: product.priceId, mode: product.mode, contentfulId }),
+      })
+      const data = await r.json()
+      if (data.url) window.location.href = data.url
+    } catch (err) {
+      console.error('Buy release failed:', err)
+    }
+  }, [auth.token])
+
+  const handleDownloadWav = useCallback(async (contentfulId: string) => {
+    if (!auth.token) return
+    try {
+      const r = await fetch(`/api/downloads?release=${encodeURIComponent(contentfulId)}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      })
+      if (!r.ok) return
+      const { url } = await r.json()
+      if (url) window.location.href = url
+    } catch (err) {
+      console.error('WAV download failed:', err)
+    }
+  }, [auth.token])
 
   // Handle Stripe checkout redirect: ?tab=shop → /shop
   useEffect(() => {
@@ -432,6 +487,9 @@ export default function App() {
     onDownload: song => dl.download(song, auth.token ?? undefined),
     onDownloadAll: songs => dl.downloadAll(songs, auth.token ?? undefined),
     onRemoveDownload: dl.remove,
+    hasPurchased: purchases.hasPurchased,
+    onBuyRelease: handleBuyRelease,
+    onDownloadWav: handleDownloadWav,
   }
 
   const collectionRouteProps: CollectionRouteProps = {
@@ -572,7 +630,8 @@ export default function App() {
               <Shop
                 isPremium={isPremium}
                 token={auth.token}
-                onUpgradeSuccess={auth.refreshUser}
+                hasPurchased={purchases.hasPurchased}
+                onUpgradeSuccess={() => { auth.refreshUser(); purchases.refresh() }}
               />
             } />
 

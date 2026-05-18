@@ -17,6 +17,9 @@ export interface ShopProduct {
   image?: string
   /** If true, shows a "Contact to License" button instead of routing through Stripe. */
   contact?: boolean
+  /** Contentful release entry ID — required for 'download' category products. Links
+   *  the shop product to a release for purchase gating and WAV delivery. */
+  contentfulId?: string
 }
 
 export const SHOP_PRODUCTS: ShopProduct[] = [
@@ -61,14 +64,20 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   image: '/covers/album.jpg',
   // },
   // ── Downloads ─────────────────────────────────────────────────────────────
-  // Add one entry per digital download product.
+  // Add one entry per release. Set priceId to a one-time Stripe Price ID and
+  // contentfulId to the Contentful release entry ID (found in the URL when
+  // editing the release in the Contentful dashboard).
+  // Also insert a matching row in the release_assets table in Neon:
+  //   INSERT INTO release_assets (contentful_id, stripe_price_id, blob_url, release_name)
+  //   VALUES ('CONTENTFUL_ID', 'price_REPLACE', 'https://...vercel-blob-url.../wav.zip', 'Album Name');
   // {
   //   id: 'dl-album-name',
   //   category: 'download',
-  //   name: 'Album Name — Digital Download',
-  //   description: 'High-quality MP3 + FLAC download. Delivered via email.',
+  //   name: 'Album Name — Permanent Download',
+  //   description: 'Permanent streaming rights + high-quality WAV ZIP download. Yours forever.',
   //   price: 700,
   //   priceId: 'price_REPLACE_DOWNLOAD',
+  //   contentfulId: 'CONTENTFUL_RELEASE_ENTRY_ID',
   //   mode: 'payment',
   //   image: '/covers/album.jpg',
   // },

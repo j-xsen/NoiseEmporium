@@ -32,9 +32,9 @@ app.get( '/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res
 app.post('/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res))
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-app.post('/api/auth/register', (req, res) => handle('./api/auth/register.ts', {}, req, res))
-app.post('/api/auth/login',    (req, res) => handle('./api/auth/login.ts',    {}, req, res))
-app.get( '/api/auth/me',       (req, res) => handle('./api/auth/me.ts',       {}, req, res))
+app.post('/api/auth/register', (req, res) => handle('./api/auth/[action].ts', { action: 'register' }, req, res))
+app.post('/api/auth/login',    (req, res) => handle('./api/auth/[action].ts', { action: 'login' },    req, res))
+app.get( '/api/auth/me',       (req, res) => handle('./api/auth/[action].ts', { action: 'me' },       req, res))
 
 // ── Playlists ─────────────────────────────────────────────────────────────────
 app.get( '/api/playlists',          (req, res) => handle('./api/playlists/index.ts',    {}, req, res))
@@ -46,6 +46,9 @@ app.delete('/api/playlists/:id', (req, res) => handle('./api/playlists/[id].ts',
 
 app.post(  '/api/playlists/:id/songs',          (req, res) => handle('./api/playlists/[id]/songs.ts',          { id: req.params.id },                            req, res))
 app.delete('/api/playlists/:id/songs/:songId',  (req, res) => handle('./api/playlists/[id]/songs/[songId].ts', { id: req.params.id, songId: req.params.songId }, req, res))
+
+// ── Downloads ─────────────────────────────────────────────────────────────────
+app.get('/api/downloads', (req, res) => handle('./api/downloads/index.ts', {}, req, res))
 
 // ── Stripe ────────────────────────────────────────────────────────────────────
 app.post('/api/stripe/checkout', (req, res) => handle('./api/stripe/checkout.ts', {}, req, res))

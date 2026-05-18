@@ -29,8 +29,19 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
   if (!userId) return res.status(401).json({ error: 'Invalid or expired token' })
 
   const rows = await sql`SELECT tier FROM users WHERE id = ${userId}`
-  if (!rows[0] || rows[0].tier !== 'premium') {
-    return res.status(403).json({ error: 'Premium membership required' })
+  if (!rows[0]) return res.status(403).json({ error: 'Unauthorized' })
+
+  const isPremium = rows[0].tier === 'premium'
+  if (!isPremium) {
+    // Also allow if the user purchased the release that contains this song.
+    // The releaseId (Contentful release entry ID) is embedded in the request URL.
+    const releaseId = typeof req.query.releaseId === 'string' ? req.query.releaseId : undefined
+    const hasPurchase = releaseId
+      ? (await sql`SELECT 1 FROM orders WHERE user_id = ${userId} AND contentful_id = ${releaseId} LIMIT 1`).length > 0
+      : false
+    if (!hasPurchase) {
+      return res.status(403).json({ error: 'Premium membership required' })
+    }
   }
 
   try {

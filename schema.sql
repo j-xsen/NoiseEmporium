@@ -62,3 +62,31 @@ CREATE VIEW song_play_counts AS
   SELECT song_id, COUNT(*) AS play_count
   FROM song_plays
   GROUP BY song_id;
+
+-- ─── Permanent download purchases ────────────────────────────────────────────
+
+-- Admin-managed: one row per release that has a purchasable WAV ZIP.
+-- blob_url is the full Vercel Blob URL (public, UUID-based — unguessable without this table).
+-- Upload ZIPs to Vercel Blob using: npx vercel blob put releases/<contentful_id>/wav.zip ./path/to/file.zip
+CREATE TABLE release_assets (
+  contentful_id   TEXT        PRIMARY KEY,
+  stripe_price_id TEXT        NOT NULL UNIQUE,
+  blob_url        TEXT        NOT NULL,
+  release_name    TEXT        NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One row per completed purchase. UNIQUE on stripe_session_id makes INSERT ... ON CONFLICT DO NOTHING
+-- safe to call from both the webhook and the fulfill redirect (whichever fires first wins).
+CREATE TABLE orders (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE (user_id, contentful_id)
+);
+
+CREATE INDEX orders_user_id_idx ON orders (user_id);

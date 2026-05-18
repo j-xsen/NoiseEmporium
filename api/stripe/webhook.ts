@@ -1,9 +1,10 @@
-// Stripe webhook — updates user tier after successful membership checkout.
+// Stripe webhook — handles checkout completion for both subscriptions and release purchases.
 // Requires STRIPE_WEBHOOK_SECRET env var (get from `stripe listen` or dashboard).
 // bodyParser is disabled so we can verify the raw Stripe signature.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
+import { Resend } from 'resend'
 import sql from '../_db.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -36,12 +37,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
     const userId = session.client_reference_id
+
     if (userId && session.mode === 'subscription') {
       try {
         await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
       } catch (err) {
         console.error('Failed to upgrade user tier:', err)
         return res.status(500).end()
+      }
+    }
+
+    if (userId && session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {
+      const contentfulId = session.metadata.contentful_id
+      const amountTotal = session.amount_total ?? 0
+
+      try {
+        await sql`
+          INSERT INTO orders (user_id, contentful_id, stripe_session_id, amount_total)
+          VALUES (${userId}, ${contentfulId}, ${session.id}, ${amountTotal})
+          ON CONFLICT (stripe_session_id) DO NOTHING
+        `
+      } catch (err) {
+        console.error('Failed to insert order:', err)
+        return res.status(500).end()
+      }
+
+      // Send purchase confirmation email — failure must never fail the webhook response
+      if (process.env.RESEND_API_KEY) {
+        try {
+          const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
+          const [assetRow] = await sql`SELECT release_name FROM release_assets WHERE contentful_id = ${contentfulId}`
+          if (userRow && assetRow) {
+            const resend = new Resend(process.env.RESEND_API_KEY)
+            await resend.emails.send({
+              from: 'Noise Emporium <noreply@noise.jaxsenville.com>',
+              to: userRow.email as string,
+              subject: `Your purchase: ${assetRow.release_name as string}`,
+              html: `<p>Thanks for your purchase!</p>
+                     <p>You now have permanent streaming rights and WAV download access for <strong>${assetRow.release_name as string}</strong>.</p>
+                     <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
+            })
+          }
+        } catch (emailErr) {
+          console.error('Failed to send purchase email:', emailErr)
+        }
       }
     }
   }

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { StarIcon, CheckIcon } from './Icons'
 import { SHOP_PRODUCTS, type ShopCategory, type ShopProduct } from '../shopData'
+import { formatPrice } from '../utils/format'
 
 interface ShopProps {
   isPremium: boolean
   token: string | null
+  hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
 }
 
@@ -18,10 +20,6 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`
-}
-
 const CATEGORY_LABELS: Record<string, string> = {
   membership: 'Membership',
   cd: 'CD',
@@ -29,7 +27,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   license: 'License',
 }
 
-export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -65,8 +63,7 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
         body: JSON.stringify({
           priceId: product.priceId,
           mode: product.mode,
-          successUrl: `${window.location.origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/?checkout=cancelled&tab=shop`,
+          ...(product.contentfulId && { contentfulId: product.contentfulId }),
         }),
       })
       const data = await r.json()
@@ -127,7 +124,8 @@ export default function Shop({ isPremium, token, onUpgradeSuccess }: ShopProps) 
           <ul className="shop-grid">
             {visible.map(product => {
               const isMembership = product.category === 'membership'
-              const alreadyOwned = isMembership && isPremium
+              const alreadyOwned = (isMembership && isPremium)
+                || (product.category === 'download' && !!product.contentfulId && hasPurchased(product.contentfulId))
               const isLoading = loading === product.id
 
               return (

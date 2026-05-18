@@ -6,8 +6,9 @@
 //                       The client redirects the browser to that URL.
 //
 //   "fulfill"         — called on the success redirect after Stripe returns.
-//                       Retrieves the completed session from Stripe and upgrades
-//                       users.tier to 'premium' for subscription purchases.
+//                       Retrieves the completed session from Stripe and:
+//                       - upgrades users.tier to 'premium' for subscription purchases
+//                       - inserts an orders row for release_download purchases
 //                       The webhook (stripe/webhook.ts) does the same thing as a
 //                       reliable fallback in case the browser never lands on the
 //                       success URL.
@@ -33,7 +34,7 @@ function appOrigin(req: VercelRequest): string {
 }
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
-  const { priceId, mode } = req.body ?? {}
+  const { priceId, mode, contentfulId } = req.body ?? {}
   if (!priceId || !mode) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
@@ -42,6 +43,19 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
   }
   if (!ALLOWED_PRICE_IDS.has(priceId)) {
     return res.status(400).json({ error: 'Invalid price' })
+  }
+
+  // For release download purchases, validate that the contentfulId + priceId pair
+  // matches a real release_assets row. This prevents forged metadata claims.
+  const metadata: Record<string, string> = {}
+  if (mode === 'payment' && typeof contentfulId === 'string' && contentfulId) {
+    const assetRows = await sql`
+      SELECT contentful_id FROM release_assets
+      WHERE contentful_id = ${contentfulId} AND stripe_price_id = ${priceId}
+    `
+    if (!assetRows[0]) return res.status(400).json({ error: 'Invalid release product' })
+    metadata.contentful_id = contentfulId
+    metadata.purchase_type = 'release_download'
   }
 
   const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
@@ -54,6 +68,7 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
+    ...(Object.keys(metadata).length > 0 && { metadata }),
     ...(customerEmail && { customer_email: customerEmail }),
   })
   res.json({ url: session.url })
@@ -76,6 +91,17 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
     }
     await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
   }
+
+  if (session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {
+    const contentfulId = session.metadata.contentful_id
+    const amountTotal = session.amount_total ?? 0
+    await sql`
+      INSERT INTO orders (user_id, contentful_id, stripe_session_id, amount_total)
+      VALUES (${userId}, ${contentfulId}, ${session.id}, ${amountTotal})
+      ON CONFLICT (stripe_session_id) DO NOTHING
+    `
+  }
+
   res.json({ ok: true })
 }
 

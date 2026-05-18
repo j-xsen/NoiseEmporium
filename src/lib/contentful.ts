@@ -19,13 +19,14 @@ export const contentfulClient = createClient({
 // Contentful schema:
 //
 // Release (content type: "release")
-//   name        — Symbol   (album/release title, display field)
-//   releaseType — Symbol   ('album' | 'ep' | 'single'; defaults to 'album' if absent)
-//   artist      — Symbol   (optional; defaults to "Jaxsen Honeycutt" if absent)
-//   date        — Date
-//   cover       — Asset    (image — shared cover art for all tracks)
-//   spotify     — Symbol
-//   tracks      — Array of Links → Song entries (ordered)
+//   name         — Symbol   (album/release title, display field)
+//   releaseType  — Symbol   ('album' | 'ep' | 'single'; defaults to 'album' if absent)
+//   artist       — Symbol   (optional; defaults to "Jaxsen Honeycutt" if absent)
+//   date         — Date
+//   cover        — Asset    (image — shared cover art for all tracks)
+//   spotify      — Symbol
+//   downloadFile — Asset    (ZIP file for high-fidelity download; optional)
+//   tracks       — Array of Links → Song entries (ordered)
 //
 // Song (content type: "song")
 //   pos        — Integer  (sort order within release)
@@ -69,6 +70,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const artist: string = (rf.artist as string | undefined) ?? 'jaxsen'
     const date: string = (rf.date as string | undefined) ?? ''
     const spotify: string | undefined = rf.spotify as string | undefined
+    const downloadFile = assetUrl(rf.downloadFile?.fields?.file?.url as string | undefined)
 
     const tracks: unknown[] = (rf.tracks as unknown[]) ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +102,7 @@ export async function fetchReleases(): Promise<Release[]> {
       })
     }
 
-    releases.push({ id: release.sys.id, slug: slugify(name), name, releaseType, date, cover: coverUrl, spotify, songs })
+    releases.push({ id: release.sys.id, slug: slugify(name), name, releaseType, date, cover: coverUrl, spotify, downloadFile, songs })
   }
 
   return releases

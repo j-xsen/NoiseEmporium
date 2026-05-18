@@ -5,6 +5,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
+import { createClient } from 'contentful'
 import sql from '../_db.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -66,15 +67,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (process.env.RESEND_API_KEY) {
         try {
           const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
-          const [assetRow] = await sql`SELECT release_name FROM release_assets WHERE contentful_id = ${contentfulId}`
-          if (userRow && assetRow) {
+          if (userRow) {
+            const ctf = createClient({
+              space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+              accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const entry = await ctf.getEntry<any>(contentfulId)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const releaseName = ((entry.fields as any)?.name as string | undefined) ?? 'your purchase'
             const resend = new Resend(process.env.RESEND_API_KEY)
             await resend.emails.send({
               from: 'Noise Emporium <noreply@noise.jaxsenville.com>',
               to: userRow.email as string,
-              subject: `Your purchase: ${assetRow.release_name as string}`,
+              subject: `Your purchase: ${releaseName}`,
               html: `<p>Thanks for your purchase!</p>
-                     <p>You now have permanent streaming rights and WAV download access for <strong>${assetRow.release_name as string}</strong>.</p>
+                     <p>You now have permanent streaming rights and WAV download access for <strong>${releaseName}</strong>.</p>
                      <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
             })
           }

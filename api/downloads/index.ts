@@ -5,13 +5,19 @@
 //   user has purchased. Called once on app load to gate streaming + show buttons.
 //
 // ?release=<contentfulId>
-//   Verifies purchase and returns { url } — the Vercel Blob CDN URL for the
-//   release's WAV ZIP. The URL itself is stored in release_assets and is a
-//   UUID-based public blob (unguessable without this endpoint).
+//   Verifies purchase and returns { url } — the Contentful asset URL for the
+//   release's high-fidelity ZIP. The URL is fetched live from Contentful so it
+//   always reflects the current asset (no DB row to keep in sync).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+
+function assetUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  return url.startsWith('//') ? 'https:' + url : url
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).end()
@@ -37,13 +43,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Verify the user has purchased this release
     const rows = await sql`
-      SELECT ra.blob_url FROM orders o
-      JOIN release_assets ra ON ra.contentful_id = o.contentful_id
-      WHERE o.user_id = ${userId} AND o.contentful_id = ${contentfulId}
+      SELECT 1 FROM orders WHERE user_id = ${userId} AND contentful_id = ${contentfulId} LIMIT 1
     `
     if (!rows[0]) return res.status(403).json({ error: 'No purchase found' })
-    return res.json({ url: rows[0].blob_url as string })
+
+    // Fetch the downloadFile URL from Contentful
+    const client = createClient({
+      space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+      accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const entry = await client.getEntry<any>(contentfulId, { include: 1 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const url = assetUrl((entry.fields as any)?.downloadFile?.fields?.file?.url as string | undefined)
+    if (!url) return res.status(404).json({ error: 'No download file on this release' })
+
+    return res.json({ url })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })

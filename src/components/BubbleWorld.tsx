@@ -321,7 +321,14 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     } catch { return 0 }
   })
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
-  const [focusedRow, setFocusedRow] = useState(() => rowForHash(window.location.hash))
+  const [focusedRow, setFocusedRow] = useState(() => {
+    const fromHash = rowForHash(window.location.hash)
+    if (fromHash !== 0) return fromHash
+    try {
+      const saved = parseInt(sessionStorage.getItem('bw-restore-focused-row') ?? '0', 10)
+      return (saved >= 0 && saved <= 2) ? saved : 0
+    } catch { return 0 }
+  })
   const [sceneReady, setSceneReady] = useState(false)
   const handleSceneReady = useCallback(() => setSceneReady(true), [])
 
@@ -343,7 +350,10 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  const isMobilePrevRef = useRef(isMobile)
   useEffect(() => {
+    if (isMobilePrevRef.current === isMobile) return
+    isMobilePrevRef.current = isMobile
     setPageRow0(0); setPageRow1(0); setPageRow2(0)
     setFocusedRow(rowForHash(window.location.hash))
   }, [isMobile])
@@ -365,6 +375,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       onClick: () => {
         sessionStorage.setItem('bw-restore-slug', r.slug)
         sessionStorage.setItem('bw-restore-row', '0')
+        sessionStorage.setItem('bw-restore-focused-row', focusedRowRef.current.toString())
         navigate(`/${r.releaseType}/${r.slug}`)
       },
     }))
@@ -381,6 +392,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       onClick: () => {
         sessionStorage.setItem('bw-restore-slug', r.slug)
         sessionStorage.setItem('bw-restore-row', '1')
+        sessionStorage.setItem('bw-restore-focused-row', focusedRowRef.current.toString())
         navigate(`/single/${r.slug}`)
       },
     }))
@@ -395,6 +407,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     onClick: () => {
       sessionStorage.setItem('bw-restore-slug', c.slug)
       sessionStorage.setItem('bw-restore-row', '2')
+      sessionStorage.setItem('bw-restore-focused-row', focusedRowRef.current.toString())
       navigate(`/collection/${c.slug}`)
     },
   }))

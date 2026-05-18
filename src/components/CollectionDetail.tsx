@@ -1,4 +1,4 @@
-import { CheckIcon, ChevronLeftIcon, LockIcon, MoreIcon, PlayIcon } from './Icons'
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, MoreIcon, PlayIcon, RetryIcon } from './Icons'
 import { formatTime, songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Collection, Song } from '../types'
@@ -12,11 +12,13 @@ interface CollectionDetailProps {
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
   onAddToPlaylist: (songId: string) => void
+  onDownload: (song: Song) => void
+  onRemoveDownload: (songId: string) => void
 }
 
 export default function CollectionDetail({
   collection, player, isPremium, dlStatuses,
-  onPlay, onBack, onAddToPlaylist,
+  onPlay, onBack, onAddToPlaylist, onDownload, onRemoveDownload,
 }: CollectionDetailProps) {
   const locked = collection.premiumOnly && !isPremium
 
@@ -75,6 +77,7 @@ export default function CollectionDetail({
               {collection.tracks.map((song, i) => {
                 const isActive = song.id === player.currentSong?.id
                 const trackLocked = song.memberOnly && !isPremium
+                const dlStatus = dlStatuses[song.id] ?? 'none'
                 return (
                   <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${trackLocked ? 'song-track--locked' : ''}`}>
                     <button className="song-track__main" onClick={() => !trackLocked && onPlay(song, collection.tracks)} disabled={trackLocked}>
@@ -96,7 +99,20 @@ export default function CollectionDetail({
                         {song.duration != null && (
                           <span className="song-track__duration">{formatTime(song.duration)}</span>
                         )}
-                        {dlStatuses[song.id] === 'done' && <CheckIcon size={13} className="song-track__dl-check" />}
+                        <button
+                          className={`song-track__dl-btn song-track__dl-btn--${dlStatus}`}
+                          onClick={e => {
+                            e.stopPropagation()
+                            if (dlStatus === 'done') onRemoveDownload(song.id)
+                            else if (dlStatus !== 'downloading') onDownload(song)
+                          }}
+                          aria-label={dlStatus === 'done' ? 'Remove download' : dlStatus === 'downloading' ? 'Downloading…' : 'Download for offline'}
+                        >
+                          {dlStatus === 'downloading' && <span className="dl-spinner" />}
+                          {dlStatus === 'done' && <CheckIcon size={14} />}
+                          {dlStatus === 'error' && <RetryIcon size={14} />}
+                          {dlStatus === 'none' && <DownloadIcon size={14} />}
+                        </button>
                         <button
                           className="song-track__more"
                           onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}

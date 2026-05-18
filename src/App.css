@@ -453,14 +453,22 @@
   flex-shrink: 0;
 }
 
-.song-track__dl-check {
-  color: var(--accent);
+.song-track__dl-btn {
+  width: 36px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-
-.song-track--active .song-track__dl-check {
-  color: #fff;
-}
+.song-track__dl-btn--none { color: var(--text-dim); }
+.song-track__dl-btn--downloading { color: var(--text-dim); pointer-events: none; }
+.song-track__dl-btn--done { color: var(--accent); }
+.song-track__dl-btn--error { color: var(--danger); }
+.song-track--active .song-track__dl-btn--none,
+.song-track--active .song-track__dl-btn--downloading,
+.song-track--active .song-track__dl-btn--error { color: rgba(255,255,255,0.7); }
+.song-track--active .song-track__dl-btn--done { color: #fff; }
 
 .song-track--locked {
   opacity: 0.45;

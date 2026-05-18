@@ -184,9 +184,11 @@ interface ReleaseRouteProps {
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string) => void
+  onDownload: (song: Song) => void
+  onRemoveDownload: (songId: string) => void
 }
 
-function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist }: ReleaseRouteProps) {
+function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onRemoveDownload }: ReleaseRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
@@ -200,6 +202,8 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
       onPlay={onPlay}
       onBack={() => navigate('/')}
       onAddToPlaylist={onAddToPlaylist}
+      onDownload={onDownload}
+      onRemoveDownload={onRemoveDownload}
     />
   )
 }
@@ -211,9 +215,11 @@ interface CollectionRouteProps {
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string) => void
+  onDownload: (song: Song) => void
+  onRemoveDownload: (songId: string) => void
 }
 
-function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onPlay, onAddToPlaylist }: CollectionRouteProps) {
+function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onRemoveDownload }: CollectionRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const collection = collections.find(c => c.slug === slug)
@@ -227,6 +233,8 @@ function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onP
       onPlay={onPlay}
       onBack={() => navigate('/')}
       onAddToPlaylist={onAddToPlaylist}
+      onDownload={onDownload}
+      onRemoveDownload={onRemoveDownload}
     />
   )
 }
@@ -240,9 +248,11 @@ interface FeaturedPlaylistRouteProps {
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string, fromPlaylistId: string) => void
   onRename: (id: string, name: string) => Promise<void>
+  onDownload: (song: Song) => void
+  onRemoveDownload: (songId: string) => void
 }
 
-function FeaturedPlaylistRoute({ allPlaylists, userPlaylistIds, songs, player, dlStatuses, onPlay, onAddToPlaylist, onRename }: FeaturedPlaylistRouteProps) {
+function FeaturedPlaylistRoute({ allPlaylists, userPlaylistIds, songs, player, dlStatuses, onPlay, onAddToPlaylist, onRename, onDownload, onRemoveDownload }: FeaturedPlaylistRouteProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const playlist = allPlaylists.find(p => p.id === id)
@@ -258,6 +268,8 @@ function FeaturedPlaylistRoute({ allPlaylists, userPlaylistIds, songs, player, d
       onBack={() => navigate('/')}
       onAddToPlaylist={songId => onAddToPlaylist(songId, playlist.id)}
       onRename={userOwns ? name => onRename(playlist.id, name) : undefined}
+      onDownload={onDownload}
+      onRemoveDownload={onRemoveDownload}
     />
   )
 }
@@ -270,9 +282,11 @@ interface LibraryPlaylistRouteProps {
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string, fromPlaylistId: string) => void
   onRename: (id: string, name: string) => Promise<void>
+  onDownload: (song: Song) => void
+  onRemoveDownload: (songId: string) => void
 }
 
-function LibraryPlaylistRoute({ playlists, songs, player, dlStatuses, onPlay, onAddToPlaylist, onRename }: LibraryPlaylistRouteProps) {
+function LibraryPlaylistRoute({ playlists, songs, player, dlStatuses, onPlay, onAddToPlaylist, onRename, onDownload, onRemoveDownload }: LibraryPlaylistRouteProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const playlist = playlists.find(p => p.id === id)
@@ -287,6 +301,8 @@ function LibraryPlaylistRoute({ playlists, songs, player, dlStatuses, onPlay, on
       onBack={() => navigate('/library')}
       onAddToPlaylist={songId => onAddToPlaylist(songId, playlist.id)}
       onRename={name => onRename(playlist.id, name)}
+      onDownload={onDownload}
+      onRemoveDownload={onRemoveDownload}
     />
   )
 }
@@ -409,6 +425,8 @@ export default function App() {
     dlStatuses: dl.statuses,
     onPlay: handlePlay,
     onAddToPlaylist: songId => setSongSheet({ songId, fromPlaylistId: null }),
+    onDownload: dl.download,
+    onRemoveDownload: dl.remove,
   }
 
   const collectionRouteProps: CollectionRouteProps = {
@@ -418,6 +436,8 @@ export default function App() {
     dlStatuses: dl.statuses,
     onPlay: handlePlay,
     onAddToPlaylist: songId => setSongSheet({ songId, fromPlaylistId: null }),
+    onDownload: dl.download,
+    onRemoveDownload: dl.remove,
   }
 
   return (
@@ -496,6 +516,8 @@ export default function App() {
                 onPlay={handlePlay}
                 onAddToPlaylist={(songId, fromPlaylistId) => setSongSheet({ songId, fromPlaylistId })}
                 onRename={pm.renamePlaylist}
+                onDownload={dl.download}
+                onRemoveDownload={dl.remove}
               />
             } />
 
@@ -526,6 +548,8 @@ export default function App() {
                 onPlay={handlePlay}
                 onAddToPlaylist={(songId, fromPlaylistId) => setSongSheet({ songId, fromPlaylistId })}
                 onRename={pm.renamePlaylist}
+                onDownload={dl.download}
+                onRemoveDownload={dl.remove}
               />
             } />
 

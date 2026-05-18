@@ -13,12 +13,13 @@ interface CollectionDetailProps {
   onBack: () => void
   onAddToPlaylist: (songId: string) => void
   onDownload: (song: Song) => void
+  onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
 }
 
 export default function CollectionDetail({
   collection, player, isPremium, dlStatuses,
-  onPlay, onBack, onAddToPlaylist, onDownload, onRemoveDownload,
+  onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
 }: CollectionDetailProps) {
   const locked = collection.premiumOnly && !isPremium
   const downloadableTracks = collection.tracks.filter(s => !s.memberOnly || isPremium)
@@ -29,7 +30,7 @@ export default function CollectionDetail({
     if (allDone) {
       downloadableTracks.forEach(s => onRemoveDownload(s.id))
     } else {
-      downloadableTracks.filter(s => dlStatuses[s.id] !== 'done').forEach(s => onDownload(s))
+      onDownloadAll(downloadableTracks.filter(s => dlStatuses[s.id] !== 'done'))
     }
   }
 

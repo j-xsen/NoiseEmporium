@@ -13,6 +13,15 @@ Noise Emporium is a **browser-based music platform** (streaming + store) — the
 | [docs/status.md](docs/status.md) | Current state — what works, what's broken, what's next |
 | [docs/design.md](docs/design.md) | Color palette, typography, custom asset specs |
 
+## Investigation Workflow
+
+Before spawning Explore agents or running code searches, always read the relevant docs/ files first:
+- `docs/status.md` — what works, what's broken, what's next
+- `docs/features.md` — feature design, auth/access patterns, membership rules
+- `docs/technical.md` — stack, architecture, data flow
+
+Use docs to form a hypothesis, then verify in code. Never skip straight to grep/glob/Explore.
+
 ## Project Root at a Glance
 
 ```

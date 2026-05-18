@@ -17,12 +17,13 @@ interface ReleaseDetailProps {
   onBack: () => void
   onAddToPlaylist: (songId: string) => void
   onDownload: (song: Song) => void
+  onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
 }
 
 export default function ReleaseDetail({
   release, player, isPremium, dlStatuses,
-  onPlay, onBack, onAddToPlaylist, onDownload, onRemoveDownload,
+  onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
 }: ReleaseDetailProps) {
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
@@ -95,7 +96,7 @@ export default function ReleaseDetail({
     if (allDone) {
       playableSongs.forEach(s => onRemoveDownload(s.id))
     } else {
-      playableSongs.filter(s => dlStatuses[s.id] !== 'done').forEach(s => onDownload(s))
+      onDownloadAll(playableSongs.filter(s => dlStatuses[s.id] !== 'done'))
     }
   }
 

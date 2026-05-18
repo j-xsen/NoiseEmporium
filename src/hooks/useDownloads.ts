@@ -68,11 +68,15 @@ export function useDownloads() {
     }
   }, [])
 
-  const download = useCallback(async (song: Song) => {
+  const download = useCallback(async (song: Song, token?: string) => {
     if (statusesRef.current[song.id] === 'downloading') return
     setStatuses(s => ({ ...s, [song.id]: 'downloading' }))
+    // Member-only tracks use a server proxy that requires the JWT as a query param
+    const src = token && song.src.startsWith('/api/plays?stream=')
+      ? `${song.src}&token=${token}`
+      : song.src
     try {
-      const res = await fetch(song.src)
+      const res = await fetch(src)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const blob = await res.blob()
       await dbPut(song.id, blob)
@@ -85,6 +89,14 @@ export function useDownloads() {
       setStatuses(s => ({ ...s, [song.id]: 'error' }))
     }
   }, [])
+
+  // Downloads songs one at a time — concurrent large fetches overwhelm iOS WebKit
+  const downloadAll = useCallback(async (songs: Song[], token?: string) => {
+    for (const song of songs) {
+      if (statusesRef.current[song.id] === 'done') continue
+      await download(song, token)
+    }
+  }, [download])
 
   const remove = useCallback(async (songId: string) => {
     await dbDel(songId)
@@ -109,5 +121,5 @@ export function useDownloads() {
     }
   }, [])
 
-  return { statuses, download, remove, getLocalSrc }
+  return { statuses, download, downloadAll, remove, getLocalSrc }
 }

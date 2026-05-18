@@ -185,10 +185,11 @@ interface ReleaseRouteProps {
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string) => void
   onDownload: (song: Song) => void
+  onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
 }
 
-function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onRemoveDownload }: ReleaseRouteProps) {
+function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload }: ReleaseRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
@@ -203,6 +204,7 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
       onBack={() => navigate('/')}
       onAddToPlaylist={onAddToPlaylist}
       onDownload={onDownload}
+      onDownloadAll={onDownloadAll}
       onRemoveDownload={onRemoveDownload}
     />
   )
@@ -216,10 +218,11 @@ interface CollectionRouteProps {
   onPlay: (song: Song, queue?: Song[]) => void
   onAddToPlaylist: (songId: string) => void
   onDownload: (song: Song) => void
+  onDownloadAll: (songs: Song[]) => void
   onRemoveDownload: (songId: string) => void
 }
 
-function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onRemoveDownload }: CollectionRouteProps) {
+function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload }: CollectionRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const collection = collections.find(c => c.slug === slug)
@@ -234,6 +237,7 @@ function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onP
       onBack={() => navigate('/')}
       onAddToPlaylist={onAddToPlaylist}
       onDownload={onDownload}
+      onDownloadAll={onDownloadAll}
       onRemoveDownload={onRemoveDownload}
     />
   )
@@ -425,7 +429,8 @@ export default function App() {
     dlStatuses: dl.statuses,
     onPlay: handlePlay,
     onAddToPlaylist: songId => setSongSheet({ songId, fromPlaylistId: null }),
-    onDownload: dl.download,
+    onDownload: song => dl.download(song, auth.token ?? undefined),
+    onDownloadAll: songs => dl.downloadAll(songs, auth.token ?? undefined),
     onRemoveDownload: dl.remove,
   }
 
@@ -436,7 +441,8 @@ export default function App() {
     dlStatuses: dl.statuses,
     onPlay: handlePlay,
     onAddToPlaylist: songId => setSongSheet({ songId, fromPlaylistId: null }),
-    onDownload: dl.download,
+    onDownload: song => dl.download(song, auth.token ?? undefined),
+    onDownloadAll: songs => dl.downloadAll(songs, auth.token ?? undefined),
     onRemoveDownload: dl.remove,
   }
 
@@ -516,7 +522,7 @@ export default function App() {
                 onPlay={handlePlay}
                 onAddToPlaylist={(songId, fromPlaylistId) => setSongSheet({ songId, fromPlaylistId })}
                 onRename={pm.renamePlaylist}
-                onDownload={dl.download}
+                onDownload={song => dl.download(song, auth.token ?? undefined)}
                 onRemoveDownload={dl.remove}
               />
             } />
@@ -548,7 +554,7 @@ export default function App() {
                 onPlay={handlePlay}
                 onAddToPlaylist={(songId, fromPlaylistId) => setSongSheet({ songId, fromPlaylistId })}
                 onRename={pm.renamePlaylist}
-                onDownload={dl.download}
+                onDownload={song => dl.download(song, auth.token ?? undefined)}
                 onRemoveDownload={dl.remove}
               />
             } />
@@ -607,7 +613,7 @@ export default function App() {
           }
           onDownload={() => {
             const song = songs.find(s => s.id === songSheet.songId)
-            if (song) dl.download(song)
+            if (song) dl.download(song, auth.token ?? undefined)
           }}
           onRemoveDownload={() => dl.remove(songSheet.songId)}
           onViewLyrics={(() => {

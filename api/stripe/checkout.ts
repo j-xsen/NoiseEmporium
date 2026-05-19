@@ -15,6 +15,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
+import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
 
@@ -35,40 +36,58 @@ function appOrigin(req: VercelRequest): string {
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
   const { priceId, mode, contentfulId } = req.body ?? {}
-  if (!priceId || !mode) {
-    return res.status(400).json({ error: 'Missing required fields' })
-  }
+  if (!mode) return res.status(400).json({ error: 'Missing required fields' })
   if (mode !== 'payment' && mode !== 'subscription') {
     return res.status(400).json({ error: 'Invalid mode' })
-  }
-  if (!ALLOWED_PRICE_IDS.has(priceId)) {
-    return res.status(400).json({ error: 'Invalid price' })
-  }
-
-  // For release download purchases, validate that the contentfulId + priceId pair
-  // matches a real release_assets row. This prevents forged metadata claims.
-  const metadata: Record<string, string> = {}
-  if (mode === 'payment' && typeof contentfulId === 'string' && contentfulId) {
-    const assetRows = await sql`
-      SELECT contentful_id FROM release_assets
-      WHERE contentful_id = ${contentfulId} AND stripe_price_id = ${priceId}
-    `
-    if (!assetRows[0]) return res.status(400).json({ error: 'Invalid release product' })
-    metadata.contentful_id = contentfulId
-    metadata.purchase_type = 'release_download'
   }
 
   const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
   const customerEmail = rows[0]?.email as string | undefined
-
   const origin = appOrigin(req)
+
+  // Release download: validate via Contentful — downloadUrl must be set on the entry
+  if (mode === 'payment' && typeof contentfulId === 'string' && contentfulId) {
+    const cf = createClient({
+      space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+      accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const entry = await cf.getEntry<any>(contentfulId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fields = entry.fields as any
+    if (!fields?.downloadUrl) return res.status(400).json({ error: 'Release not available for purchase' })
+    const releaseName: string = (fields.name as string | undefined) ?? 'Music Download'
+    const priceCents = parseInt(process.env.VITE_DOWNLOAD_PRICE_CENTS ?? '500', 10)
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: priceCents,
+          product_data: { name: releaseName },
+        },
+      }],
+      success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
+      client_reference_id: userId,
+      metadata: { contentful_id: contentfulId, purchase_type: 'release_download' },
+      ...(customerEmail && { customer_email: customerEmail }),
+    })
+    return res.json({ url: session.url })
+  }
+
+  // Subscription (membership): validate priceId against allowlist
+  if (!priceId) return res.status(400).json({ error: 'Missing priceId' })
+  if (!ALLOWED_PRICE_IDS.has(priceId)) return res.status(400).json({ error: 'Invalid price' })
+
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
-    ...(Object.keys(metadata).length > 0 && { metadata }),
     ...(customerEmail && { customer_email: customerEmail }),
   })
   res.json({ url: session.url })

@@ -19,11 +19,13 @@ export interface Release {
   id: string
   slug: string
   name: string
-  /** Contentful field: 'album' | 'ep' | 'single'. Defaults to 'album' if unset. */
-  releaseType: 'album' | 'ep' | 'single'
-  date: string
+  releaseType: 'album' | 'ep' | 'single' | 'collection'
+  date?: string
   cover?: string
   spotify?: string
+  description?: string
+  /** If true, non-premium users without a purchase see the full release locked. */
+  premiumOnly?: boolean
   /** URL to the high-fidelity ZIP download (WAV/FLAC), stored in Contentful downloadUrl field, hosted on Vercel Blob. */
   downloadFile?: string
   songs: Song[]
@@ -34,16 +36,6 @@ export interface Playlist {
   name: string
   songIds: string[]
   createdAt: number
-}
-
-export interface Collection {
-  id: string
-  slug: string
-  title: string
-  description?: string
-  cover?: string
-  premiumOnly: boolean
-  tracks: Song[]
 }
 
 export type LoopMode = 'off' | 'one' | 'all'

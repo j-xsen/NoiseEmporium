@@ -6,7 +6,7 @@
 import { memo, useEffect, useState } from 'react'
 import CoverArt from './CoverArt'
 import { ChevronDownIcon, LockIcon } from './Icons'
-import type { Collection, Playlist, Release, Song } from '../types'
+import type { Playlist, Release, Song } from '../types'
 
 function useSectionOpen(key: string, defaultOpen = true) {
   const lsKey = `noise-section-${key}`
@@ -23,23 +23,22 @@ function useSectionOpen(key: string, defaultOpen = true) {
 
 interface LibraryProps {
   releases: Release[]
-  collections: Collection[]
   featuredPlaylists: Playlist[]
   isPremium: boolean
   userEmail: string
   currentSongId: string | undefined
   onSelectRelease: (id: string) => void
-  onSelectCollection: (id: string) => void
   onSelectFeaturedPlaylist: (id: string) => void
   onOpenAccount: () => void
 }
 
 function Library({
-  releases, collections, featuredPlaylists, isPremium, userEmail, currentSongId,
-  onSelectRelease, onSelectCollection, onSelectFeaturedPlaylist, onOpenAccount,
+  releases, featuredPlaylists, isPremium, userEmail, currentSongId,
+  onSelectRelease, onSelectFeaturedPlaylist, onOpenAccount,
 }: LibraryProps) {
-  const albums  = releases.filter(r => r.releaseType !== 'single')
-  const singles = releases.filter(r => r.releaseType === 'single')
+  const albums      = releases.filter(r => r.releaseType === 'album' || r.releaseType === 'ep')
+  const singles     = releases.filter(r => r.releaseType === 'single')
+  const collections = releases.filter(r => r.releaseType === 'collection')
 
   const [releasesOpen, toggleReleases]    = useSectionOpen('releases')
   const [singlesOpen, toggleSingles]      = useSectionOpen('singles')
@@ -51,8 +50,8 @@ function Library({
     }
   }, [])
 
-  const hasCollections = collections.length > 0 || featuredPlaylists.length > 0
-  const hasMultipleSections = (albums.length > 0 ? 1 : 0) + (singles.length > 0 ? 1 : 0) + (hasCollections ? 1 : 0) > 1
+  const hasFeatured = collections.length > 0 || featuredPlaylists.length > 0
+  const hasMultipleSections = (albums.length > 0 ? 1 : 0) + (singles.length > 0 ? 1 : 0) + (hasFeatured ? 1 : 0) > 1
 
   return (
     <div className="screen-layout">
@@ -66,7 +65,7 @@ function Library({
       </div>
 
       <div className="scroll-area">
-        {releases.length === 0 && !hasCollections ? (
+        {releases.length === 0 && !hasFeatured ? (
           <div className="empty-state">
             <div className="empty-icon">♪</div>
             <p className="empty-title">No releases yet</p>
@@ -146,7 +145,7 @@ function Library({
             )}
 
             {/* ── Collections & playlists ── */}
-            {hasCollections && (
+            {hasFeatured && (
               <section id="collections" className="home-section">
                 <h2 className="home-section__title">
                   <button className="home-section__toggle" onClick={toggleCollections} aria-expanded={collectionsOpen}>
@@ -156,15 +155,15 @@ function Library({
                 </h2>
                 <div className={`home-section__body${collectionsOpen ? '' : ' home-section__body--collapsed'}`}>
                   <ul className="release-grid">
-                    {collections.map(collection => {
-                      const locked = collection.premiumOnly && !isPremium
+                    {collections.map(r => {
+                      const locked = r.premiumOnly && !isPremium
                       return (
-                        <li key={collection.id} className="release-card">
-                          <button className="release-card__select" onClick={() => onSelectCollection(collection.id)}>
+                        <li key={r.id} className="release-card">
+                          <button className="release-card__select" onClick={() => onSelectRelease(r.id)}>
                             <div className="release-card__art-wrap">
-                              {collection.cover
-                                ? <img src={collection.cover} alt={collection.title} className="release-card__art" />
-                                : <CoverArt song={{ id: collection.id, title: collection.title, src: '' }} className="release-card__art" />
+                              {r.cover
+                                ? <img src={r.cover} alt={r.name} className="release-card__art" />
+                                : <CoverArt song={{ id: r.id, title: r.name, src: '' }} className="release-card__art" />
                               }
                               {locked && (
                                 <div className="release-card__lock">
@@ -173,9 +172,9 @@ function Library({
                               )}
                             </div>
                             <div className="release-card__info">
-                              <span className="release-card__name">{collection.title}</span>
+                              <span className="release-card__name">{r.name}</span>
                               <span className="release-card__meta">
-                                {locked ? 'Members only' : `${collection.tracks.length} ${collection.tracks.length === 1 ? 'track' : 'tracks'}`}
+                                {locked ? 'Members only' : `${r.songs.length} ${r.songs.length === 1 ? 'track' : 'tracks'}`}
                               </span>
                             </div>
                           </button>

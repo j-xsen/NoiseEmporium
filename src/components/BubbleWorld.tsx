@@ -4,7 +4,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, GradientTexture, Environment, Clouds, Cloud, useTexture, useProgress } from '@react-three/drei'
 import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
-import type { Release, Collection } from '../types'
+import type { Release } from '../types'
 import * as THREE from 'three'
 
 // Desktop layout: camera at z=26
@@ -289,12 +289,11 @@ function preloadRowCovers(items: Item[]) {
 
 interface BubbleWorldProps {
   releases: Release[]
-  collections: Collection[]
   currentSongId?: string
 }
 
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
-function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps) {
+function BubbleWorld({ releases, currentSongId }: BubbleWorldProps) {
   const navigate = useNavigate()
   const [pageRow0, setPageRow0] = useState(() => {
     try {
@@ -316,7 +315,7 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
     try {
       const slug = sessionStorage.getItem('bw-restore-slug')
       if (!slug || sessionStorage.getItem('bw-restore-row') !== '2') return 0
-      const idx = collections.findIndex(c => c.slug === slug)
+      const idx = releases.filter(r => r.releaseType === 'collection').findIndex(r => r.slug === slug)
       return idx >= 0 ? idx : 0
     } catch { return 0 }
   })
@@ -397,20 +396,22 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       },
     }))
 
-  const row2: Item[] = collections.map(c => ({
-    id: c.id,
-    name: c.title,
-    label: `${c.title} — Collection`,
-    cover: c.cover,
-    radius: 1.1,
-    isActive: c.tracks.some(s => s.id === currentSongId),
-    onClick: () => {
-      sessionStorage.setItem('bw-restore-slug', c.slug)
-      sessionStorage.setItem('bw-restore-row', '2')
-      sessionStorage.setItem('bw-restore-focused-row', focusedRowRef.current.toString())
-      navigate(`/collection/${c.slug}`)
-    },
-  }))
+  const row2: Item[] = releases
+    .filter(r => r.releaseType === 'collection')
+    .map(r => ({
+      id: r.id,
+      name: r.name,
+      label: `${r.name} — Collection`,
+      cover: r.cover,
+      radius: 1.1,
+      isActive: r.songs.some(s => s.id === currentSongId),
+      onClick: () => {
+        sessionStorage.setItem('bw-restore-slug', r.slug)
+        sessionStorage.setItem('bw-restore-row', '2')
+        sessionStorage.setItem('bw-restore-focused-row', focusedRowRef.current.toString())
+        navigate(`/collection/${r.slug}`)
+      },
+    }))
 
   // Arrays indexed by row number — eliminates parallel state helpers
   const rows = [row0, row1, row2]

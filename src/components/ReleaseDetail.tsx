@@ -8,14 +8,14 @@ import SongTrack from './SongTrack'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
-import type { ShopProduct } from '../shopData'
+
+const DOWNLOAD_PRICE_CENTS = parseInt(import.meta.env.VITE_DOWNLOAD_PRICE_CENTS ?? '500', 10)
 
 interface ReleaseDetailProps {
   release: Release
   player: PlayerAPI
   isPremium: boolean
   hasPurchasedRelease: boolean
-  releaseProduct?: ShopProduct
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
@@ -28,16 +28,17 @@ interface ReleaseDetailProps {
 }
 
 export default function ReleaseDetail({
-  release, player, isPremium, hasPurchasedRelease, releaseProduct, dlStatuses,
+  release, player, isPremium, hasPurchasedRelease, dlStatuses,
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
   onBuyRelease, onDownloadWav,
 }: ReleaseDetailProps) {
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
     : null
+  const hasFullAccess = isPremium || hasPurchasedRelease
+  const locked = release.premiumOnly && !hasFullAccess
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
-  const hasFullAccess = isPremium || hasPurchasedRelease
   const playableSongs = hasFullAccess ? release.songs : publicSongs
 
   const count = release.songs.length
@@ -70,10 +71,13 @@ export default function ReleaseDetail({
       <div className="rps2-info-col">
         <div className="rps2-header">
           <h1 className="rps2-title">{release.name}</h1>
+          {release.description && (
+            <p className="rps2-description">{release.description}</p>
+          )}
           <p className="rps2-meta">
-            {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
+            {[formattedDate, !locked && `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
           </p>
-          {playableSongs.length > 0 && (
+          {!locked && playableSongs.length > 0 && (
             <div className="rps2-header-actions">
               <button
                 className="release-hero__play"
@@ -102,13 +106,13 @@ export default function ReleaseDetail({
                   <span>Download WAV</span>
                 </button>
               )}
-              {!hasFullAccess && releaseProduct?.priceId && (
+              {!hasFullAccess && release.downloadFile && (
                 <button
                   className="release-hero__buy"
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(releaseProduct.price ?? 0)}</span>
+                  <span>Buy {formatPrice(DOWNLOAD_PRICE_CENTS)}</span>
                 </button>
               )}
             </div>
@@ -116,7 +120,26 @@ export default function ReleaseDetail({
         </div>
 
         <div className="rps2-tracks-scroll">
-          {release.songs.length === 0 ? (
+          {locked ? (
+            <div className="empty-state">
+              <div className="empty-icon"><LockIcon size={32} /></div>
+              <p className="empty-title">Members Only</p>
+              <p className="empty-hint">
+                {release.downloadFile
+                  ? 'Purchase this release for permanent access, or upgrade to a premium membership.'
+                  : 'Upgrade to a premium membership to access this collection.'}
+              </p>
+              {release.downloadFile && (
+                <button
+                  className="release-hero__buy"
+                  onClick={() => onBuyRelease(release.id)}
+                  aria-label="Buy permanent download"
+                >
+                  <span>Buy {formatPrice(DOWNLOAD_PRICE_CENTS)}</span>
+                </button>
+              )}
+            </div>
+          ) : release.songs.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">♪</div>
               <p className="empty-title">No tracks</p>

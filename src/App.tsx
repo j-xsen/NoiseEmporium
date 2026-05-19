@@ -2,10 +2,10 @@
 //
 // Navigation model: React Router v7.
 //   /             → Library (home tab)
-//   /ep/:slug     → EP detail
-//   /album/:slug  → Album detail
-//   /single/:slug → Single detail
-//   /collection/:slug → Collection detail
+//   /album/:slug  → Album/EP/Single/Collection detail (all use ReleaseDetail)
+//   /ep/:slug     → (same)
+//   /single/:slug → (same)
+//   /collection/:slug → (same)
 //   /playlist/:id → Featured playlist detail
 //   /player       → Now playing
 //   /library      → User playlists
@@ -24,7 +24,6 @@ import { useFeaturedPlaylists } from './hooks/useFeaturedPlaylists'
 import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import { usePurchases } from './hooks/usePurchases'
-import { SHOP_PRODUCTS } from './shopData'
 import AuthScreen from './components/AuthScreen'
 import BubbleWorld from './components/BubbleWorld'
 import Library from './components/Library'
@@ -32,7 +31,6 @@ import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
 import PlaylistDetail from './components/PlaylistDetail'
 import ReleaseDetail from './components/ReleaseDetail'
-import CollectionDetail from './components/CollectionDetail'
 import LyricsView from './components/LyricsView'
 import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
@@ -40,7 +38,7 @@ import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
 import { ChevronLeftIcon, DownloadIcon, MinusCircleIcon, PlusIcon, UserIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
-import type { Song, Tab, Playlist, Release, Collection } from './types'
+import type { Song, Tab, Playlist, Release } from './types'
 
 // ── Loading / Error screens ───────────────────────────────────────────────────
 
@@ -220,14 +218,12 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
   if (!release) return <Navigate to="/" replace />
-  const releaseProduct = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === release.id)
   return (
     <ReleaseDetail
       release={release}
       player={player}
       isPremium={isPremium}
       hasPurchasedRelease={hasPurchased(release.id)}
-      releaseProduct={releaseProduct}
       dlStatuses={dlStatuses}
       onPlay={onPlay}
       onBack={() => navigate('/')}
@@ -241,38 +237,6 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
   )
 }
 
-interface CollectionRouteProps {
-  collections: Collection[]
-  player: AudioPlayer
-  isPremium: boolean
-  dlStatuses: Record<string, DlStatus>
-  onPlay: (song: Song, queue?: Song[]) => void
-  onAddToPlaylist: (songId: string) => void
-  onDownload: (song: Song) => void
-  onDownloadAll: (songs: Song[]) => void
-  onRemoveDownload: (songId: string) => void
-}
-
-function CollectionDetailRoute({ collections, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload }: CollectionRouteProps) {
-  const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
-  const collection = collections.find(c => c.slug === slug)
-  if (!collection) return <Navigate to="/" replace />
-  return (
-    <CollectionDetail
-      collection={collection}
-      player={player}
-      isPremium={isPremium}
-      dlStatuses={dlStatuses}
-      onPlay={onPlay}
-      onBack={() => navigate('/')}
-      onAddToPlaylist={onAddToPlaylist}
-      onDownload={onDownload}
-      onDownloadAll={onDownloadAll}
-      onRemoveDownload={onRemoveDownload}
-    />
-  )
-}
 
 interface FeaturedPlaylistRouteProps {
   allPlaylists: Playlist[]
@@ -348,7 +312,7 @@ type SongSheet = { songId: string; fromPlaylistId: string | null } | null
 
 export default function App() {
   const auth = useAuth()
-  const { songs, releases, collections, status, error } = useSongs()
+  const { songs, releases, status, error } = useSongs()
 
   const recordPlay = useCallback((songId: string) => {
     if (!auth.token) return
@@ -429,12 +393,7 @@ export default function App() {
     if (r) navigate(`/${r.releaseType}/${r.slug}`)
   }, [releases, navigate])
 
-  const handleSelectCollection = useCallback((id: string) => {
-    const c = collections.find(c => c.id === id)
-    if (c) navigate(`/collection/${c.slug}`)
-  }, [collections, navigate])
-
-  const handleSelectFeaturedPlaylist = useCallback((id: string) => {
+const handleSelectFeaturedPlaylist = useCallback((id: string) => {
     navigate(`/playlist/${id}`)
   }, [navigate])
 
@@ -444,13 +403,11 @@ export default function App() {
 
   const handleBuyRelease = useCallback(async (contentfulId: string) => {
     if (!auth.token) return
-    const product = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === contentfulId)
-    if (!product?.priceId) return
     try {
       const r = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-        body: JSON.stringify({ priceId: product.priceId, mode: product.mode, contentfulId }),
+        body: JSON.stringify({ mode: 'payment', contentfulId }),
       })
       const data = await r.json()
       if (data.url) window.location.href = data.url
@@ -513,19 +470,7 @@ export default function App() {
     onDownloadWav: handleDownloadWav,
   }
 
-  const collectionRouteProps: CollectionRouteProps = {
-    collections,
-    player,
-    isPremium,
-    dlStatuses: dl.statuses,
-    onPlay: handlePlay,
-    onAddToPlaylist: songId => setSongSheet({ songId, fromPlaylistId: null }),
-    onDownload: song => dl.download(song, auth.token ?? undefined),
-    onDownloadAll: songs => dl.downloadAll(songs, auth.token ?? undefined),
-    onRemoveDownload: dl.remove,
-  }
-
-  return (
+return (
     <div className="app">
       <div className="screen">
         {tab === 'home' && !lyricsSong && location.pathname === '/' && (
@@ -571,7 +516,6 @@ export default function App() {
               >
                 <BubbleWorld
                   releases={releases}
-                  collections={collections}
                   currentSongId={player.currentSong?.id}
                 />
               </div>
@@ -581,13 +525,11 @@ export default function App() {
               viewMode === '2d' ? (
                 <Library
                   releases={releases}
-                  collections={collections}
                   featuredPlaylists={featuredPlaylists}
                   isPremium={isPremium}
                   userEmail={auth.user?.email ?? ''}
                   currentSongId={player.currentSong?.id}
                   onSelectRelease={handleSelectRelease}
-                  onSelectCollection={handleSelectCollection}
                   onSelectFeaturedPlaylist={handleSelectFeaturedPlaylist}
                   onOpenAccount={handleOpenAccount}
                 />
@@ -598,7 +540,7 @@ export default function App() {
             <Route path="/album/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />
             <Route path="/single/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />
 
-            <Route path="/collection/:slug" element={<CollectionDetailRoute {...collectionRouteProps} />} />
+            <Route path="/collection/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />
 
             <Route path="/playlist/:id" element={
               <FeaturedPlaylistRoute

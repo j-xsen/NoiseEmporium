@@ -24,7 +24,7 @@ export interface Release {
   date: string
   cover?: string
   spotify?: string
-  /** URL to the high-fidelity ZIP download (WAV/FLAC), set via Contentful downloadFile asset. */
+  /** URL to the high-fidelity ZIP download (WAV/FLAC), stored in Contentful downloadUrl field, hosted on Vercel Blob. */
   downloadFile?: string
   songs: Song[]
 }

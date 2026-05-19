@@ -25,7 +25,7 @@ export const contentfulClient = createClient({
 //   date         — Date
 //   cover        — Asset    (image — shared cover art for all tracks)
 //   spotify      — Symbol
-//   downloadFile — Asset    (ZIP file for high-fidelity download; optional)
+//   downloadUrl  — Symbol   (Vercel Blob URL for high-fidelity ZIP download; optional)
 //   tracks       — Array of Links → Song entries (ordered)
 //
 // Song (content type: "song")
@@ -70,7 +70,8 @@ export async function fetchReleases(): Promise<Release[]> {
     const artist: string = (rf.artist as string | undefined) ?? 'jaxsen'
     const date: string = (rf.date as string | undefined) ?? ''
     const spotify: string | undefined = rf.spotify as string | undefined
-    const downloadFile = assetUrl(rf.downloadFile?.fields?.file?.url as string | undefined)
+    const downloadFile = (rf.downloadUrl as string | undefined)
+      ?? assetUrl(rf.downloadFile?.fields?.file?.url as string | undefined)
 
     const tracks: unknown[] = (rf.tracks as unknown[]) ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

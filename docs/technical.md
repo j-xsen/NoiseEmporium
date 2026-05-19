@@ -110,7 +110,7 @@ api/
                                 DELETE /api/account   (delete account; auth required)
   downloads/
     index.ts                    GET /api/downloads?purchases   (list purchased release IDs; auth required)
-                                GET /api/downloads?release=id  (verify purchase + return blob URL; auth required)
+                                GET /api/downloads?release=id  (verify purchase + generate short-lived signed Blob URL; auth required)
   playlists/
     index.ts                    GET/POST /api/playlists           (auth required)
     featured.ts                 GET      /api/playlists/featured  (public)
@@ -149,6 +149,7 @@ Release (content type: "release")
   date         — Date
   cover        — Asset       (shared cover art for all tracks in this release)
   spotify      — Short text  (optional)
+  downloadUrl  — Short text  (Vercel Blob URL for the WAV ZIP; optional; populated after uploading a private blob)
   tracks       — References  (ordered Song entries; sort by Song.pos)
 
 Song (content type: "song")

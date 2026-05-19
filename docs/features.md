@@ -202,6 +202,7 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 - `date` — Date
 - `cover` — Media (shared cover art for all tracks in the release)
 - `spotify` — Short text (optional Spotify link)
+- `downloadUrl` — Short text (optional; private Vercel Blob URL for the WAV ZIP — populated when a release is activated for purchase)
 - `tracks` — References, many → Song entries (ordered by `pos` field)
 
 **Song** (content type: `song`)
@@ -285,7 +286,20 @@ A one-time purchase that grants perpetual rights to a specific release — disti
 - Requires an account (the purchase is tied to a user ID)
 - One-time Stripe payment (mode: `payment`), not a subscription
 - After purchase: Resend sends a confirmation email with a link back to the app
-- To activate a release for purchase: create a Stripe Product + one-time Price, upload a WAV ZIP to Vercel Blob, add a row to `release_assets`, and add the product to `shopData.ts`
+
+#### Download URL security model
+WAV ZIPs are stored as **private** Vercel Blob files. When a verified purchaser requests a download, `api/downloads/index.ts` reads the raw Blob URL from the `downloadUrl` field on the Contentful release entry and uses the `@vercel/blob` SDK to generate a **short-lived signed URL** (e.g. 1 hour expiry). Only that signed URL is returned to the client — the raw Blob URL is never exposed. If someone shares a signed URL, it becomes useless after it expires.
+
+The `downloadUrl` field in Contentful holds the permanent private Blob URL (e.g. `https://xxxx.public.blob.vercel-storage.com/...`). It is a plain Short text field on the Release content type — not a media asset.
+
+#### Activating a release for purchase
+1. Upload the WAV ZIP to Vercel Blob as a **private** blob (via Vercel dashboard or a one-off script using `@vercel/blob`)
+2. Copy the resulting Blob URL into the `downloadUrl` field on the Contentful release entry
+3. Create a Stripe Product + one-time Price for the release
+4. Add a row to `release_assets` in the database linking the Contentful release ID to the Stripe Price ID
+5. Add the product to `shopData.ts` so it appears in the Shop UI
+
+> **Note:** No files have been uploaded yet — the signing logic in `api/downloads/index.ts` still returns the raw URL directly. Once files are ready to upload, the handler needs to be updated to call `@vercel/blob`'s signed URL generation before returning.
 
 ### Digital Downloads (name-your-price, not yet implemented)
 - Every release available as a free download

@@ -81,12 +81,15 @@ interface SongActionsSheetProps {
 function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleCreate() {
-    if (!name.trim()) return
+    if (!name.trim() || submitting) return
+    setSubmitting(true)
     await onCreate(name.trim())
     setName('')
     setCreating(false)
+    setSubmitting(false)
   }
 
   const addablePlaylists = fromPlaylist
@@ -158,7 +161,7 @@ function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, 
               />
               <div className="sheet-create__btns">
                 <button className="btn-ghost" onClick={() => { setCreating(false); setName('') }}>Cancel</button>
-                <button className="btn-accent" onClick={handleCreate} disabled={!name.trim()}>Create</button>
+                <button className="btn-accent" onClick={handleCreate} disabled={!name.trim() || submitting}>Create</button>
               </div>
             </div>
           ) : (

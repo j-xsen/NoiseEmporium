@@ -66,6 +66,7 @@ function ErrorScreen({ message }: { message: string | null }) {
 // ── Song actions bottom sheet ─────────────────────────────────────────────────
 
 interface SongActionsSheetProps {
+  songTitle: string
   playlists: Playlist[]
   fromPlaylist: Playlist | null
   dlStatus: DlStatus
@@ -78,7 +79,7 @@ interface SongActionsSheetProps {
   onClose: () => void
 }
 
-function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
+function SongActionsSheet({ songTitle, playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -98,7 +99,7 @@ function SongActionsSheet({ playlists, fromPlaylist, dlStatus, onAdd, onCreate, 
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div className="sheet-header">
-          <h3 className="sheet-title">Add to playlist</h3>
+          <h3 className="sheet-title">{songTitle}</h3>
           <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
         </div>
         <div className="sheet-body">
@@ -668,6 +669,7 @@ export default function App() {
 
       {songSheet && (
         <SongActionsSheet
+          songTitle={songs.find(s => s.id === songSheet.songId)?.title ?? ''}
           playlists={pm.playlists}
           fromPlaylist={sheetFromPlaylist}
           dlStatus={dl.statuses[songSheet.songId] ?? 'none'}

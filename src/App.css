@@ -1115,7 +1115,7 @@
   color: var(--text-bright);
 }
 
-.sheet-close {
+.sheet-back, .sheet-close {
   width: 32px;
   height: 32px;
   border-radius: 50%;

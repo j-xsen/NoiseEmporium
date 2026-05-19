@@ -38,7 +38,7 @@ import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
-import { DownloadIcon, MinusCircleIcon, PlusIcon, UserIcon, XIcon } from './components/Icons'
+import { ChevronLeftIcon, DownloadIcon, MinusCircleIcon, PlusIcon, UserIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release, Collection } from './types'
 
@@ -80,6 +80,7 @@ interface SongActionsSheetProps {
 }
 
 function SongActionsSheet({ songTitle, playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
+  const [view, setView] = useState<'main' | 'playlists'>('main')
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -99,74 +100,90 @@ function SongActionsSheet({ songTitle, playlists, fromPlaylist, dlStatus, onAdd,
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div className="sheet-header">
-          <h3 className="sheet-title">{songTitle}</h3>
+          {view === 'playlists' && (
+            <button className="sheet-back" onClick={() => { setView('main'); setCreating(false); setName('') }} aria-label="Back">
+              <ChevronLeftIcon size={18} />
+            </button>
+          )}
+          <h3 className="sheet-title">{view === 'main' ? songTitle : 'Add to playlist'}</h3>
           <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
         </div>
         <div className="sheet-body">
-          {onViewLyrics && (
-            <button className="sheet-new" onClick={() => { onViewLyrics(); onClose() }}>
-              <span>Lyrics</span>
-            </button>
-          )}
-          {dlStatus === 'done' ? (
-            <button className="sheet-remove" onClick={() => { onRemoveDownload(); onClose() }}>
-              <XIcon size={16} />
-              <span>Remove Download</span>
-            </button>
+          {view === 'main' ? (
+            <>
+              {onViewLyrics && (
+                <button className="sheet-new" onClick={() => { onViewLyrics(); onClose() }}>
+                  <span>Lyrics</span>
+                </button>
+              )}
+              {dlStatus === 'done' ? (
+                <button className="sheet-remove" onClick={() => { onRemoveDownload(); onClose() }}>
+                  <XIcon size={16} />
+                  <span>Remove Download</span>
+                </button>
+              ) : (
+                <button
+                  className="sheet-new"
+                  onClick={() => { onDownload(); onClose() }}
+                  disabled={dlStatus === 'downloading'}
+                >
+                  <DownloadIcon size={16} />
+                  <span>{dlStatus === 'downloading' ? 'Downloading…' : 'Download'}</span>
+                </button>
+              )}
+              {onRemove && (
+                <button
+                  className="sheet-remove"
+                  onClick={async () => { await onRemove(); onClose() }}
+                >
+                  <MinusCircleIcon size={16} />
+                  <span>Remove from {fromPlaylist?.name ?? 'playlist'}</span>
+                </button>
+              )}
+              <button className="sheet-new" onClick={() => setView('playlists')}>
+                <PlusIcon size={16} />
+                <span>Add to playlist</span>
+              </button>
+            </>
           ) : (
-            <button
-              className="sheet-new"
-              onClick={() => { onDownload(); onClose() }}
-              disabled={dlStatus === 'downloading'}
-            >
-              <DownloadIcon size={16} />
-              <span>{dlStatus === 'downloading' ? 'Downloading…' : 'Download'}</span>
-            </button>
-          )}
-          {onRemove && (
-            <button
-              className="sheet-remove"
-              onClick={async () => { await onRemove(); onClose() }}
-            >
-              <MinusCircleIcon size={16} />
-              <span>Remove from {fromPlaylist?.name ?? 'playlist'}</span>
-            </button>
-          )}
-          {addablePlaylists.length > 0 && (
-            <ul className="sheet-list">
-              {addablePlaylists.map(p => (
-                <li key={p.id}>
-                  <button className="sheet-item" onClick={() => { onAdd(p.id); onClose() }}>
-                    <span className="sheet-item__name">{p.name}</span>
-                    <span className="sheet-item__count">{p.songIds.length}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {creating ? (
-            <div className="sheet-create">
-              <input
-                autoFocus
-                className="sheet-input"
-                placeholder="Playlist name…"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleCreate()
-                  if (e.key === 'Escape') { setCreating(false); setName('') }
-                }}
-              />
-              <div className="sheet-create__btns">
-                <button className="btn-ghost" onClick={() => { setCreating(false); setName('') }}>Cancel</button>
-                <button className="btn-accent" onClick={handleCreate} disabled={!name.trim()}>Create</button>
-              </div>
-            </div>
-          ) : (
-            <button className="sheet-new" onClick={() => setCreating(true)}>
-              <PlusIcon size={16} />
-              <span>New playlist</span>
-            </button>
+            <>
+              {addablePlaylists.length > 0 && (
+                <ul className="sheet-list">
+                  {addablePlaylists.map(p => (
+                    <li key={p.id}>
+                      <button className="sheet-item" onClick={() => { onAdd(p.id); onClose() }}>
+                        <span className="sheet-item__name">{p.name}</span>
+                        <span className="sheet-item__count">{p.songIds.length}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {creating ? (
+                <div className="sheet-create">
+                  <input
+                    autoFocus
+                    className="sheet-input"
+                    placeholder="Playlist name…"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleCreate()
+                      if (e.key === 'Escape') { setCreating(false); setName('') }
+                    }}
+                  />
+                  <div className="sheet-create__btns">
+                    <button className="btn-ghost" onClick={() => { setCreating(false); setName('') }}>Cancel</button>
+                    <button className="btn-accent" onClick={handleCreate} disabled={!name.trim()}>Create</button>
+                  </div>
+                </div>
+              ) : (
+                <button className="sheet-new" onClick={() => setCreating(true)}>
+                  <PlusIcon size={16} />
+                  <span>New playlist</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

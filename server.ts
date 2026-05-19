@@ -22,8 +22,14 @@ async function handle(
 ) {
   const mod = await import(handlerPath)
   const handler = mod.default
-  // Merge URL params into query so handlers can do `req.query.id`
-  Object.assign(req.query, params)
+  // Merge URL params into query so handlers can do `req.query.id`.
+  // Must override the getter with a plain value; Object.assign writes to a
+  // throwaway object because req.query re-parses the URL on every access.
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query, ...params },
+    writable: true,
+    configurable: true,
+  })
   await handler(req, res)
 }
 

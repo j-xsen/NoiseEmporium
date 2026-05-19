@@ -6,6 +6,22 @@ export function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+// Default prices in cents. Override per-entry via Contentful price/memberPrice fields.
+const DEFAULT_PRICES = {
+  single:  { full: 200, member: 100 },
+  default: { full: 700, member: 500 },
+} as const
+
+export function releasePrice(
+  release: { releaseType: string; price?: number; memberPrice?: number },
+  isPremium: boolean,
+): number {
+  const def = release.releaseType === 'single' ? DEFAULT_PRICES.single : DEFAULT_PRICES.default
+  return isPremium
+    ? (release.memberPrice ?? def.member)
+    : (release.price ?? def.full)
+}
+
 export function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00'
   const m = Math.floor(seconds / 60)

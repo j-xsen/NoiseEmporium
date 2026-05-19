@@ -104,7 +104,10 @@ export async function fetchReleases(): Promise<Release[]> {
       id: entry.sys.id, slug: slugify(name), name, releaseType,
       date: rf.date as string | undefined,
       cover: coverUrl, spotify: rf.spotify as string | undefined,
-      downloadFile, songs,
+      downloadFile,
+      price: rf.price as number | undefined,
+      memberPrice: rf.memberPrice as number | undefined,
+      songs,
     })
   }
 
@@ -121,6 +124,8 @@ export async function fetchReleases(): Promise<Release[]> {
       description: f.description as string | undefined,
       premiumOnly: f.premiumOnly === true,
       downloadFile: f.downloadUrl as string | undefined,
+      price: f.price as number | undefined,
+      memberPrice: f.memberPrice as number | undefined,
       songs,
     })
   }

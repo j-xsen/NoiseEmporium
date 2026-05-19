@@ -3,13 +3,11 @@
 // Premium users see and can play everything.
 
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
-import { formatPrice } from '../utils/format'
+import { formatPrice, releasePrice } from '../utils/format'
 import SongTrack from './SongTrack'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
-
-const DOWNLOAD_PRICE_CENTS = parseInt(import.meta.env.VITE_DOWNLOAD_PRICE_CENTS ?? '500', 10)
 
 interface ReleaseDetailProps {
   release: Release
@@ -112,7 +110,7 @@ export default function ReleaseDetail({
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(DOWNLOAD_PRICE_CENTS)}</span>
+                  <span>Buy {formatPrice(releasePrice(release, isPremium))}</span>
                 </button>
               )}
             </div>
@@ -135,7 +133,7 @@ export default function ReleaseDetail({
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(DOWNLOAD_PRICE_CENTS)}</span>
+                  <span>Buy {formatPrice(releasePrice(release, isPremium))}</span>
                 </button>
               )}
             </div>

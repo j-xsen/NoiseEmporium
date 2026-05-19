@@ -1,5 +1,6 @@
-import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, MoreIcon, PlayIcon, RetryIcon } from './Icons'
-import { formatTime, songSubtitle } from '../utils/format'
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
+import { formatTime } from '../utils/format'
+import SongTrack from './SongTrack'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Collection, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
@@ -101,57 +102,21 @@ export default function CollectionDetail({
             </div>
           ) : (
             <ul className="song-track-list">
-              {collection.tracks.map((song, i) => {
-                const isActive = song.id === player.currentSong?.id
-                const trackLocked = song.memberOnly && !isPremium
-                const dlStatus = dlStatuses[song.id] ?? 'none'
-                return (
-                  <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${trackLocked ? 'song-track--locked' : ''}`}>
-                    <button className="song-track__main" onClick={() => !trackLocked && onPlay(song, collection.tracks)} disabled={trackLocked}>
-                      <span className="song-track__num">
-                        {trackLocked
-                          ? <LockIcon size={13} />
-                          : isActive && player.isPlaying
-                            ? <span className="song-row__bars"><span /><span /><span /></span>
-                            : i + 1
-                        }
-                      </span>
-                      <div className="song-track__info">
-                        <span className="song-track__title">{song.title}</span>
-                        {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
-                      </div>
-                    </button>
-                    {!trackLocked && (
-                      <div className="song-track__actions">
-                        {song.duration != null && (
-                          <span className="song-track__duration">{formatTime(song.duration)}</span>
-                        )}
-                        <button
-                          className={`song-track__dl-btn song-track__dl-btn--${dlStatus}`}
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (dlStatus === 'done') onRemoveDownload(song.id)
-                            else if (dlStatus !== 'downloading') onDownload(song)
-                          }}
-                          aria-label={dlStatus === 'done' ? 'Remove download' : dlStatus === 'downloading' ? 'Downloading…' : 'Download for offline'}
-                        >
-                          {dlStatus === 'downloading' && <span className="dl-spinner" />}
-                          {dlStatus === 'done' && <CheckIcon size={14} />}
-                          {dlStatus === 'error' && <RetryIcon size={14} />}
-                          {dlStatus === 'none' && <DownloadIcon size={14} />}
-                        </button>
-                        <button
-                          className="song-track__more"
-                          onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-                          aria-label="More options"
-                        >
-                          <MoreIcon size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
+              {collection.tracks.map((song, i) => (
+                <SongTrack
+                  key={song.id}
+                  song={song}
+                  displayNum={i + 1}
+                  isActive={song.id === player.currentSong?.id}
+                  isPlaying={player.isPlaying}
+                  locked={song.memberOnly && !isPremium}
+                  dlStatus={dlStatuses[song.id] ?? 'none'}
+                  onPlay={() => onPlay(song, collection.tracks)}
+                  onDownload={() => onDownload(song)}
+                  onRemoveDownload={() => onRemoveDownload(song.id)}
+                  onAddToPlaylist={() => onAddToPlaylist(song.id)}
+                />
+              ))}
             </ul>
           )}
         </div>

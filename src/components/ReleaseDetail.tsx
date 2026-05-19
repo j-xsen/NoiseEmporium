@@ -2,8 +2,9 @@
 // Free users see public tracks normally and locked tracks greyed out with a lock icon.
 // Premium users see and can play everything.
 
-import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, MoreIcon, PlayIcon, RetryIcon } from './Icons'
-import { formatTime, formatPrice, songSubtitle } from '../utils/format'
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
+import { formatPrice } from '../utils/format'
+import SongTrack from './SongTrack'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
@@ -37,63 +38,7 @@ export default function ReleaseDetail({
   const publicSongs = release.songs.filter(s => !s.memberOnly)
   const memberSongs = release.songs.filter(s => s.memberOnly)
   const hasFullAccess = isPremium || hasPurchasedRelease
-  // Queue passed to onPlay excludes locked tracks for free users so auto-advance skips them.
   const playableSongs = hasFullAccess ? release.songs : publicSongs
-
-  function renderTrack(song: Song, displayNum: number, locked: boolean) {
-    const isActive = song.id === player.currentSong?.id
-    const dlStatus = dlStatuses[song.id] ?? 'none'
-    return (
-      <li key={song.id} className={`song-track ${isActive ? 'song-track--active' : ''} ${locked ? 'song-track--locked' : ''}`}>
-        <button
-          className="song-track__main"
-          onClick={() => !locked && onPlay(song, playableSongs)}
-          disabled={locked}
-        >
-          <span className="song-track__num">
-            {locked
-              ? <LockIcon size={13} />
-              : isActive && player.isPlaying
-                ? <span className="song-row__bars"><span /><span /><span /></span>
-                : displayNum
-            }
-          </span>
-          <div className="song-track__info">
-            <span className="song-track__title">{song.title}</span>
-            {songSubtitle(song) && <span className="song-track__subtitle">{songSubtitle(song)}</span>}
-          </div>
-        </button>
-        {!locked && (
-          <div className="song-track__actions">
-            {song.duration != null && (
-              <span className="song-track__duration">{formatTime(song.duration)}</span>
-            )}
-            <button
-              className={`song-track__dl-btn song-track__dl-btn--${dlStatus}`}
-              onClick={e => {
-                e.stopPropagation()
-                if (dlStatus === 'done') onRemoveDownload(song.id)
-                else if (dlStatus !== 'downloading') onDownload(song)
-              }}
-              aria-label={dlStatus === 'done' ? 'Remove download' : dlStatus === 'downloading' ? 'Downloading…' : 'Download for offline'}
-            >
-              {dlStatus === 'downloading' && <span className="dl-spinner" />}
-              {dlStatus === 'done' && <CheckIcon size={14} />}
-              {dlStatus === 'error' && <RetryIcon size={14} />}
-              {dlStatus === 'none' && <DownloadIcon size={14} />}
-            </button>
-            <button
-              className="song-track__more"
-              onClick={e => { e.stopPropagation(); onAddToPlaylist(song.id) }}
-              aria-label="More options"
-            >
-              <MoreIcon size={16} />
-            </button>
-          </div>
-        )}
-      </li>
-    )
-  }
 
   const count = release.songs.length
   const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
@@ -178,16 +123,42 @@ export default function ReleaseDetail({
             </div>
           ) : (
             <ul className="song-track-list">
-              {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
+              {publicSongs.map((song, i) => (
+                <SongTrack
+                  key={song.id}
+                  song={song}
+                  displayNum={i + 1}
+                  isActive={song.id === player.currentSong?.id}
+                  isPlaying={player.isPlaying}
+                  locked={false}
+                  dlStatus={dlStatuses[song.id] ?? 'none'}
+                  onPlay={() => onPlay(song, playableSongs)}
+                  onDownload={() => onDownload(song)}
+                  onRemoveDownload={() => onRemoveDownload(song.id)}
+                  onAddToPlaylist={() => onAddToPlaylist(song.id)}
+                />
+              ))}
               {memberSongs.length > 0 && (
                 <>
                   <li className="song-track-section">
                     <LockIcon size={12} />
                     <span>Members Only</span>
                   </li>
-                  {memberSongs.map((song, i) =>
-                    renderTrack(song, publicSongs.length + i + 1, !hasFullAccess)
-                  )}
+                  {memberSongs.map((song, i) => (
+                    <SongTrack
+                      key={song.id}
+                      song={song}
+                      displayNum={publicSongs.length + i + 1}
+                      isActive={song.id === player.currentSong?.id}
+                      isPlaying={player.isPlaying}
+                      locked={!hasFullAccess}
+                      dlStatus={dlStatuses[song.id] ?? 'none'}
+                      onPlay={() => onPlay(song, playableSongs)}
+                      onDownload={() => onDownload(song)}
+                      onRemoveDownload={() => onRemoveDownload(song.id)}
+                      onAddToPlaylist={() => onAddToPlaylist(song.id)}
+                    />
+                  ))}
                 </>
               )}
             </ul>

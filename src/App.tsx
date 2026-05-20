@@ -36,7 +36,8 @@ import MiniPlayer from './components/MiniPlayer'
 import BottomNav from './components/BottomNav'
 import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
-import { ChevronLeftIcon, DownloadIcon, MinusCircleIcon, PlusIcon, UserIcon, XIcon } from './components/Icons'
+import AccountButton from './components/AccountButton'
+import { ChevronLeftIcon, DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release } from './types'
 
@@ -488,14 +489,10 @@ return (
           </div>
         )}
 
-        {tab === 'home' && !lyricsSong && location.pathname === '/' && viewMode === '3d' && auth.user && (
-          <button
-            className="bw-account-btn"
-            onClick={handleOpenAccount}
-            aria-label="Account settings"
-          >
-            <UserIcon size={20} />
-          </button>
+        {tab === 'home' && !lyricsSong && !(viewMode === '2d' && location.pathname === '/') && auth.user && (
+          <div className="account-btn-overlay">
+            <AccountButton email={auth.user.email} onClick={handleOpenAccount} />
+          </div>
         )}
 
         {lyricsSong ? (

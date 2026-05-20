@@ -5,6 +5,7 @@
 
 import { memo, useEffect, useState } from 'react'
 import CoverArt from './CoverArt'
+import AccountButton from './AccountButton'
 import { ChevronDownIcon, LockIcon } from './Icons'
 import type { Playlist, Release, Song } from '../types'
 
@@ -59,9 +60,7 @@ function Library({
         <div className="screen-header__center">
           <h1 className="screen-title">Home</h1>
         </div>
-        <button className="account-trigger" onClick={onOpenAccount} aria-label="Account settings">
-          <span className="signout-email">{userEmail}</span>
-        </button>
+        <AccountButton email={userEmail} onClick={onOpenAccount} />
       </div>
 
       <div className="scroll-area">

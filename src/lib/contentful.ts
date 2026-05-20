@@ -49,7 +49,7 @@ function assetUrl(url: string | undefined): string | undefined {
   return url.startsWith('//') ? 'https:' + url : url
 }
 
-function mapTracks(rawTracks: unknown[], entryId: string, artist: string, coverUrl: string | undefined, memberOnly_releaseId?: string): Song[] {
+function mapTracks(rawTracks: unknown[], artist: string, coverUrl: string | undefined, memberOnly_releaseId?: string): Song[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const resolved = (rawTracks as any[]).filter(t => t?.fields)
   const songs: Song[] = []
@@ -98,7 +98,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const rawTracks: unknown[] = (rf.tracks as unknown[]) ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sorted = (rawTracks as any[]).filter(t => t?.fields).sort((a, b) => (a.fields.pos ?? 0) - (b.fields.pos ?? 0))
-    const songs = mapTracks(sorted, entry.sys.id, artist, coverUrl, entry.sys.id)
+    const songs = mapTracks(sorted, artist, coverUrl, entry.sys.id)
     songs.forEach(s => { s.album = name })
     releases.push({
       id: entry.sys.id, slug: slugify(name), name, releaseType,
@@ -117,7 +117,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const name: string = (f.title as string | undefined) ?? 'Untitled'
     const artist: string = (f.artist as string | undefined) ?? 'jaxsen'
     const coverUrl = assetUrl(f.coverImage?.fields?.file?.url as string | undefined)
-    const songs = mapTracks((f.tracks as unknown[]) ?? [], entry.sys.id, artist, coverUrl)
+    const songs = mapTracks((f.tracks as unknown[]) ?? [], artist, coverUrl)
     releases.push({
       id: entry.sys.id, slug: slugify(name), name, releaseType: 'collection',
       cover: coverUrl,

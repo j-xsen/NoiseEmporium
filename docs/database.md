@@ -88,6 +88,7 @@ CREATE INDEX orders_user_id_idx ON orders (user_id);
 
 ### To activate a release for purchase
 
+<<<<<<< HEAD
 1. Upload the WAV ZIP to Vercel Blob as a **private** blob:
    ```
    npx vercel blob put releases/<contentful_id>/wav.zip ./your-album-wav.zip

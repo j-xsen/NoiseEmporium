@@ -12,6 +12,11 @@
 //                       The webhook (stripe/webhook.ts) does the same thing as a
 //                       reliable fallback in case the browser never lands on the
 //                       success URL.
+//
+// Release download purchases use Stripe price_data (inline pricing) so the
+// amount is always read from Contentful — no separate Stripe Price ID needed.
+// Subscriptions and other fixed products still use pre-created Stripe Price IDs
+// validated against STRIPE_ALLOWED_PRICE_IDS.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
@@ -21,12 +26,20 @@ import { requireAuth } from '../_auth.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// Server-side allowlist of valid Stripe Price IDs.
-// Set STRIPE_ALLOWED_PRICE_IDS in Vercel env vars as a comma-separated list
-// (e.g. "price_abc123,price_def456"). Requests with any other priceId are rejected.
+// Server-side allowlist of valid Stripe Price IDs for subscriptions and fixed products.
+// Set STRIPE_ALLOWED_PRICE_IDS in Vercel env vars as a comma-separated list.
+// Release downloads are NOT in this list — they use inline price_data instead.
 const ALLOWED_PRICE_IDS = new Set(
   (process.env.STRIPE_ALLOWED_PRICE_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
 )
+
+// Default prices in cents when not set on the Contentful release entry.
+const DEFAULT_PRICE: Record<string, { full: number; member: number }> = {
+  single:     { full: 200,  member: 100 },
+  album:      { full: 700,  member: 500 },
+  ep:         { full: 700,  member: 500 },
+  collection: { full: 700,  member: 500 },
+}
 
 function appOrigin(req: VercelRequest): string {
   const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
@@ -58,12 +71,11 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     const fields = entry.fields as any
     if (!fields?.downloadUrl) return res.status(400).json({ error: 'Release not available for purchase' })
     const releaseName: string = (fields.name as string | undefined) ?? (fields.title as string | undefined) ?? 'Music Download'
-    const isSingle = entry.sys.contentType.sys.id === 'release' && fields.releaseType === 'single'
-    const defaultFull   = isSingle ? 200 : 700
-    const defaultMember = isSingle ? 100 : 500
-    const fullPrice   = (fields.price as number | undefined) ?? defaultFull
-    const memberPrice = (fields.memberPrice as number | undefined) ?? defaultMember
-    const priceCents = isPremium ? memberPrice : fullPrice
+    const releaseType: string = ((fields.releaseType as string | undefined) ?? 'album').toLowerCase()
+    const defaults = DEFAULT_PRICE[releaseType] ?? DEFAULT_PRICE.album
+    const priceCents = isPremium
+      ? ((fields.memberPrice as number | undefined) ?? defaults.member)
+      : ((fields.price       as number | undefined) ?? defaults.full)
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -114,7 +126,12 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
     if (!purchasedPriceId || !ALLOWED_PRICE_IDS.has(purchasedPriceId)) {
       return res.status(400).json({ error: 'Invalid purchase' })
     }
-    await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
+    const stripeCustomerId = typeof session.customer === 'string' ? session.customer : null
+    await sql`
+      UPDATE users
+      SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
+      WHERE id = ${userId}
+    `
   }
 
   if (session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {

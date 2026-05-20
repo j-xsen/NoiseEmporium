@@ -28,9 +28,9 @@ export interface Release {
   premiumOnly?: boolean
   /** URL to the high-fidelity ZIP download (WAV/FLAC), stored in Contentful downloadUrl field, hosted on Vercel Blob. */
   downloadFile?: string
-  /** Custom one-time purchase price in cents. Falls back to type-based default if unset. */
+  /** One-time purchase price in cents for non-members. Falls back to type-based default if unset. */
   price?: number
-  /** Custom member purchase price in cents. Falls back to type-based default if unset. */
+  /** One-time purchase price in cents for premium members. Falls back to type-based default if unset. */
   memberPrice?: number
   songs: Song[]
 }

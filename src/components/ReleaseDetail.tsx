@@ -75,25 +75,29 @@ export default function ReleaseDetail({
           <p className="rps2-meta">
             {[formattedDate, !locked && `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
           </p>
-          {!locked && playableSongs.length > 0 && (
+          {!locked && (
             <div className="rps2-header-actions">
-              <button
-                className="release-hero__play"
-                onClick={() => onPlay(playableSongs[0], playableSongs)}
-                aria-label="Play all"
-              >
-                <PlayIcon size={20} />
-                <span>Play</span>
-              </button>
-              <button
-                className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
-                onClick={handleDownloadAll}
-                disabled={anyDownloading}
-                aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
-              >
-                {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
-                <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
-              </button>
+              {playableSongs.length > 0 && (
+                <>
+                  <button
+                    className="release-hero__play"
+                    onClick={() => onPlay(playableSongs[0], playableSongs)}
+                    aria-label="Play all"
+                  >
+                    <PlayIcon size={20} />
+                    <span>Play</span>
+                  </button>
+                  <button
+                    className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
+                    onClick={handleDownloadAll}
+                    disabled={anyDownloading}
+                    aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
+                  >
+                    {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
+                    <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
+                  </button>
+                </>
+              )}
               {hasPurchasedRelease && (
                 <button
                   className="release-hero__wav-dl"

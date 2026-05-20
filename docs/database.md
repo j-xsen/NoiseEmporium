@@ -19,9 +19,12 @@ CREATE TABLE users (
   tier          TEXT        NOT NULL DEFAULT 'free',  -- 'free' | 'premium'
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT users_email_lower  CHECK (email = lower(email)),
-  CONSTRAINT users_email_unique UNIQUE (email),
-  CONSTRAINT users_tier_valid   CHECK (tier IN ('free', 'premium'))
+  stripe_customer_id TEXT,
+
+  CONSTRAINT users_email_lower        CHECK (email = lower(email)),
+  CONSTRAINT users_email_unique       UNIQUE (email),
+  CONSTRAINT users_tier_valid         CHECK (tier IN ('free', 'premium')),
+  CONSTRAINT users_stripe_cust_unique UNIQUE (stripe_customer_id)
 );
 
 CREATE TABLE playlists (
@@ -88,7 +91,6 @@ CREATE INDEX orders_user_id_idx ON orders (user_id);
 
 ### To activate a release for purchase
 
-<<<<<<< HEAD
 1. Upload the WAV ZIP to Vercel Blob as a **private** blob:
    ```
    npx vercel blob put releases/<contentful_id>/wav.zip ./your-album-wav.zip
@@ -104,6 +106,13 @@ CREATE INDEX orders_user_id_idx ON orders (user_id);
 ALTER TABLE playlists
   ADD COLUMN featured       BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN featured_order INTEGER;
+```
+
+```sql
+-- Add stripe_customer_id for subscription downgrade lookups
+ALTER TABLE users
+  ADD COLUMN stripe_customer_id TEXT,
+  ADD CONSTRAINT users_stripe_cust_unique UNIQUE (stripe_customer_id);
 ```
 
 ```sql

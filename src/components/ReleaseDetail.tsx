@@ -148,35 +148,32 @@ export default function ReleaseDetail({
             </div>
           ) : (
             <ul className="song-track-list">
-              {publicSongs.map((song, i) => (
-                <SongTrack
-                  key={song.id}
-                  song={song}
-                  displayNum={i + 1}
-                  isActive={song.id === player.currentSong?.id}
-                  isPlaying={player.isPlaying}
-                  locked={false}
-                  dlStatus={dlStatuses[song.id] ?? 'none'}
-                  onPlay={() => onPlay(song, playableSongs)}
-                  onDownload={() => onDownload(song)}
-                  onRemoveDownload={() => onRemoveDownload(song.id)}
-                  onAddToPlaylist={() => onAddToPlaylist(song.id)}
-                />
-              ))}
-              {memberSongs.length > 0 && (
+              {hasFullAccess ? (
+                release.songs.map((song, i) => (
+                  <SongTrack
+                    key={song.id}
+                    song={song}
+                    displayNum={i + 1}
+                    isActive={song.id === player.currentSong?.id}
+                    isPlaying={player.isPlaying}
+                    locked={false}
+                    dlStatus={dlStatuses[song.id] ?? 'none'}
+                    onPlay={() => onPlay(song, playableSongs)}
+                    onDownload={() => onDownload(song)}
+                    onRemoveDownload={() => onRemoveDownload(song.id)}
+                    onAddToPlaylist={() => onAddToPlaylist(song.id)}
+                  />
+                ))
+              ) : (
                 <>
-                  <li className="song-track-section">
-                    <LockIcon size={12} />
-                    <span>Members Only</span>
-                  </li>
-                  {memberSongs.map((song, i) => (
+                  {publicSongs.map((song, i) => (
                     <SongTrack
                       key={song.id}
                       song={song}
-                      displayNum={publicSongs.length + i + 1}
+                      displayNum={i + 1}
                       isActive={song.id === player.currentSong?.id}
                       isPlaying={player.isPlaying}
-                      locked={!hasFullAccess}
+                      locked={false}
                       dlStatus={dlStatuses[song.id] ?? 'none'}
                       onPlay={() => onPlay(song, playableSongs)}
                       onDownload={() => onDownload(song)}
@@ -184,6 +181,29 @@ export default function ReleaseDetail({
                       onAddToPlaylist={() => onAddToPlaylist(song.id)}
                     />
                   ))}
+                  {memberSongs.length > 0 && (
+                    <>
+                      <li className="song-track-section">
+                        <LockIcon size={12} />
+                        <span>Members Only</span>
+                      </li>
+                      {memberSongs.map((song, i) => (
+                        <SongTrack
+                          key={song.id}
+                          song={song}
+                          displayNum={publicSongs.length + i + 1}
+                          isActive={song.id === player.currentSong?.id}
+                          isPlaying={player.isPlaying}
+                          locked={true}
+                          dlStatus={dlStatuses[song.id] ?? 'none'}
+                          onPlay={() => onPlay(song, playableSongs)}
+                          onDownload={() => onDownload(song)}
+                          onRemoveDownload={() => onRemoveDownload(song.id)}
+                          onAddToPlaylist={() => onAddToPlaylist(song.id)}
+                        />
+                      ))}
+                    </>
+                  )}
                 </>
               )}
             </ul>

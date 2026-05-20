@@ -187,15 +187,21 @@ export default function ReleaseDetail({
             </div>
           ) : (
             <ul className="song-track-list">
-              {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
-              {memberSongs.length > 0 && (
+              {hasFullAccess ? (
+                release.songs.map((song, i) => renderTrack(song, i + 1, false))
+              ) : (
                 <>
-                  <li className="song-track-section">
-                    <LockIcon size={12} />
-                    <span>Members Only</span>
-                  </li>
-                  {memberSongs.map((song, i) =>
-                    renderTrack(song, publicSongs.length + i + 1, !hasFullAccess)
+                  {publicSongs.map((song, i) => renderTrack(song, i + 1, false))}
+                  {memberSongs.length > 0 && (
+                    <>
+                      <li className="song-track-section">
+                        <LockIcon size={12} />
+                        <span>Members Only</span>
+                      </li>
+                      {memberSongs.map((song, i) =>
+                        renderTrack(song, publicSongs.length + i + 1, true)
+                      )}
+                    </>
                   )}
                 </>
               )}

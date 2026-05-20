@@ -68,23 +68,14 @@ CREATE VIEW song_play_counts AS
 ```sql
 -- ─── Permanent download purchases ────────────────────────────────────────────
 
--- Admin-managed: one row per release that has a purchasable WAV ZIP.
--- blob_url is the full Vercel Blob CDN URL (UUID-based path, effectively unguessable).
--- Upload ZIPs via: npx vercel blob put releases/<contentful_id>/wav.zip ./file.zip
-CREATE TABLE release_assets (
-  contentful_id   TEXT        PRIMARY KEY,
-  stripe_price_id TEXT        NOT NULL UNIQUE,
-  blob_url        TEXT        NOT NULL,
-  release_name    TEXT        NOT NULL,   -- for email copy; avoids a Contentful API call in the webhook
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- One row per completed purchase. UNIQUE on stripe_session_id makes the INSERT
--- idempotent — safe to call from both the webhook and the fulfill redirect.
+-- One row per completed purchase. UNIQUE on stripe_session_id makes INSERT ... ON CONFLICT DO NOTHING
+-- safe to call from both the webhook and the fulfill redirect (whichever fires first wins).
+-- Purchasability is validated against Contentful (downloadUrl field) at checkout time — no separate
+-- release_assets table is needed.
 CREATE TABLE orders (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  contentful_id     TEXT        NOT NULL,   -- Contentful release entry ID
   stripe_session_id TEXT        NOT NULL UNIQUE,
   amount_total      INTEGER     NOT NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -97,17 +88,13 @@ CREATE INDEX orders_user_id_idx ON orders (user_id);
 
 ### To activate a release for purchase
 
-1. Upload the WAV ZIP to Vercel Blob (create the store in the Vercel dashboard first):
+1. Upload the WAV ZIP to Vercel Blob as a **private** blob:
    ```
    npx vercel blob put releases/<contentful_id>/wav.zip ./your-album-wav.zip
    ```
-2. Insert a row into `release_assets`:
-   ```sql
-   INSERT INTO release_assets (contentful_id, stripe_price_id, blob_url, release_name)
-   VALUES ('<contentful_entry_id>', 'price_XXXX', 'https://...vercel-blob-url.../wav.zip', 'Album Name');
-   ```
-3. Add the product to `src/shopData.ts` with `contentfulId` matching the row above.
-4. Add `price_XXXX` to the `STRIPE_ALLOWED_PRICE_IDS` environment variable.
+2. Copy the resulting Blob URL into the `downloadUrl` Short text field on the Contentful release entry.
+3. Optionally set `price` / `memberPrice` Integer fields (cents) on the entry to override default pricing.
+4. That's it — the Buy button appears automatically on the release detail page.
 
 ### Migrations applied (run these on an existing database)
 
@@ -119,19 +106,11 @@ ALTER TABLE playlists
 ```
 
 ```sql
--- Add permanent download purchase tables
-CREATE TABLE release_assets (
-  contentful_id   TEXT        PRIMARY KEY,
-  stripe_price_id TEXT        NOT NULL UNIQUE,
-  blob_url        TEXT        NOT NULL,
-  release_name    TEXT        NOT NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
+-- Add permanent download purchase table
 CREATE TABLE orders (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  contentful_id     TEXT        NOT NULL,
   stripe_session_id TEXT        NOT NULL UNIQUE,
   amount_total      INTEGER     NOT NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),

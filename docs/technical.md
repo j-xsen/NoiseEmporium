@@ -40,8 +40,8 @@ src/hooks/
 /album/:slug             ReleaseDetail
 /ep/:slug                ReleaseDetail
 /single/:slug            ReleaseDetail
-/collection/:slug        CollectionDetail
-  └── LyricsView         rendered in-place over CollectionDetail (no route, local state)
+/collection/:slug        ReleaseDetail (collections use the same component)
+  └── LyricsView         rendered in-place over ReleaseDetail (no route, local state)
 /playlist/:id            FeaturedPlaylistDetail
 ```
 
@@ -146,10 +146,14 @@ Collections and songs are fetched from Contentful via `src/lib/contentful.ts`. B
 ```
 Release (content type: "release")
   name         — Short text  (display field)
+  releaseType  — Short text  ('album' | 'ep' | 'single'; defaults to 'album')
+  artist       — Short text  (optional; defaults to 'jaxsen')
   date         — Date
   cover        — Asset       (shared cover art for all tracks in this release)
   spotify      — Short text  (optional)
-  downloadUrl  — Short text  (Vercel Blob URL for the WAV ZIP; optional; populated after uploading a private blob)
+  downloadUrl  — Short text  (Vercel Blob URL for the WAV ZIP; optional; if set, enables purchase flow)
+  price        — Integer     (optional override price in cents for non-members)
+  memberPrice  — Integer     (optional override price in cents for premium members)
   tracks       — References  (ordered Song entries; sort by Song.pos)
 
 Song (content type: "song")
@@ -164,10 +168,15 @@ For `memberOnly` tracks in a release, `fetchReleases()` builds the stream proxy 
 stream proxy check purchase rights in addition to the premium tier (see `api/plays/index.ts`).
 
 Collection (content type: "collection")
+  — Fetched by fetchReleases() in parallel with releases; mapped to Release with releaseType: 'collection'
   title        — Short text  (display field)
   description  — Short text  (optional subtitle)
   coverImage   — Asset       (optional cover art)
   premiumOnly  — Boolean     (true = entire collection locked for non-premium users)
+  sortOrder    — Integer     (optional; lower = earlier in home grid; ties broken by title)
+  downloadUrl  — Short text  (optional; if set, enables WAV ZIP purchase)
+  price        — Integer     (optional override price in cents for non-members)
+  memberPrice  — Integer     (optional override price in cents for premium members)
   tracks       — References  (Song entries; order controlled by drag in Contentful editor)
 ```
 
@@ -181,8 +190,8 @@ Collection (content type: "collection")
 | Playlists | Neon `playlists` + `playlist_songs` tables |
 | Featured playlists | `playlists.featured` flag + `playlists.featured_order` |
 | Play counts | Neon `song_plays` table + `song_play_counts` view |
-| Memberships / subscriptions | Neon *(planned)* |
-| Payments | Stripe *(planned)* |
+| Memberships / subscriptions | Neon `users.tier` + Stripe subscriptions |
+| Payments | Stripe (memberships + one-time release purchases) |
 
 Songs are identified by their **Contentful entry ID**. The database never stores audio files — only references to Contentful IDs.
 
@@ -220,10 +229,12 @@ DATABASE_URL=                  # Neon connection string
 JWT_SECRET=                    # Strong random string
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-STRIPE_ALLOWED_PRICE_IDS=      # Comma-separated list of valid Stripe Price IDs
+STRIPE_ALLOWED_PRICE_IDS=      # Comma-separated list of valid Stripe Price IDs (membership prices only)
 VITE_STRIPE_PUBLISHABLE_KEY=
 BLOB_READ_WRITE_TOKEN=         # Auto-set when a Vercel Blob store is created on the project
 RESEND_API_KEY=                # From resend.com — used for purchase confirmation emails
+# Download prices are defined in src/utils/format.ts (releasePrice). Override per-entry via
+# Contentful price/memberPrice Integer fields (cents).
 ```
 
 ## Stripe Architecture (Part 2 — Artist Payouts)

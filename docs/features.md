@@ -82,6 +82,8 @@ Each paid subscription month:
 
 Collections are curator-defined playlists stored in Contentful (not in the database). They differ from user playlists in that they are editorially curated, can carry their own cover art and description, and have a `premiumOnly` gate at the collection level.
 
+Collections are represented as `Release` objects with `releaseType: 'collection'` — the same type used for albums, EPs, and singles. They are fetched alongside regular releases in a single `fetchReleases()` call and rendered by `ReleaseDetail.tsx` (no separate detail component).
+
 ### Contentful content type: `collection`
 
 | Field | Field ID | Type | Notes |
@@ -90,9 +92,11 @@ Collections are curator-defined playlists stored in Contentful (not in the datab
 | Description | `description` | Short text | Optional subtitle |
 | Cover Image | `coverImage` | Media | Optional square cover art |
 | Premium Only | `premiumOnly` | Boolean | Default true; gates the entire collection |
-| Tracks | `tracks` | References, many | Links to Song entries |
-
-Track order within a collection is controlled by dragging in Contentful's editor. The `pos` field on Song entries is ignored for collections — it only matters for ordering tracks within a Release.
+| Sort Order | `sortOrder` | Integer | Optional; lower = earlier in home grid; ties broken by title |
+| Download URL | `downloadUrl` | Short text | Optional Vercel Blob URL; if set, enables WAV ZIP purchase |
+| Price | `price` | Integer | Optional override price in cents for non-members |
+| Member Price | `memberPrice` | Integer | Optional override price in cents for premium members |
+| Tracks | `tracks` | References, many | Links to Song entries; order controlled by drag in Contentful editor |
 
 ### Access rules
 - If `premiumOnly: true` and user is not premium → collection card shows a lock badge; opening it shows a paywall message; no tracks visible
@@ -107,9 +111,9 @@ Clicking any unlocked track in a collection opens a **Lyrics page** (`src/compon
 - Shows "No lyrics" placeholder if the field is empty
 
 ### Current state (fully implemented)
-- `fetchCollections()` in `src/lib/contentful.ts`
-- Collections returned alongside releases from `useSongs` hook
-- `src/components/CollectionDetail.tsx` — track list with per-track premium gating
+- `fetchReleases()` in `src/lib/contentful.ts` — fetches both releases and collections in parallel; collections become `Release` objects with `releaseType: 'collection'`
+- Collections returned as part of the unified releases array from `useSongs` hook
+- `src/components/ReleaseDetail.tsx` — handles all release types including collections; per-track premium gating
 - `src/components/LyricsView.tsx` — lyrics page with autoplay
 - Collections appear in the "Featured" section on the Home screen
 
@@ -199,10 +203,14 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 
 **Release** (content type: `release`)
 - `name` — Short text (display field)
+- `releaseType` — Short text (`'album'` | `'ep'` | `'single'`; defaults to `'album'` if absent)
+- `artist` — Short text (optional; defaults to `'jaxsen'`)
 - `date` — Date
 - `cover` — Media (shared cover art for all tracks in the release)
 - `spotify` — Short text (optional Spotify link)
-- `downloadUrl` — Short text (optional; private Vercel Blob URL for the WAV ZIP — populated when a release is activated for purchase)
+- `downloadUrl` — Short text (optional; private Vercel Blob URL for the WAV ZIP — if set, enables the purchase/download flow)
+- `price` — Integer (optional override price in cents for non-members; falls back to type-based default)
+- `memberPrice` — Integer (optional override price in cents for premium members; falls back to type-based default)
 - `tracks` — References, many → Song entries (ordered by `pos` field)
 
 **Song** (content type: `song`)
@@ -212,14 +220,13 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 - `memberOnly` — Boolean (if true, only premium members can stream or view lyrics)
 - `lyrics` — Long text (optional; line breaks preserved in the lyrics view)
 
-**Collection** (content type: `collection`) — see Collections section above
+**Collection** (content type: `collection`) — see Collections section above; maps to `Release` with `releaseType: 'collection'`
 
 ### Current state (fully implemented)
-- `src/lib/contentful.ts` — `fetchReleases()` and `fetchCollections()`
-- `src/hooks/useSongs.ts` — loads releases, flattened song list, and collections; exposes all three
+- `src/lib/contentful.ts` — `fetchReleases()` fetches both releases and collections in parallel; returns a unified `Release[]`
+- `src/hooks/useSongs.ts` — loads unified releases array (includes collections) and flattened song list
 - `src/components/Library.tsx` — home screen rendering releases and featured content
-- `src/components/ReleaseDetail.tsx` — release track list with per-track premium gating
-- `src/components/CollectionDetail.tsx` — collection track list with per-track premium gating
+- `src/components/ReleaseDetail.tsx` — handles all release types (album/ep/single/collection) with per-track premium gating
 - `src/components/LyricsView.tsx` — song lyrics page with autoplay
 
 ### Liked Albums
@@ -287,19 +294,29 @@ A one-time purchase that grants perpetual rights to a specific release — disti
 - One-time Stripe payment (mode: `payment`), not a subscription
 - After purchase: Resend sends a confirmation email with a link back to the app
 
-#### Download URL security model
-WAV ZIPs are stored as **private** Vercel Blob files. When a verified purchaser requests a download, `api/downloads/index.ts` reads the raw Blob URL from the `downloadUrl` field on the Contentful release entry and uses the `@vercel/blob` SDK to generate a **short-lived signed URL** (e.g. 1 hour expiry). Only that signed URL is returned to the client — the raw Blob URL is never exposed. If someone shares a signed URL, it becomes useless after it expires.
+#### Pricing
+Default prices (from `src/utils/format.ts`):
 
-The `downloadUrl` field in Contentful holds the permanent private Blob URL (e.g. `https://xxxx.public.blob.vercel-storage.com/...`). It is a plain Short text field on the Release content type — not a media asset.
+| Release type | Full price | Member price |
+|---|---|---|
+| Single | $2.00 | $1.00 |
+| Album / EP / Collection | $7.00 | $5.00 |
+
+Per-entry overrides: set the `price` and/or `memberPrice` Integer fields (cents) on the Contentful release entry. The server reads these at checkout time and charges accordingly.
+
+#### Download URL security model
+WAV ZIPs are stored as **private** Vercel Blob files. When a verified purchaser requests a download, `api/downloads/index.ts` reads the raw Blob URL from the `downloadUrl` field on the Contentful release entry and uses the `@vercel/blob` SDK to generate a **short-lived signed URL** (1-hour expiry). Only that signed URL is returned to the client — the raw Blob URL is never exposed. If someone shares a signed URL, it becomes useless after it expires.
+
+The `downloadUrl` field in Contentful holds the permanent private Blob URL. It is a plain Short text field on the Release content type — not a media asset.
+
+#### Purchasability validation
+The server validates purchases against Contentful directly. A release is purchasable if and only if its `downloadUrl` field is set. No separate database table is needed — the `orders` table records completed purchases (keyed by Contentful ID), and the `usePurchases` hook queries it on login.
 
 #### Activating a release for purchase
-1. Upload the WAV ZIP to Vercel Blob as a **private** blob (via Vercel dashboard or a one-off script using `@vercel/blob`)
+1. Upload the WAV ZIP to Vercel Blob as a **private** blob (via Vercel dashboard or `npx vercel blob put`)
 2. Copy the resulting Blob URL into the `downloadUrl` field on the Contentful release entry
-3. Create a Stripe Product + one-time Price for the release
-4. Add a row to `release_assets` in the database linking the Contentful release ID to the Stripe Price ID
-5. Add the product to `shopData.ts` so it appears in the Shop UI
-
-> **Note:** No files have been uploaded yet — the signing logic in `api/downloads/index.ts` still returns the raw URL directly. Once files are ready to upload, the handler needs to be updated to call `@vercel/blob`'s signed URL generation before returning.
+3. Optionally set `price` / `memberPrice` fields on the entry to override default pricing
+4. That's it — the Buy button appears automatically on the release detail page when `downloadUrl` is set
 
 ### Digital Downloads (name-your-price, not yet implemented)
 - Every release available as a free download

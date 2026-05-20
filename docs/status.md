@@ -22,7 +22,7 @@
 | Stripe Checkout + webhook | ✅ Working | `api/stripe/checkout.ts` creates sessions + fulfills; `api/stripe/webhook.ts` upgrades `users.tier` on `checkout.session.completed` |
 | Account modal | ✅ Working | `AccountModal.tsx` — shows tier, change password, delete account |
 | 3D bubble world | ✅ Working | Two-row carousel (releases + collections); drag/swipe, arrow nav, auto-scroll to now-playing release, mobile + desktop layouts |
-| Permanent download purchase | ✅ Working | One-time Stripe payment grants permanent streaming rights (bypasses `memberOnly` gate) + WAV ZIP download via Vercel Blob. `orders` + `release_assets` tables; `api/downloads/index.ts`; `usePurchases` hook; Buy/Download WAV buttons on release pages; Resend purchase confirmation email |
+| Permanent download purchase | ✅ Working | One-time Stripe payment grants permanent streaming rights (bypasses `memberOnly` gate) + WAV ZIP download via Vercel Blob. Pricing read from Contentful at checkout time (`price`/`memberPrice` fields with type-based defaults). `orders` table; `api/downloads/index.ts`; `usePurchases` hook; Buy/Download WAV buttons on release pages; Resend purchase confirmation email |
 
 ---
 

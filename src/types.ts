@@ -26,6 +26,10 @@ export interface Release {
   spotify?: string
   /** URL to the high-fidelity ZIP download (WAV/FLAC), set via Contentful downloadFile asset. */
   downloadFile?: string
+  /** One-time purchase price in cents for non-members. Falls back to type-based default if unset. */
+  price?: number
+  /** One-time purchase price in cents for premium members. Falls back to type-based default if unset. */
+  memberPrice?: number
   songs: Song[]
 }
 

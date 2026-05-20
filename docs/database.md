@@ -68,23 +68,12 @@ CREATE VIEW song_play_counts AS
 ```sql
 -- ─── Permanent download purchases ────────────────────────────────────────────
 
--- Admin-managed: one row per release that has a purchasable WAV ZIP.
--- blob_url is the full Vercel Blob CDN URL (UUID-based path, effectively unguessable).
--- Upload ZIPs via: npx vercel blob put releases/<contentful_id>/wav.zip ./file.zip
-CREATE TABLE release_assets (
-  contentful_id   TEXT        PRIMARY KEY,
-  stripe_price_id TEXT        NOT NULL UNIQUE,
-  blob_url        TEXT        NOT NULL,
-  release_name    TEXT        NOT NULL,   -- for email copy; avoids a Contentful API call in the webhook
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- One row per completed purchase. UNIQUE on stripe_session_id makes the INSERT
 -- idempotent — safe to call from both the webhook and the fulfill redirect.
 CREATE TABLE orders (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  contentful_id     TEXT        NOT NULL,
   stripe_session_id TEXT        NOT NULL UNIQUE,
   amount_total      INTEGER     NOT NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -97,17 +86,18 @@ CREATE INDEX orders_user_id_idx ON orders (user_id);
 
 ### To activate a release for purchase
 
+Pricing and purchasability are driven entirely by Contentful — no database rows needed.
+
 1. Upload the WAV ZIP to Vercel Blob (create the store in the Vercel dashboard first):
    ```
    npx vercel blob put releases/<contentful_id>/wav.zip ./your-album-wav.zip
    ```
-2. Insert a row into `release_assets`:
-   ```sql
-   INSERT INTO release_assets (contentful_id, stripe_price_id, blob_url, release_name)
-   VALUES ('<contentful_entry_id>', 'price_XXXX', 'https://...vercel-blob-url.../wav.zip', 'Album Name');
-   ```
-3. Add the product to `src/shopData.ts` with `contentfulId` matching the row above.
-4. Add `price_XXXX` to the `STRIPE_ALLOWED_PRICE_IDS` environment variable.
+2. Set the `downloadFile` asset field on the Contentful release entry to the ZIP.
+3. Optionally set `price` / `memberPrice` (integer, cents) on the entry to override defaults:
+   - Album/EP/Collection: $7.00 full / $5.00 member
+   - Single: $2.00 full / $1.00 member
+
+The Buy button appears automatically once `downloadFile` is set. No Stripe Price ID or `shopData.ts` entry needed.
 
 ### Migrations applied (run these on an existing database)
 
@@ -119,19 +109,11 @@ ALTER TABLE playlists
 ```
 
 ```sql
--- Add permanent download purchase tables
-CREATE TABLE release_assets (
-  contentful_id   TEXT        PRIMARY KEY,
-  stripe_price_id TEXT        NOT NULL UNIQUE,
-  blob_url        TEXT        NOT NULL,
-  release_name    TEXT        NOT NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
+-- Add permanent download purchase table
 CREATE TABLE orders (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contentful_id     TEXT        NOT NULL REFERENCES release_assets(contentful_id),
+  contentful_id     TEXT        NOT NULL,
   stripe_session_id TEXT        NOT NULL UNIQUE,
   amount_total      INTEGER     NOT NULL,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),

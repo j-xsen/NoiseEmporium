@@ -285,7 +285,7 @@ A one-time purchase that grants perpetual rights to a specific release — disti
 - Requires an account (the purchase is tied to a user ID)
 - One-time Stripe payment (mode: `payment`), not a subscription
 - After purchase: Resend sends a confirmation email with a link back to the app
-- To activate a release for purchase: create a Stripe Product + one-time Price, upload a WAV ZIP to Vercel Blob, add a row to `release_assets`, and add the product to `shopData.ts`
+- To activate a release for purchase: upload a WAV ZIP to Vercel Blob and set it as the `downloadFile` asset on the Contentful release entry. Optionally set `price`/`memberPrice` (cents) to override defaults. No Stripe Price ID or database row needed — pricing is read from Contentful at checkout time.
 
 ### Digital Downloads (name-your-price, not yet implemented)
 - Every release available as a free download

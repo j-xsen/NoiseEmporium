@@ -71,6 +71,8 @@ export async function fetchReleases(): Promise<Release[]> {
     const date: string = (rf.date as string | undefined) ?? ''
     const spotify: string | undefined = rf.spotify as string | undefined
     const downloadFile = assetUrl(rf.downloadFile?.fields?.file?.url as string | undefined)
+    const price: number | undefined = typeof rf.price === 'number' ? rf.price : undefined
+    const memberPrice: number | undefined = typeof rf.memberPrice === 'number' ? rf.memberPrice : undefined
 
     const tracks: unknown[] = (rf.tracks as unknown[]) ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,7 +104,7 @@ export async function fetchReleases(): Promise<Release[]> {
       })
     }
 
-    releases.push({ id: release.sys.id, slug: slugify(name), name, releaseType, date, cover: coverUrl, spotify, downloadFile, songs })
+    releases.push({ id: release.sys.id, slug: slugify(name), name, releaseType, date, cover: coverUrl, spotify, downloadFile, price, memberPrice, songs })
   }
 
   return releases

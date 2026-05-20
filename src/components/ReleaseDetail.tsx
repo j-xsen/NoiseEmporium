@@ -7,14 +7,19 @@ import { formatTime, formatPrice, songSubtitle } from '../utils/format'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
 import type { PlayerAPI } from '../hooks/useAudio'
-import type { ShopProduct } from '../shopData'
+
+const DEFAULT_PRICES: Record<string, { full: number; member: number }> = {
+  single:     { full: 200,  member: 100 },
+  album:      { full: 700,  member: 500 },
+  ep:         { full: 700,  member: 500 },
+  collection: { full: 700,  member: 500 },
+}
 
 interface ReleaseDetailProps {
   release: Release
   player: PlayerAPI
   isPremium: boolean
   hasPurchasedRelease: boolean
-  releaseProduct?: ShopProduct
   dlStatuses: Record<string, DlStatus>
   onPlay: (song: Song, queue: Song[]) => void
   onBack: () => void
@@ -27,7 +32,7 @@ interface ReleaseDetailProps {
 }
 
 export default function ReleaseDetail({
-  release, player, isPremium, hasPurchasedRelease, releaseProduct, dlStatuses,
+  release, player, isPremium, hasPurchasedRelease, dlStatuses,
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
   onBuyRelease, onDownloadWav,
 }: ReleaseDetailProps) {
@@ -157,13 +162,17 @@ export default function ReleaseDetail({
                   <span>Download WAV</span>
                 </button>
               )}
-              {!hasFullAccess && releaseProduct?.priceId && (
+              {!hasFullAccess && release.downloadFile && (
                 <button
                   className="release-hero__buy"
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(releaseProduct.price ?? 0)}</span>
+                  <span>Buy {formatPrice(
+                    isPremium
+                      ? (release.memberPrice ?? DEFAULT_PRICES[release.releaseType]?.member ?? 500)
+                      : (release.price        ?? DEFAULT_PRICES[release.releaseType]?.full  ?? 700)
+                  )}</span>
                 </button>
               )}
             </div>

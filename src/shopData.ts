@@ -64,23 +64,13 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   image: '/covers/album.jpg',
   // },
   // ── Downloads ─────────────────────────────────────────────────────────────
-  // Add one entry per release. Set priceId to a one-time Stripe Price ID and
-  // contentfulId to the Contentful release entry ID (found in the URL when
-  // editing the release in the Contentful dashboard).
-  // Also insert a matching row in the release_assets table in Neon:
-  //   INSERT INTO release_assets (contentful_id, stripe_price_id, blob_url, release_name)
-  //   VALUES ('CONTENTFUL_ID', 'price_REPLACE', 'https://...vercel-blob-url.../wav.zip', 'Album Name');
-  // {
-  //   id: 'dl-album-name',
-  //   category: 'download',
-  //   name: 'Album Name — Permanent Download',
-  //   description: 'Permanent streaming rights + high-quality WAV ZIP download. Yours forever.',
-  //   price: 700,
-  //   priceId: 'price_REPLACE_DOWNLOAD',
-  //   contentfulId: 'CONTENTFUL_RELEASE_ENTRY_ID',
-  //   mode: 'payment',
-  //   image: '/covers/album.jpg',
-  // },
+  // Release download products are driven entirely by Contentful — no entry
+  // needed here. To make a release purchasable:
+  //   1. Upload the WAV ZIP to Vercel Blob (private).
+  //   2. Set the `downloadFile` asset field on the Contentful release entry.
+  //   3. Optionally set `price` / `memberPrice` (cents) on the entry to
+  //      override the default pricing ($7.00 / $5.00 for albums, $2.00 / $1.00 for singles).
+  // The Buy button appears automatically once `downloadFile` is set.
   // ── Licenses ──────────────────────────────────────────────────────────────
   {
     id: 'license-instrumental',

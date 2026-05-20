@@ -24,7 +24,6 @@ import { useFeaturedPlaylists } from './hooks/useFeaturedPlaylists'
 import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import { usePurchases } from './hooks/usePurchases'
-import { SHOP_PRODUCTS } from './shopData'
 import AuthScreen from './components/AuthScreen'
 import BubbleWorld from './components/BubbleWorld'
 import Library from './components/Library'
@@ -220,14 +219,12 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
   if (!release) return <Navigate to="/" replace />
-  const releaseProduct = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === release.id)
   return (
     <ReleaseDetail
       release={release}
       player={player}
       isPremium={isPremium}
       hasPurchasedRelease={hasPurchased(release.id)}
-      releaseProduct={releaseProduct}
       dlStatuses={dlStatuses}
       onPlay={onPlay}
       onBack={() => navigate('/')}
@@ -444,13 +441,11 @@ export default function App() {
 
   const handleBuyRelease = useCallback(async (contentfulId: string) => {
     if (!auth.token) return
-    const product = SHOP_PRODUCTS.find(p => p.category === 'download' && p.contentfulId === contentfulId)
-    if (!product?.priceId) return
     try {
       const r = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-        body: JSON.stringify({ priceId: product.priceId, mode: product.mode, contentfulId }),
+        body: JSON.stringify({ mode: 'payment', contentfulId }),
       })
       const data = await r.json()
       if (data.url) window.location.href = data.url

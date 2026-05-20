@@ -12,20 +12,34 @@
 //                       The webhook (stripe/webhook.ts) does the same thing as a
 //                       reliable fallback in case the browser never lands on the
 //                       success URL.
+//
+// Release download purchases use Stripe price_data (inline pricing) so the
+// amount is always read from Contentful — no separate Stripe Price ID needed.
+// Subscriptions and other fixed products still use pre-created Stripe Price IDs
+// validated against STRIPE_ALLOWED_PRICE_IDS.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
+import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// Server-side allowlist of valid Stripe Price IDs.
-// Set STRIPE_ALLOWED_PRICE_IDS in Vercel env vars as a comma-separated list
-// (e.g. "price_abc123,price_def456"). Requests with any other priceId are rejected.
+// Server-side allowlist of valid Stripe Price IDs for subscriptions and fixed products.
+// Set STRIPE_ALLOWED_PRICE_IDS in Vercel env vars as a comma-separated list.
+// Release downloads are NOT in this list — they use inline price_data instead.
 const ALLOWED_PRICE_IDS = new Set(
   (process.env.STRIPE_ALLOWED_PRICE_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
 )
+
+// Default prices in cents when not set on the Contentful release entry.
+const DEFAULT_PRICE: Record<string, { full: number; member: number }> = {
+  single:     { full: 200,  member: 100 },
+  album:      { full: 700,  member: 500 },
+  ep:         { full: 700,  member: 500 },
+  collection: { full: 700,  member: 500 },
+}
 
 function appOrigin(req: VercelRequest): string {
   const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
@@ -35,40 +49,77 @@ function appOrigin(req: VercelRequest): string {
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
   const { priceId, mode, contentfulId } = req.body ?? {}
-  if (!priceId || !mode) {
-    return res.status(400).json({ error: 'Missing required fields' })
-  }
+  if (!mode) return res.status(400).json({ error: 'Missing required fields' })
   if (mode !== 'payment' && mode !== 'subscription') {
     return res.status(400).json({ error: 'Invalid mode' })
   }
-  if (!ALLOWED_PRICE_IDS.has(priceId)) {
-    return res.status(400).json({ error: 'Invalid price' })
+
+  const isReleasePurchase = mode === 'payment' && typeof contentfulId === 'string' && contentfulId
+
+  // Release purchases use Contentful pricing — no Stripe Price ID from client.
+  // All other products require a pre-created Price ID on the allowlist.
+  if (!isReleasePurchase) {
+    if (!priceId || !ALLOWED_PRICE_IDS.has(priceId)) {
+      return res.status(400).json({ error: 'Invalid price' })
+    }
   }
 
-  // For release download purchases, validate that the contentfulId + priceId pair
-  // matches a real release_assets row. This prevents forged metadata claims.
-  const metadata: Record<string, string> = {}
-  if (mode === 'payment' && typeof contentfulId === 'string' && contentfulId) {
-    const assetRows = await sql`
-      SELECT contentful_id FROM release_assets
-      WHERE contentful_id = ${contentfulId} AND stripe_price_id = ${priceId}
-    `
-    if (!assetRows[0]) return res.status(400).json({ error: 'Invalid release product' })
-    metadata.contentful_id = contentfulId
-    metadata.purchase_type = 'release_download'
+  const origin = appOrigin(req)
+
+  if (isReleasePurchase) {
+    // Fetch release from Contentful to get name, downloadFile, and pricing.
+    const ctf = createClient({
+      space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+      accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const entry = await ctf.getEntry<any>(contentfulId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fields = entry.fields as any
+
+    // Only releases with a downloadFile are purchasable.
+    if (!fields.downloadFile) return res.status(400).json({ error: 'Release not available for purchase' })
+
+    const releaseName: string = (fields.name as string | undefined) ?? 'Release'
+    const releaseType: string = ((fields.releaseType as string | undefined) ?? 'album').toLowerCase()
+
+    // Determine price based on buyer's tier.
+    const [userRow] = await sql`SELECT tier, email FROM users WHERE id = ${userId}`
+    const isMember = userRow?.tier === 'premium'
+    const defaults = DEFAULT_PRICE[releaseType] ?? DEFAULT_PRICE.album
+    const unitAmount: number = isMember
+      ? ((fields.memberPrice as number | undefined) ?? defaults.member)
+      : ((fields.price       as number | undefined) ?? defaults.full)
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: unitAmount,
+          product_data: { name: releaseName },
+        },
+      }],
+      success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
+      client_reference_id: userId,
+      metadata: { purchase_type: 'release_download', contentful_id: contentfulId },
+      ...(userRow?.email && { customer_email: userRow.email as string }),
+    })
+    return res.json({ url: session.url })
   }
 
+  // Subscription / fixed-price product (memberships, CDs, licenses).
   const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
   const customerEmail = rows[0]?.email as string | undefined
 
-  const origin = appOrigin(req)
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
-    ...(Object.keys(metadata).length > 0 && { metadata }),
     ...(customerEmail && { customer_email: customerEmail }),
   })
   res.json({ url: session.url })

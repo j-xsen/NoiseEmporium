@@ -11,9 +11,12 @@ CREATE TABLE users (
   tier          TEXT        NOT NULL DEFAULT 'free',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT users_email_lower  CHECK (email = lower(email)),
-  CONSTRAINT users_email_unique UNIQUE (email),
-  CONSTRAINT users_tier_valid   CHECK (tier IN ('free', 'premium'))
+  stripe_customer_id TEXT,
+
+  CONSTRAINT users_email_lower       CHECK (email = lower(email)),
+  CONSTRAINT users_email_unique      UNIQUE (email),
+  CONSTRAINT users_tier_valid        CHECK (tier IN ('free', 'premium')),
+  CONSTRAINT users_stripe_cust_unique UNIQUE (stripe_customer_id)
 );
 
 -- ─── Playlists ────────────────────────────────────────────────────────────────

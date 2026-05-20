@@ -89,7 +89,12 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
     if (!purchasedPriceId || !ALLOWED_PRICE_IDS.has(purchasedPriceId)) {
       return res.status(400).json({ error: 'Invalid purchase' })
     }
-    await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
+    const stripeCustomerId = typeof session.customer === 'string' ? session.customer : null
+    await sql`
+      UPDATE users
+      SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
+      WHERE id = ${userId}
+    `
   }
 
   if (session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {

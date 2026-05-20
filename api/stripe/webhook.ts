@@ -40,8 +40,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userId = session.client_reference_id
 
     if (userId && session.mode === 'subscription') {
+      const stripeCustomerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? null
       try {
-        await sql`UPDATE users SET tier = 'premium' WHERE id = ${userId}`
+        await sql`
+          UPDATE users
+          SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
+          WHERE id = ${userId}
+        `
       } catch (err) {
         console.error('Failed to upgrade user tier:', err)
         return res.status(500).end()
@@ -89,6 +94,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (emailErr) {
           console.error('Failed to send purchase email:', emailErr)
         }
+      }
+    }
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object as Stripe.Subscription
+    const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
+    try {
+      await sql`UPDATE users SET tier = 'free' WHERE stripe_customer_id = ${stripeCustomerId}`
+    } catch (err) {
+      console.error('Failed to downgrade user tier on subscription deletion:', err)
+      return res.status(500).end()
+    }
+  }
+
+  if (event.type === 'customer.subscription.updated') {
+    const sub = event.data.object as Stripe.Subscription
+    if (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled') {
+      const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
+      try {
+        await sql`UPDATE users SET tier = 'free' WHERE stripe_customer_id = ${stripeCustomerId}`
+      } catch (err) {
+        console.error('Failed to downgrade user tier on subscription update:', err)
+        return res.status(500).end()
       }
     }
   }

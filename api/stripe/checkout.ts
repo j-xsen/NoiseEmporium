@@ -54,9 +54,8 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     return res.status(400).json({ error: 'Invalid mode' })
   }
 
-  const rows = await sql`SELECT email, tier FROM users WHERE id = ${userId}`
+  const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
   const customerEmail = rows[0]?.email as string | undefined
-  const isPremium = rows[0]?.tier === 'premium'
   const origin = appOrigin(req)
 
   // Release download: validate via Contentful — downloadUrl must be set on the entry
@@ -73,9 +72,8 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     const releaseName: string = (fields.name as string | undefined) ?? (fields.title as string | undefined) ?? 'Music Download'
     const releaseType: string = ((fields.releaseType as string | undefined) ?? 'album').toLowerCase()
     const defaults = DEFAULT_PRICE[releaseType] ?? DEFAULT_PRICE.album
-    const priceCents = isPremium
-      ? ((fields.memberPrice as number | undefined) ?? defaults.member)
-      : ((fields.price       as number | undefined) ?? defaults.full)
+    // All authenticated users get the member (discounted) price for release downloads.
+    const priceCents = (fields.memberPrice as number | undefined) ?? defaults.member
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

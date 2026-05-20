@@ -1571,6 +1571,12 @@
 
 .release-hero__buy:active { opacity: 0.8; }
 
+.release-hero__buy-was {
+  text-decoration: line-through;
+  opacity: 0.6;
+  font-weight: 400;
+}
+
 .release-hero__wav-dl {
   display: flex;
   align-items: center;

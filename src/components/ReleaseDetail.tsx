@@ -30,6 +30,10 @@ export default function ReleaseDetail({
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
   onBuyRelease, onDownloadWav,
 }: ReleaseDetailProps) {
+  const fullPrice = releasePrice(release, false)
+  const discountedPrice = releasePrice(release, true)
+  const hasDiscount = fullPrice > discountedPrice
+
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
     : null
@@ -114,7 +118,8 @@ export default function ReleaseDetail({
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(releasePrice(release, isPremium))}</span>
+                  {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
+                  <span>Buy {formatPrice(discountedPrice)}</span>
                 </button>
               )}
             </div>
@@ -137,7 +142,8 @@ export default function ReleaseDetail({
                   onClick={() => onBuyRelease(release.id)}
                   aria-label="Buy permanent download"
                 >
-                  <span>Buy {formatPrice(releasePrice(release, isPremium))}</span>
+                  {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
+                  <span>Buy {formatPrice(discountedPrice)}</span>
                 </button>
               )}
             </div>

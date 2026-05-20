@@ -9,7 +9,7 @@ interface BottomNavProps {
 const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'library', label: 'Library', Icon: LibraryIcon },
-  { id: 'shop', label: 'Shop', Icon: ShopIcon },
+  { id: 'shop', label: 'Instrumental Licenses', Icon: ShopIcon },
 ]
 
 export default function BottomNav({ tab, onChange }: BottomNavProps) {

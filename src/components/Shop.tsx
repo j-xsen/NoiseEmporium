@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import { StarIcon, CheckIcon } from './Icons'
-import { SHOP_PRODUCTS, type ShopCategory, type ShopProduct } from '../shopData'
+import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct } from '../shopData'
 import { formatPrice } from '../utils/format'
+import type { Song } from '../types'
 
 interface ShopProps {
   isPremium: boolean
   token: string | null
   hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
+  songs: Song[]
 }
 
 type Filter = 'all' | ShopCategory
@@ -20,14 +22,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-const CATEGORY_LABELS: Record<string, string> = {
-  membership: 'Membership',
-  cd: 'CD',
-  download: 'Download',
-  license: 'License',
-}
-
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -77,13 +72,53 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess 
     }
   }
 
-  const visible = SHOP_PRODUCTS.filter(p => filter === 'all' || p.category === filter)
+  async function handleLicense(song: Song) {
+    if (!token) return
+    setLoading(`license-${song.id}`)
+    try {
+      const r = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          priceId: INSTRUMENTAL_LICENSE.priceId,
+          mode: 'payment',
+          songId: song.id,
+          songTitle: song.title,
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error ?? 'Checkout failed')
+      window.location.href = data.url
+    } catch (err) {
+      console.error(err)
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const instrumentals = songs.filter(s => s.instrumental)
+
+  const membershipProducts = SHOP_PRODUCTS.filter(p => p.category === 'membership')
+  const cdProducts = SHOP_PRODUCTS.filter(p => p.category === 'cd')
+  const downloadProducts = SHOP_PRODUCTS.filter(p => p.category === 'download')
+
+  const showMembership = filter === 'all' || filter === 'membership'
+  const showCd = filter === 'all' || filter === 'cd'
+  const showDownload = filter === 'all' || filter === 'download'
+  const showLicense = filter === 'all' || filter === 'license'
+
+  const hasContent =
+    (showMembership && membershipProducts.length > 0) ||
+    (showCd && cdProducts.length > 0) ||
+    (showDownload && downloadProducts.length > 0) ||
+    (showLicense && instrumentals.length > 0)
 
   return (
     <div className="screen-layout">
       <div className="screen-header">
         <div className="screen-header__center">
-          <h1 className="screen-title">Shop</h1>
+          <h1 className="screen-title">Instrumental Licenses</h1>
         </div>
       </div>
 
@@ -114,71 +149,151 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess 
       </div>
 
       <div className="scroll-area">
-        {visible.length === 0 ? (
+        {!hasContent ? (
           <div className="empty-state">
             <div className="empty-icon">🛍</div>
             <p className="empty-title">Nothing here yet</p>
             <p className="empty-hint">Check back soon.</p>
           </div>
         ) : (
-          <ul className="shop-grid">
-            {visible.map(product => {
-              const isMembership = product.category === 'membership'
-              const alreadyOwned = (isMembership && isPremium)
-                || (product.category === 'download' && !!product.contentfulId && hasPurchased(product.contentfulId))
-              const isLoading = loading === product.id
-
-              return (
-                <li key={product.id} className={`shop-card ${isMembership ? 'shop-card--featured' : ''}`}>
-                  <div className="shop-card__img-wrap">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="shop-card__img" />
-                    ) : (
-                      <div className="shop-card__img-placeholder">
-                        {isMembership ? <StarIcon size={32} /> : '♪'}
+          <div className="shop-list">
+            {showMembership && membershipProducts.length > 0 && (
+              <section className="shop-section">
+                <h2 className="shop-section__title">Membership</h2>
+                {membershipProducts.map(product => {
+                  const owned = isPremium
+                  const isLoading = loading === product.id
+                  return (
+                    <div key={product.id} className="shop-row shop-row--featured">
+                      <div className="shop-row__icon shop-row__icon--featured">
+                        <StarIcon size={16} />
                       </div>
-                    )}
-                    <span className="shop-card__category-tag">
-                      {CATEGORY_LABELS[product.category] ?? product.category}
-                    </span>
-                  </div>
-
-                  <div className="shop-card__body">
-                    <div className="shop-card__header">
-                      <span className="shop-card__name">{product.name}</span>
-                      <span className="shop-card__price">
-                        {product.contact ? 'Negotiable' : product.price != null ? formatPrice(product.price) : '—'}
-                        {product.mode === 'subscription' && <span className="shop-card__period">/mo</span>}
-                      </span>
+                      <div className="shop-row__info">
+                        <div className="shop-row__name">{product.name}</div>
+                        <div className="shop-row__desc">{product.description}</div>
+                      </div>
+                      <div className="shop-row__right">
+                        <span className="shop-row__price">
+                          {formatPrice(product.price ?? 0)}
+                          <span className="shop-row__period">/mo</span>
+                        </span>
+                        {owned ? (
+                          <span className="shop-row__active">
+                            <CheckIcon size={12} />
+                            Active
+                          </span>
+                        ) : (
+                          <button
+                            className="shop-row__btn shop-row__btn--featured"
+                            onClick={() => handleBuy(product)}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '…' : 'Upgrade'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="shop-card__desc">{product.description}</p>
+                  )
+                })}
+              </section>
+            )}
 
-                    {alreadyOwned ? (
-                      <div className="shop-card__active">
-                        <CheckIcon size={14} />
-                        <span>Active</span>
+            {showCd && cdProducts.length > 0 && (
+              <section className="shop-section">
+                <h2 className="shop-section__title">CDs</h2>
+                {cdProducts.map(product => {
+                  const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
+                  const isLoading = loading === product.id
+                  return (
+                    <div key={product.id} className="shop-row">
+                      <div className="shop-row__icon">💿</div>
+                      <div className="shop-row__info">
+                        <div className="shop-row__name">{product.name}</div>
+                        <div className="shop-row__desc">{product.description}</div>
                       </div>
-                    ) : product.contact ? (
-                      <a
-                        className="shop-card__cta"
-                        href={`mailto:jaxsen@jxsen.com?subject=${encodeURIComponent('Commercial License Inquiry')}`}
-                      >
-                        Contact to License
-                      </a>
-                    ) : (
-                      <button
-                        className="shop-card__cta"
-                        onClick={() => handleBuy(product)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Redirecting…' : isMembership ? 'Upgrade to Premium' : 'Buy'}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                      <div className="shop-row__right">
+                        <span className="shop-row__price">{product.price != null ? formatPrice(product.price) : '—'}</span>
+                        {owned ? (
+                          <span className="shop-row__active"><CheckIcon size={12} />Owned</span>
+                        ) : (
+                          <button className="shop-row__btn" onClick={() => handleBuy(product)} disabled={isLoading}>
+                            {isLoading ? '…' : 'Buy'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </section>
+            )}
+
+            {showDownload && downloadProducts.length > 0 && (
+              <section className="shop-section">
+                <h2 className="shop-section__title">Downloads</h2>
+                {downloadProducts.map(product => {
+                  const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
+                  const isLoading = loading === product.id
+                  return (
+                    <div key={product.id} className="shop-row">
+                      <div className="shop-row__icon">⬇︎</div>
+                      <div className="shop-row__info">
+                        <div className="shop-row__name">{product.name}</div>
+                        <div className="shop-row__desc">{product.description}</div>
+                      </div>
+                      <div className="shop-row__right">
+                        <span className="shop-row__price">{product.price != null ? formatPrice(product.price) : '—'}</span>
+                        {owned ? (
+                          <span className="shop-row__active"><CheckIcon size={12} />Owned</span>
+                        ) : (
+                          <button className="shop-row__btn" onClick={() => handleBuy(product)} disabled={isLoading}>
+                            {isLoading ? '…' : 'Buy'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </section>
+            )}
+
+            {showLicense && (
+              <section className="shop-section">
+                <h2 className="shop-section__title">Licenses</h2>
+                {instrumentals.length === 0 ? (
+                  <p className="shop-section__empty">No instrumental tracks available for licensing yet.</p>
+                ) : (
+                  instrumentals.map(song => {
+                    const isLoading = loading === `license-${song.id}`
+                    return (
+                      <div key={song.id} className="shop-row">
+                        <div className="shop-row__icon">♩</div>
+                        <div className="shop-row__info">
+                          <div className="shop-row__name">{song.title}</div>
+                          {song.album && <div className="shop-row__desc">{song.album}</div>}
+                        </div>
+                        <div className="shop-row__right">
+                          <span className="shop-row__price">{formatPrice(INSTRUMENTAL_LICENSE.priceCents)}</span>
+                          <button
+                            className="shop-row__btn"
+                            onClick={() => handleLicense(song)}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '…' : 'License'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+                <p className="shop-contact-hint">
+                  Need a vocal or full-release license?{' '}
+                  <a href={`mailto:jaxsen@jxsen.com?subject=${encodeURIComponent('License Inquiry')}`}>
+                    Contact →
+                  </a>
+                </p>
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>

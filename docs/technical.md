@@ -160,7 +160,9 @@ Song (content type: "song")
   pos          — Integer     (track number within a release; ignored for collections)
   name         — Short text  (display field)
   file         — Asset       (audio file)
+  duration     — Integer     (seconds; set by NoiseConverter via ffprobe)
   memberOnly   — Boolean     (true = premium only; controls playback AND lyrics access)
+  artist       — Short text  (optional; overrides release-level artist)
   lyrics       — Long text   (optional; line breaks preserved)
 
 For `memberOnly` tracks in a release, `fetchReleases()` builds the stream proxy URL as
@@ -367,6 +369,46 @@ STRIPE_WEBHOOK_SECRET=          # Required — from Stripe dashboard webhook set
 VITE_STRIPE_PUBLISHABLE_KEY=    # Required — used client-side (not yet wired; for future Elements use)
 STRIPE_CONNECT_CLIENT_ID=       # Future — needed only when Connect onboarding is added
 ```
+
+---
+
+## Content Pipeline (NoiseConverter)
+
+`conversion/` is a **separate git repository** — a local-only Windows tool that handles everything between a raw audio file and a published entry in Contentful. It is never deployed.
+
+### What it does
+
+```
+Source audio (WAV/MP3)
+  ↓ Step 1  Convert to M4A (ffmpeg AAC 256k, -movflags +faststart)
+  ↓ Step 2  Measure durations (ffprobe → m4a_lengths.txt)
+  ↓ Step 3  Push durations to Contentful song entries (update-durations.mjs)
+  ↓ Console Upload song → Contentful asset + song entry (linked to a release)
+  ↓ Console Create/edit release or collection entries in Contentful
+  ↓ Console Package WAV ZIP → upload to Vercel Blob → store URL in release.downloadUrl
+```
+
+### How to launch
+
+Double-click `conversion/Launch Console.bat`. It starts a zero-dependency Node HTTP server on port 3333 and opens `http://localhost:3333` in the default browser.
+
+### Console tabs
+
+| Tab | What it does |
+|-----|-------------|
+| Pipeline | Run/monitor the three pipeline steps; live terminal output via SSE |
+| Upload Song | Upload an M4A to Contentful as an asset + `song` entry; optionally link to a release |
+| Create Release | Create a new `release` or `collection` entry; queue songs for batch upload |
+| Edit Release | Load an existing release or collection, edit metadata, republish |
+| Publish Download | Compile → zip WAV files → upload to Vercel Blob → set `downloadUrl` on the release |
+
+### Key facts
+
+- `.env` and `node_modules` live in the parent `NoiseEmporium/` directory — there is no `package.json` inside `conversion/`
+- Audio and image assets go to **Contentful** (via the CMA); WAV ZIPs go to **Vercel Blob** (Contentful has a 52 MB asset limit; ZIPs are 90–300 MB)
+- The download endpoint (`api/downloads/index.ts`) reads `downloadUrl` from Contentful and generates a short-lived signed URL — the raw blob URL is never exposed to the client
+- Step 3 (update durations) is only needed for songs uploaded directly in the Contentful dashboard; the Upload Song tab sets duration automatically via ffprobe
+- Full documentation is in `conversion/docs/`
 
 ---
 

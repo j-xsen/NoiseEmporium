@@ -8,10 +8,11 @@ Noise Emporium is a **browser-based music platform** (streaming + store) — the
 |------|----------------|
 | [docs/overview.md](docs/overview.md) | Vision, Jaxsenville context, domain, hosting |
 | [docs/features.md](docs/features.md) | All planned features — accounts, memberships, player, library |
-| [docs/technical.md](docs/technical.md) | Stack, architecture, data flow |
+| [docs/technical.md](docs/technical.md) | Stack, architecture, data flow, content pipeline |
 | [docs/database.md](docs/database.md) | Schema, Neon setup, planned additions |
 | [docs/status.md](docs/status.md) | Current state — what works, what's broken, what's next |
 | [docs/design.md](docs/design.md) | Color palette, typography, custom asset specs |
+| [conversion/CLAUDE.md](conversion/CLAUDE.md) | NoiseConverter quick reference (separate repo — audio pipeline + Contentful console) |
 
 ## Investigation Workflow
 
@@ -37,6 +38,8 @@ api/                   Serverless-style API handlers (Vercel Functions)
   playlists/           CRUD + song management
 server.ts              Local Express dev server (proxies api/ handlers)
 schema.sql             Database schema (Neon PostgreSQL)
+conversion/            Separate git repo — local audio pipeline + Contentful management console
+                       (converts audio to M4A, uploads songs/releases to Contentful, packages WAV ZIPs)
 ```
 
 ## Worktree Setup

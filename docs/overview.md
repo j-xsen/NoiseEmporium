@@ -10,8 +10,8 @@ The platform starts as a personal hub for Jaxsen's music, then expands to let Lo
 
 Jaxsenville is a universe of interconnected web apps, each conceived as a "building" in a city:
 
-- **Building 1:** `museum.jaxsenville.com`
-- **Building 2:** *(existing)*
+- **Building 1:** `clinic.jaxsenville.com`
+- **Building 2:** `museum.jaxsenville.com`
 - **Building 3:** Noise Emporium ← this app
 
 Domain is registered at **Porkbun**. Subdomains are free, so the final URL is TBD between:
@@ -55,7 +55,7 @@ Royalty payouts use **Stripe Connect** (see `technical.md` for the full architec
 
 **Phase 2:** Friends, fans, Louisville locals. Free tier for Jaxsen's music; paid tier for the broader catalog.
 
-**Phase 3:** Scaling as interest grows. Architecture is designed to support this from day one (Vercel + Supabase).
+**Phase 3:** Scaling as interest grows. Architecture is designed to support this from day one (Vercel + Neon).
 
 ## Hosting & Infrastructure
 

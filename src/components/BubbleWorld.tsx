@@ -51,8 +51,11 @@ function CameraController({ targetY, targetZ }: { targetY: number; targetZ: numb
   }, [targetY, targetZ])
 
   useFrame(() => {
-    camera.position.y += (ty.current - camera.position.y) * 0.09
-    camera.position.z += (tz.current - camera.position.z) * 0.09
+    const dy = ty.current - camera.position.y
+    const dz = tz.current - camera.position.z
+    if (Math.abs(dy) < 0.001 && Math.abs(dz) < 0.001) return
+    camera.position.y += dy * 0.09
+    camera.position.z += dz * 0.09
   })
   return null
 }
@@ -102,7 +105,9 @@ function ScrollGroup({ targetOffsetY, children, apiRef }: { targetOffsetY: numbe
 
   useFrame(() => {
     if (!groupRef.current) return
-    groupRef.current.position.y += (ty.current - groupRef.current.position.y) * 0.18
+    const dy = ty.current - groupRef.current.position.y
+    if (Math.abs(dy) < 0.001) return
+    groupRef.current.position.y += dy * 0.18
   })
 
   return <group ref={groupRef}>{children}</group>
@@ -123,9 +128,10 @@ interface CarouselRowProps {
   phaseBase: number
   apiRef: MutableRefObject<CarouselApi | null>
   rowFocused: boolean
+  isMobile: boolean
 }
 
-function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused }: CarouselRowProps) {
+function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused, isMobile }: CarouselRowProps) {
   const groupRef = useRef<THREE.Group>(null)
   const targetX = useRef(-page * spacing)
   const currentX = useRef(-page * spacing)
@@ -169,14 +175,19 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
 
   useFrame(() => {
     if (!groupRef.current) return
-    currentX.current += (targetX.current - currentX.current) * 0.12
+    const dx = targetX.current - currentX.current
+    if (Math.abs(dx) < 0.001) return
+    currentX.current += dx * 0.12
     groupRef.current.position.x = currentX.current
   })
+
+  // Show 3 neighbours on desktop, 1 on mobile to limit draw calls
+  const visRange = isMobile ? 1 : 2
 
   return (
     <group ref={groupRef}>
       {items.map((item, i) => {
-        if (Math.abs(i - page) > 2) return null
+        if (Math.abs(i - page) > visRange) return null
         return (
           <ReleaseBubble
             key={item.id}
@@ -189,6 +200,7 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
             resetKey={page}
             phaseOffset={i * 0.7 + phaseBase}
             onClick={item.onClick}
+            isMobile={isMobile}
           />
         )
       })}
@@ -228,21 +240,24 @@ const CLOUD_DEFS = [
 const CLOUD_SCALE = 2.8
 const CLOUD_BUFFER = 55  // world units past screen edge before wrapping
 
-function ScrollingClouds() {
+function ScrollingClouds({ isMobile }: { isMobile: boolean }) {
   const refs = useRef<(THREE.Group | null)[]>(CLOUD_DEFS.map(() => null))
   const { camera, size } = useThree()
+  const halfWRef = useRef(0)
 
   useFrame((_, delta) => {
     const cam = camera as THREE.PerspectiveCamera
+    // Recompute half-width only when camera z changes meaningfully
+    const dist = cam.position.z - CLOUD_DEFS[0].z
+    halfWRef.current = Math.tan((cam.fov * Math.PI) / 360) * dist * (size.width / size.height)
     refs.current.forEach((ref, i) => {
       if (!ref) return
-      const def = CLOUD_DEFS[i]
-      ref.position.x += def.dx * delta
-      const dist = cam.position.z - def.z
-      const halfW = Math.tan((cam.fov * Math.PI) / 360) * dist * (size.width / size.height)
-      if (ref.position.x > halfW + CLOUD_BUFFER) ref.position.x = -(halfW + CLOUD_BUFFER)
+      ref.position.x += CLOUD_DEFS[i].dx * delta
+      if (ref.position.x > halfWRef.current + CLOUD_BUFFER) ref.position.x = -(halfWRef.current + CLOUD_BUFFER)
     })
   })
+
+  const segments = isMobile ? 8 : 20
 
   return (
     <Clouds material={THREE.MeshBasicMaterial}>
@@ -254,7 +269,7 @@ function ScrollingClouds() {
           bounds={c.bounds}
           position={[c.x, c.y, c.z]}
           scale={CLOUD_SCALE}
-          segments={20}
+          segments={segments}
           opacity={0.80}
           speed={0.1}
           color="#ffffff"
@@ -570,8 +585,9 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
       >
         <Canvas
           camera={{ position: [0, 0.75, 26], fov: 50 }}
-          dpr={[1, 1.5]}
+          dpr={isMobile ? [1, 1] : [1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
+          performance={{ min: 0.5 }}
         >
           <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 13 : 26} />
           <WorldScaleProbe scaleRef={worldScaleRef} />
@@ -587,19 +603,19 @@ function BubbleWorld({ releases, collections, currentSongId }: BubbleWorldProps)
           <ambientLight intensity={0.7} color="#ddeeff" />
           <directionalLight position={[5, 10, 3]} intensity={1.2} color="#fff8e0" />
           <hemisphereLight color="#87ceeb" groundColor="#6a9e5a" intensity={0.5} />
-          <Environment preset="dawn" background={false} />
-          <ScrollingClouds />
+          {!isMobile && <Environment preset="dawn" background={false} />}
+          <ScrollingClouds isMobile={isMobile} />
 
           {isMobile ? (
             <ScrollGroup targetOffsetY={MOBILE_ROW_Y[0] - MOBILE_ROW_Y[focusedRow]} apiRef={scrollGroupApiRef}>
               {rows.map((items, i) => (
-                <CarouselRow key={i} items={items} page={pages[i]} rowY={MOBILE_ROW_Y[i]} spacing={MOBILE_SPACING} phaseBase={i * 1.5} apiRef={rowApis[i]} rowFocused={focusedRow === i} />
+                <CarouselRow key={i} items={items} page={pages[i]} rowY={MOBILE_ROW_Y[i]} spacing={MOBILE_SPACING} phaseBase={i * 1.5} apiRef={rowApis[i]} rowFocused={focusedRow === i} isMobile={true} />
               ))}
             </ScrollGroup>
           ) : (
             <>
               {rows.map((items, i) => (
-                <CarouselRow key={i} items={items} page={pages[i]} rowY={ROW_Y[i]} spacing={COL_SPACING} phaseBase={i * 1.5} apiRef={rowApis[i]} rowFocused={true} />
+                <CarouselRow key={i} items={items} page={pages[i]} rowY={ROW_Y[i]} spacing={COL_SPACING} phaseBase={i * 1.5} apiRef={rowApis[i]} rowFocused={true} isMobile={false} />
               ))}
             </>
           )}

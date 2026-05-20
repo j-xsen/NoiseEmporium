@@ -128,10 +128,11 @@ function getGlareTex() {
 }
 
 // ── Bubble shell with custom shader ──────────────────────────────────────────
-function BubbleShell({ radius, hovered, artTexture }: {
+function BubbleShell({ radius, hovered, artTexture, isMobile }: {
   radius: number
   hovered: boolean
   artTexture?: THREE.Texture
+  isMobile?: boolean
 }) {
   const hoveredRef = useRef(hovered)
   useEffect(() => { hoveredRef.current = hovered }, [hovered])
@@ -164,9 +165,11 @@ function BubbleShell({ radius, hovered, artTexture }: {
 
   useEffect(() => () => material.dispose(), [material])
 
+  const segs = isMobile ? 20 : 32
+
   return (
     <mesh renderOrder={2}>
-      <sphereGeometry args={[radius, 32, 32]} />
+      <sphereGeometry args={[radius, segs, segs]} />
       <primitive object={material} attach="material" />
     </mesh>
   )
@@ -175,13 +178,14 @@ function BubbleShell({ radius, hovered, artTexture }: {
 // Suspense-aware wrapper: loads cover art and feeds it to BubbleShell.
 // Drei's useTexture caches by URL — if ArtPlane already loaded this URL the
 // texture is returned synchronously with no network round-trip.
-function BubbleShellWithArt({ radius, hovered, coverUrl }: {
+function BubbleShellWithArt({ radius, hovered, coverUrl, isMobile }: {
   radius: number
   hovered: boolean
   coverUrl: string
+  isMobile?: boolean
 }) {
   const artTexture = useTexture(coverUrl)
-  return <BubbleShell radius={radius} hovered={hovered} artTexture={artTexture} />
+  return <BubbleShell radius={radius} hovered={hovered} artTexture={artTexture} isMobile={isMobile} />
 }
 
 // ── Art plane helpers ─────────────────────────────────────────────────────────
@@ -215,12 +219,13 @@ interface ReleaseBubbleProps {
   resetKey: number
   phaseOffset: number
   onClick: () => void
+  isMobile?: boolean
 }
 
 const ACTIVE_COLOR = new THREE.Color('#5ab5e0')
 
 function ReleaseBubble({
-  position, radius, cover, name, isActive, isFocused, resetKey, phaseOffset, onClick,
+  position, radius, cover, name, isActive, isFocused, resetKey, phaseOffset, onClick, isMobile,
 }: ReleaseBubbleProps) {
   const posGroupRef = useRef<THREE.Group>(null)
   const rotGroupRef = useRef<THREE.Group>(null)
@@ -233,13 +238,14 @@ function ReleaseBubble({
   }, [resetKey])
 
   // Per-instance randomized animation params — stable across renders (seeded by phaseOffset)
+  // On mobile, skip micro-bubbles entirely to reduce draw calls and useFrame work.
   const { bobSpeed, bobAmp, rotSpeed, micro } = useMemo(() => {
     const r = makeRng(phaseOffset)
     return {
       bobSpeed: 0.30 + r() * 0.35,
       bobAmp:   0.10 + r() * 0.14,
       rotSpeed: 0.04 + r() * 0.08,
-      micro: Array.from({ length: 4 }, () => ({
+      micro: isMobile ? [] : Array.from({ length: 4 }, () => ({
         phase:  r() * Math.PI * 2,
         orbitR: 0.90 + r() * 0.55,
         speed:  0.22 + r() * 0.35,
@@ -247,7 +253,7 @@ function ReleaseBubble({
         yOff:  (r() - 0.5) * 0.55,
       })),
     }
-  }, [phaseOffset])
+  }, [phaseOffset, isMobile])
 
   // Gradient texture for cover-less bubbles (collections with no image)
   const gradientTexture = useMemo(
@@ -276,7 +282,8 @@ function ReleaseBubble({
       posGroupRef.current.position.y = position[1] + Math.sin(t * bobSpeed + phaseOffset) * bobAmp
       const target = isFocused ? (hovered ? 1.62 : 1.50) : hovered ? 1.18 : isActive ? 1.08 : 1
       const s = posGroupRef.current.scale.x
-      posGroupRef.current.scale.setScalar(s + (target - s) * 0.08)
+      const ds = (target - s) * 0.08
+      if (Math.abs(ds) > 0.0001) posGroupRef.current.scale.setScalar(s + ds)
     }
     if (rotGroupRef.current) {
       rotGroupRef.current.rotation.y = t * rotSpeed + phaseOffset
@@ -326,16 +333,16 @@ function ReleaseBubble({
       <group ref={rotGroupRef}>
         {/* Backside inner rim — catches light on the inside edge */}
         <mesh renderOrder={1}>
-          <sphereGeometry args={[radius, 20, 20]} />
+          <sphereGeometry args={[radius, isMobile ? 12 : 20, isMobile ? 12 : 20]} />
           <meshBasicMaterial color="#a0ccf0" transparent opacity={0.05} side={THREE.BackSide} depthWrite={false} />
         </mesh>
         {/* Fresnel + iridescence shell; tinted by cover art or seeded gradient */}
         {cover ? (
-          <Suspense fallback={<BubbleShell radius={radius} hovered={hovered} />}>
-            <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={cover} />
+          <Suspense fallback={<BubbleShell radius={radius} hovered={hovered} isMobile={isMobile} />}>
+            <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={cover} isMobile={isMobile} />
           </Suspense>
         ) : (
-          <BubbleShell radius={radius} hovered={hovered} artTexture={gradientTexture ?? undefined} />
+          <BubbleShell radius={radius} hovered={hovered} artTexture={gradientTexture ?? undefined} isMobile={isMobile} />
         )}
       </group>
 

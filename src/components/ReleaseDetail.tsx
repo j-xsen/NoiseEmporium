@@ -112,7 +112,7 @@ export default function ReleaseDetail({
                   <span>Download WAV</span>
                 </button>
               )}
-              {!hasFullAccess && release.downloadFile && (
+              {!hasPurchasedRelease && release.downloadFile && (
                 <button
                   className="release-hero__buy"
                   onClick={() => onBuyRelease(release.id)}

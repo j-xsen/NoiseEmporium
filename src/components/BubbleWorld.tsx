@@ -107,7 +107,7 @@ function ScrollGroup({ targetOffsetY, children, apiRef }: { targetOffsetY: numbe
     if (!groupRef.current) return
     const dy = ty.current - groupRef.current.position.y
     if (Math.abs(dy) < 0.001) return
-    groupRef.current.position.y += dy * 0.18
+    groupRef.current.position.y += dy * 0.30
   })
 
   return <group ref={groupRef}>{children}</group>

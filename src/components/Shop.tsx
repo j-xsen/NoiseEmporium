@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { StarIcon, CheckIcon } from './Icons'
-import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct } from '../shopData'
+import { StarIcon, CheckIcon, PlayIcon, PauseIcon } from './Icons'
+import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct, type InstrumentalLicenseType } from '../shopData'
 import { formatPrice } from '../utils/format'
 import type { Song } from '../types'
 
@@ -10,6 +10,10 @@ interface ShopProps {
   hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
   songs: Song[]
+  onPreview?: (song: Song, queue: Song[]) => void
+  onPause?: () => void
+  currentSongId?: string
+  isPlaying?: boolean
 }
 
 type Filter = 'all' | ShopCategory
@@ -22,10 +26,17 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [selectedInstrumentalId, setSelectedInstrumentalId] = useState('')
+  const [licenseType, setLicenseType] = useState<InstrumentalLicenseType>('personal')
+
+  function toggleSection(key: string) {
+    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -75,15 +86,17 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   async function handleLicense(song: Song) {
     if (!token) return
     setLoading(`license-${song.id}`)
+    const tier = INSTRUMENTAL_LICENSE[licenseType]
     try {
       const r = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          priceId: INSTRUMENTAL_LICENSE.priceId,
+          priceId: tier.priceId,
           mode: 'payment',
           songId: song.id,
           songTitle: song.title,
+          licenseType,
         }),
       })
       const data = await r.json()
@@ -97,7 +110,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
     }
   }
 
-  const instrumentals = songs.filter(s => s.instrumental)
+  const instrumentals = [...new Map(
+    songs.filter(s => s.instrumental).map(s => [s.id, s])
+  ).values()]
 
   const membershipProducts = SHOP_PRODUCTS.filter(p => p.category === 'membership')
   const cdProducts = SHOP_PRODUCTS.filter(p => p.category === 'cd')
@@ -118,7 +133,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
     <div className="screen-layout">
       <div className="screen-header">
         <div className="screen-header__center">
-          <h1 className="screen-title">Instrumental Licenses</h1>
+          <h1 className="screen-title">Shop</h1>
         </div>
       </div>
 
@@ -159,8 +174,11 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
           <div className="shop-list">
             {showMembership && membershipProducts.length > 0 && (
               <section className="shop-section">
-                <h2 className="shop-section__title">Membership</h2>
-                {membershipProducts.map(product => {
+                <button className="shop-section__title" onClick={() => toggleSection('membership')}>
+                  Membership
+                  <span className="shop-section__chevron">{collapsed['membership'] ? '›' : '⌄'}</span>
+                </button>
+                {!collapsed['membership'] && membershipProducts.map(product => {
                   const owned = isPremium
                   const isLoading = loading === product.id
                   return (
@@ -200,8 +218,11 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
             {showCd && cdProducts.length > 0 && (
               <section className="shop-section">
-                <h2 className="shop-section__title">CDs</h2>
-                {cdProducts.map(product => {
+                <button className="shop-section__title" onClick={() => toggleSection('cd')}>
+                  CDs
+                  <span className="shop-section__chevron">{collapsed['cd'] ? '›' : '⌄'}</span>
+                </button>
+                {!collapsed['cd'] && cdProducts.map(product => {
                   const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
                   const isLoading = loading === product.id
                   return (
@@ -229,8 +250,11 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
             {showDownload && downloadProducts.length > 0 && (
               <section className="shop-section">
-                <h2 className="shop-section__title">Downloads</h2>
-                {downloadProducts.map(product => {
+                <button className="shop-section__title" onClick={() => toggleSection('download')}>
+                  Downloads
+                  <span className="shop-section__chevron">{collapsed['download'] ? '›' : '⌄'}</span>
+                </button>
+                {!collapsed['download'] && downloadProducts.map(product => {
                   const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
                   const isLoading = loading === product.id
                   return (
@@ -258,39 +282,87 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
             {showLicense && (
               <section className="shop-section">
-                <h2 className="shop-section__title">Licenses</h2>
-                {instrumentals.length === 0 ? (
+                <button className="shop-section__title" onClick={() => toggleSection('license')}>
+                  Instrumental Licenses
+                  <span className="shop-section__chevron">{collapsed['license'] ? '›' : '⌄'}</span>
+                </button>
+                {!collapsed['license'] && (instrumentals.length === 0 ? (
                   <p className="shop-section__empty">No instrumental tracks available for licensing yet.</p>
                 ) : (
-                  instrumentals.map(song => {
-                    const isLoading = loading === `license-${song.id}`
-                    return (
-                      <div key={song.id} className="shop-row">
-                        <div className="shop-row__icon">♩</div>
-                        <div className="shop-row__info">
-                          <div className="shop-row__name">{song.title}</div>
-                          {song.album && <div className="shop-row__desc">{song.album}</div>}
-                        </div>
-                        <div className="shop-row__right">
-                          <span className="shop-row__price">{formatPrice(INSTRUMENTAL_LICENSE.priceCents)}</span>
+                  <div className="shop-row shop-row--license">
+                    <div className="shop-row__icon">♩</div>
+                    <div className="shop-row__info">
+                      <div className="shop-row__name">Instrumental License</div>
+                      <div className="shop-row__license-types">
+                        {(Object.keys(INSTRUMENTAL_LICENSE) as InstrumentalLicenseType[]).map(type => (
+                          <label key={type} className="shop-row__license-type">
+                            <input
+                              type="radio"
+                              name="licenseType"
+                              value={type}
+                              checked={licenseType === type}
+                              onChange={() => setLicenseType(type)}
+                            />
+                            <span className="shop-row__license-type-label">{INSTRUMENTAL_LICENSE[type].label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="shop-row__desc">{INSTRUMENTAL_LICENSE[licenseType].description}</div>
+                      <div className="shop-row__select-row">
+                        <select
+                          className="shop-row__select"
+                          value={selectedInstrumentalId}
+                          onChange={e => setSelectedInstrumentalId(e.target.value)}
+                        >
+                          <option value="">Choose a track…</option>
+                          {instrumentals.map(s => (
+                            <option key={s.id} value={s.id}>{s.title}</option>
+                          ))}
+                        </select>
+                        {(() => {
+                          const selected = instrumentals.find(s => s.id === selectedInstrumentalId)
+                          const isThisPlaying = !!selected && selected.id === currentSongId && isPlaying
+                          return (
+                            <button
+                              className="shop-row__preview-btn"
+                              disabled={!selected}
+                              onClick={() => {
+                                if (!selected) return
+                                if (isThisPlaying) onPause?.()
+                                else onPreview?.(selected, instrumentals)
+                              }}
+                              title={isThisPlaying ? 'Pause' : 'Preview track'}
+                            >
+                              {isThisPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
+                            </button>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                    <div className="shop-row__right">
+                      <span className="shop-row__price">{formatPrice(INSTRUMENTAL_LICENSE[licenseType].priceCents)}</span>
+                      {(() => {
+                        const selected = instrumentals.find(s => s.id === selectedInstrumentalId)
+                        const isLoading = !!selected && loading === `license-${selected.id}`
+                        return (
                           <button
                             className="shop-row__btn"
-                            onClick={() => handleLicense(song)}
-                            disabled={isLoading}
+                            onClick={() => selected && handleLicense(selected)}
+                            disabled={!selected || isLoading}
                           >
                             {isLoading ? '…' : 'License'}
                           </button>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-                <p className="shop-contact-hint">
+                        )
+                      })()}
+                    </div>
+                  </div>
+                ))}
+                {!collapsed['license'] && <p className="shop-contact-hint">
                   Need a vocal or full-release license?{' '}
                   <a href={`mailto:jaxsen@jxsen.com?subject=${encodeURIComponent('License Inquiry')}`}>
                     Contact →
                   </a>
-                </p>
+                </p>}
               </section>
             )}
           </div>

@@ -15,8 +15,8 @@
 //
 // Release download purchases use Stripe price_data (inline pricing) so the
 // amount is always read from Contentful — no separate Stripe Price ID needed.
-// Subscriptions and other fixed products still use pre-created Stripe Price IDs
-// validated against STRIPE_ALLOWED_PRICE_IDS.
+// Subscriptions and fixed products (memberships, instrumental licenses) use pre-created
+// Stripe Price IDs validated against STRIPE_ALLOWED_PRICE_IDS.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
@@ -48,7 +48,7 @@ function appOrigin(req: VercelRequest): string {
 }
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
-  const { priceId, mode, contentfulId } = req.body ?? {}
+  const { priceId, mode, contentfulId, songId, songTitle, licenseType } = req.body ?? {}
   if (!mode) return res.status(400).json({ error: 'Missing required fields' })
   if (mode !== 'payment' && mode !== 'subscription') {
     return res.status(400).json({ error: 'Invalid mode' })
@@ -105,6 +105,14 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
     ...(customerEmail && { customer_email: customerEmail }),
+    ...(songId && {
+      metadata: {
+        purchase_type: 'instrumental_license',
+        song_id: String(songId),
+        song_title: String(songTitle ?? ''),
+        license_type: String(licenseType ?? 'personal'),
+      },
+    }),
   })
   res.json({ url: session.url })
 }

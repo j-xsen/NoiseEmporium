@@ -162,6 +162,7 @@ Song (content type: "song")
   file         — Asset       (audio file)
   duration     — Integer     (seconds; set by NoiseConverter via ffprobe)
   memberOnly   — Boolean     (true = premium only; controls playback AND lyrics access)
+  instrumental — Boolean     (true = song appears in Shop's Instrumental Licenses section)
   artist       — Short text  (optional; overrides release-level artist)
   lyrics       — Long text   (optional; line breaks preserved)
 
@@ -231,7 +232,7 @@ DATABASE_URL=                  # Neon connection string
 JWT_SECRET=                    # Strong random string
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-STRIPE_ALLOWED_PRICE_IDS=      # Comma-separated list of valid Stripe Price IDs (membership prices only)
+STRIPE_ALLOWED_PRICE_IDS=      # Comma-separated list of valid Stripe Price IDs (membership prices + INSTRUMENTAL_LICENSE.priceId)
 VITE_STRIPE_PUBLISHABLE_KEY=
 BLOB_READ_WRITE_TOKEN=         # Auto-set when a Vercel Blob store is created on the project
 RESEND_API_KEY=                # From resend.com — used for purchase confirmation emails

@@ -22,12 +22,30 @@ export interface ShopProduct {
   contentfulId?: string
 }
 
+/** Per-song instrumental licenses — priceId shared across all songs for each tier. */
+export const INSTRUMENTAL_LICENSE = {
+  personal: {
+    priceId: 'price_1TZJb3KHXukW25xlr8A5C18i',
+    priceCents: 500,
+    label: 'Personal',
+    description: 'Non-commercial videos, podcasts, personal projects, and hobby content.',
+  },
+  commercial: {
+    priceId: 'price_1TYLmpKHXukW25xlEcAHahta',
+    priceCents: 5000,
+    label: 'Commercial',
+    description: 'Ads, brand content, client work, and monetized YouTube channels.',
+  },
+} as const
+
+export type InstrumentalLicenseType = keyof typeof INSTRUMENTAL_LICENSE
+
 export const SHOP_PRODUCTS: ShopProduct[] = [
   {
     id: 'membership-tier-1',
     category: 'membership',
-    name: 'Tier 1',
-    description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
+    name: 'Premium Membership',
+    description: 'Full access to all member-only tracks and exclusive content.',
     price: 500,
     priceId: 'price_1TWopFKHXukW25xlfG3qRJea',
     mode: 'subscription',
@@ -37,7 +55,6 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   id: 'membership-tier-2',
   //   category: 'membership',
   //   name: 'Tier 2',
-  //   description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
   //   price: 1000,
   //   priceId: 'price_1TWopTKHXukW25xlSDVvHEl5',
   //   mode: 'subscription',
@@ -46,7 +63,6 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   id: 'membership-tier-3',
   //   category: 'membership',
   //   name: 'Tier 3',
-  //   description: 'Full access to all member-only tracks and exclusive content. Billed monthly.',
   //   price: 1500,
   //   priceId: 'price_1TWopcKHXukW25xlLoiFSlmW',
   //   mode: 'subscription',
@@ -67,26 +83,11 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   // Release download products are driven entirely by Contentful — no entry
   // needed here. To make a release purchasable:
   //   1. Upload the WAV ZIP to Vercel Blob (private).
-  //   2. Set the `downloadFile` asset field on the Contentful release entry.
-  //   3. Optionally set `price` / `memberPrice` (cents) on the entry to
-  //      override the default pricing ($7.00 / $5.00 for albums, $2.00 / $1.00 for singles).
-  // The Buy button appears automatically once `downloadFile` is set.
+  //   2. Set the `downloadUrl` field on the Contentful release entry.
+  //   3. Optionally set `price` / `memberPrice` (cents) on the entry.
+  // The Buy button appears automatically on the release detail page.
   // ── Licenses ──────────────────────────────────────────────────────────────
-  {
-    id: 'license-instrumental',
-    category: 'license',
-    name: 'Instrumental License',
-    description: 'Perpetual, non-exclusive license for any instrumental track. Use in YouTube videos, podcasts, streams, or personal projects. No expiration.',
-    price: 5000,
-    priceId: 'price_1TYLmpKHXukW25xlEcAHahta',
-    mode: 'payment',
-  },
-  {
-    id: 'license-release',
-    category: 'license',
-    name: 'Release License',
-    description: 'Want to use one of my full releases (vocals included)? Reach out and we\'ll figure out something fair.',
-    mode: 'payment',
-    contact: true,
-  },
+  // Per-song instrumental licenses are generated dynamically from Contentful
+  // songs that have `instrumental: true`. See INSTRUMENTAL_LICENSE above for the
+  // shared Stripe Price ID. No entries needed here.
 ]

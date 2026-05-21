@@ -69,6 +69,7 @@ function mapTracks(rawTracks: unknown[], artist: string, coverUrl: string | unde
       memberOnly,
       lyrics: tf.lyrics as string | undefined,
       duration: tf.duration as number | undefined,
+      instrumental: tf.instrumental === true,
     })
   }
   return songs

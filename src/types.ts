@@ -13,6 +13,8 @@ export interface Song {
   lyrics?: string
   /** Duration in seconds from Contentful. */
   duration?: number
+  /** If true, this track is an instrumental and available for licensing in the shop. */
+  instrumental?: boolean
 }
 
 export interface Release {

@@ -218,6 +218,7 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 - `name` — Short text (display field)
 - `file` — Media (audio file)
 - `memberOnly` — Boolean (if true, only premium members can stream or view lyrics)
+- `instrumental` — Boolean (if true, the track is available for individual licensing in the Shop)
 - `lyrics` — Long text (optional; line breaks preserved in the lyrics view)
 
 **Collection** (content type: `collection`) — see Collections section above; maps to `Release` with `releaseType: 'collection'`
@@ -329,8 +330,19 @@ The server validates purchases against Contentful directly. A release is purchas
 - Artists set their own CD prices and download minimums
 - Revenue from store sales goes directly to the artist (minus a small platform fee — TBD)
 
+### Instrumental Licenses (implemented)
+Individual songs can be licensed directly from the Shop. Any song with `instrumental: true` in Contentful appears in the "Instrumental Licenses" section of the Shop.
+
+- **Flat rate:** $50/song, charged via a single shared Stripe Price ID (`INSTRUMENTAL_LICENSE.priceId` in `src/shopData.ts`)
+- **Per-song metadata:** Checkout session includes `purchase_type: 'instrumental_license'`, `song_id`, and `song_title` in Stripe metadata
+- Requires an account (auth required to initiate checkout)
+- The contact hint below the section prompts users who want a vocal or full-release license to email instead
+
+#### Activating a song for licensing
+Set `instrumental: true` on the Contentful `song` entry. The song appears automatically in the Shop's Instrumental Licenses section. No entry in `shopData.ts` is needed.
+
 ### Not Yet Implemented
-- Store UI
+- Physical CD store (3D environment)
 - Stripe Checkout integration for CDs and name-your-price downloads
 - Order management and fulfillment tracking
 - Artist storefront configuration

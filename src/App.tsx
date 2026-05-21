@@ -592,6 +592,11 @@ return (
                 token={auth.token}
                 hasPurchased={purchases.hasPurchased}
                 onUpgradeSuccess={() => { auth.refreshUser(); purchases.refresh() }}
+                songs={songs}
+                onPreview={handlePlay}
+                onPause={player.togglePlay}
+                currentSongId={player.currentSong?.id}
+                isPlaying={player.isPlaying}
               />
             } />
 

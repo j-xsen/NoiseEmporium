@@ -2,7 +2,8 @@
 //
 // GET  /api/plays?stream=<songId>&token=<jwt>
 //   Stream proxy for member-only audio. Validates the JWT and premium tier,
-//   fetches the real CDN URL from Contentful server-side, then 302-redirects.
+//   then either 302-redirects (full access) or streams the first 3 seconds
+//   (preview for free users). The CDN URL is never exposed to non-members.
 //   The token is passed as a query param because <audio src> cannot send headers.
 //
 // POST /api/plays
@@ -10,10 +11,17 @@
 //   PLAY_THRESHOLD seconds of actual listening (enforced in useAudio.ts).
 //   song_id is a Contentful entry ID — Contentful is the music source of truth.
 
+import { Readable } from 'stream'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth, verifyToken } from '../_auth.js'
+
+const PREVIEW_SECONDS = 3
+// Extra bytes prepended to the preview to ensure the M4A moov atom (file header)
+// is always included. With -movflags +faststart the moov sits at the very start
+// of the file, so the first N bytes are always decodable by the browser.
+const MOOV_BUFFER_BYTES = 128 * 1024
 
 async function streamHandler(req: VercelRequest, res: VercelResponse) {
   const songId = req.query.stream
@@ -32,16 +40,14 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
   if (!rows[0]) return res.status(403).json({ error: 'Unauthorized' })
 
   const isPremium = rows[0].tier === 'premium'
-  if (!isPremium) {
+  let hasFullAccess = isPremium
+  if (!hasFullAccess) {
     // Also allow if the user purchased the release that contains this song.
-    // The releaseId (Contentful release entry ID) is embedded in the request URL.
     const releaseId = typeof req.query.releaseId === 'string' ? req.query.releaseId : undefined
     const hasPurchase = releaseId
       ? (await sql`SELECT 1 FROM orders WHERE user_id = ${userId} AND contentful_id = ${releaseId} LIMIT 1`).length > 0
       : false
-    if (!hasPurchase) {
-      return res.status(403).json({ error: 'Premium membership required' })
-    }
+    hasFullAccess = hasPurchase
   }
 
   try {
@@ -51,11 +57,42 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entry = await client.getEntry<any>(songId)
-    const raw = entry.fields.file?.fields?.file?.url as string | undefined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fileField = (entry.fields.file as any)?.fields?.file
+    const raw = fileField?.url as string | undefined
     if (!raw) return res.status(404).json({ error: 'Audio not found' })
     const audioUrl = raw.startsWith('//') ? 'https:' + raw : raw
+
+    if (hasFullAccess) {
+      res.setHeader('Cache-Control', 'no-store')
+      return res.redirect(302, audioUrl)
+    }
+
+    // Preview: stream only the first PREVIEW_SECONDS of audio.
+    // We estimate the byte count from file size and duration, then add MOOV_BUFFER_BYTES
+    // to guarantee the moov atom is fully included so the browser can decode the clip.
+    const fileSize = fileField?.details?.size as number | undefined
+    const duration = entry.fields.duration as number | undefined
+
+    if (!fileSize || !duration || duration < PREVIEW_SECONDS) {
+      return res.status(403).json({ error: 'Premium membership required' })
+    }
+
+    const previewBytes = Math.min(
+      fileSize - 1,
+      Math.ceil((PREVIEW_SECONDS / duration) * fileSize) + MOOV_BUFFER_BYTES,
+    )
+
+    const cdnRes = await fetch(audioUrl, { headers: { Range: `bytes=0-${previewBytes}` } })
+    if (!cdnRes.ok && cdnRes.status !== 206) {
+      return res.status(502).json({ error: 'Preview unavailable' })
+    }
+    if (!cdnRes.body) return res.status(502).json({ error: 'Preview unavailable' })
+
+    res.status(200)
+    res.setHeader('Content-Type', 'audio/mp4')
     res.setHeader('Cache-Control', 'no-store')
-    return res.redirect(302, audioUrl)
+    Readable.fromWeb(cdnRes.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res)
   } catch {
     return res.status(404).json({ error: 'Song not found' })
   }

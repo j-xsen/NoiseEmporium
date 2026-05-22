@@ -371,8 +371,12 @@ export default function App() {
       const rId = releaseIdFromSrc(s.src)
       return rId ? purchases.hasPurchased(rId) : false
     }
-    if (!canPlay(song)) return
-    const q = (queue ?? [song]).filter(canPlay)
+    // A memberOnly song clicked without a queue is a solo preview — allow it even
+    // without full access. The stream proxy will serve only the first 3 seconds.
+    const isPreview = song.memberOnly && !canPlay(song)
+    if (!canPlay(song) && !isPreview) return
+    // Preview plays solo so the queue doesn't auto-advance into other member tracks.
+    const q = isPreview ? [song] : (queue ?? [song]).filter(canPlay)
     if (q.length === 0) return
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)

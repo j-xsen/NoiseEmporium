@@ -202,7 +202,7 @@ export default function ReleaseDetail({
                           isPlaying={player.isPlaying}
                           locked={false}
                           dlStatus={dlStatuses[song.id] ?? 'none'}
-                          onPlay={() => onPlay(song)}
+                          onPlay={() => onPlay(song, playableSongs)}
                           onDownload={() => onDownload(song)}
                           onRemoveDownload={() => onRemoveDownload(song.id)}
                           onAddToPlaylist={() => onAddToPlaylist(song.id)}

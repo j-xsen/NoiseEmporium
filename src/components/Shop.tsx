@@ -283,7 +283,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
             {showLicense && (
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('license')}>
-                  Instrumental Licenses
+                  Licenses
                   <span className="shop-section__chevron">{collapsed['license'] ? '›' : '⌄'}</span>
                 </button>
                 {!collapsed['license'] && (instrumentals.length === 0 ? (
@@ -350,7 +350,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                             onClick={() => selected && handleLicense(selected)}
                             disabled={!selected || isLoading}
                           >
-                            {isLoading ? '…' : 'License'}
+                            {isLoading ? '…' : 'Purchase'}
                           </button>
                         )
                       })()}

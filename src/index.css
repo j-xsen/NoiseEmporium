@@ -88,6 +88,15 @@ code {
 }
 
 /* Range input — global because used in NowPlaying */
+input[type="radio"],
+input[type="checkbox"] {
+  width: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;

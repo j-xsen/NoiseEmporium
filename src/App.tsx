@@ -520,7 +520,7 @@ return (
             {/* Persistent 2D home screen — kept mounted so scroll position survives back-navigation.
                 display:none hides it from layout without removing the DOM node, preserving scrollTop. */}
             {viewMode === '2d' && (
-              <div style={location.pathname !== '/' ? { display: 'none' } : undefined}>
+              <div style={{ height: '100%', ...(location.pathname !== '/' ? { display: 'none' } : {}) }}>
                 <Library
                   releases={releases}
                   featuredPlaylists={featuredPlaylists}

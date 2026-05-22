@@ -16,11 +16,28 @@ import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth, verifyToken } from '../_auth.js'
 
-const PREVIEW_SECONDS = 3
-// Extra bytes prepended to the preview to ensure the M4A moov atom (file header)
-// is always included. With -movflags +faststart the moov sits at the very start
-// of the file, so the first N bytes are always decodable by the browser.
-const MOOV_BUFFER_BYTES = 128 * 1024
+// Bytes to fetch for a preview. 600 KB covers the moov atom (even for long songs)
+// plus several seconds of audio data in the mdat, so the browser has enough to
+// start decoding. Client-side logic stops playback after PREVIEW_SECONDS.
+const PREVIEW_FETCH_BYTES = 600 * 1024
+
+// Walk the top-level MP4 box tree to find the 'mdat' box and rewrite its declared
+// size to match what we actually sent. The original size points to the full file;
+// without this fix Chrome sees a truncated mdat and refuses to play the audio.
+function patchMdatSize(buf: Buffer): Buffer {
+  let offset = 0
+  while (offset + 8 <= buf.length) {
+    const boxSize = buf.readUInt32BE(offset)
+    const boxType = buf.toString('ascii', offset + 4, offset + 8)
+    if (boxType === 'mdat') {
+      buf.writeUInt32BE(buf.length - offset, offset)
+      break
+    }
+    if (boxSize < 8 || offset + boxSize >= buf.length) break
+    offset += boxSize
+  }
+  return buf
+}
 
 async function streamHandler(req: VercelRequest, res: VercelResponse) {
   const songId = req.query.stream
@@ -77,17 +94,14 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'Premium membership required' })
     }
 
-    // If duration is missing or very short, fall back to 400 KB (~12 s at 256 kbps).
-    const previewBytes = (duration && duration >= PREVIEW_SECONDS)
-      ? Math.min(fileSize - 1, Math.ceil((PREVIEW_SECONDS / duration) * fileSize) + MOOV_BUFFER_BYTES)
-      : Math.min(fileSize - 1, 400 * 1024)
-
-    const cdnRes = await fetch(audioUrl, { headers: { Range: `bytes=0-${previewBytes}` } })
+    const fetchBytes = Math.min(fileSize - 1, PREVIEW_FETCH_BYTES)
+    const cdnRes = await fetch(audioUrl, { headers: { Range: `bytes=0-${fetchBytes}` } })
     if (!cdnRes.ok && cdnRes.status !== 206) {
       return res.status(502).json({ error: 'Preview unavailable' })
     }
 
-    const preview = Buffer.from(await cdnRes.arrayBuffer())
+    // Fix the mdat box size so the browser sees a structurally valid (if short) MP4.
+    const preview = patchMdatSize(Buffer.from(await cdnRes.arrayBuffer()))
     res.status(200)
     res.setHeader('Content-Type', 'audio/mp4')
     res.setHeader('Content-Length', String(preview.length))

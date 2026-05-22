@@ -14,7 +14,7 @@
 //
 // LyricsView remains state-based (full-screen overlay, not a distinct page).
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
@@ -345,6 +345,7 @@ export default function App() {
   const location = useLocation()
 
   const isPremium = auth.user?.tier === 'premium'
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Derive active tab from the URL for BottomNav highlighting.
   const tab: Tab = location.pathname.startsWith('/player') ? 'player'
@@ -388,8 +389,12 @@ export default function App() {
       return s
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
     player.playSong(target, resolved)
-  }, [dl.getLocalSrc, player.playSong, isPremium, auth.token, purchases.hasPurchased])
+    if (isPreview) {
+      previewTimerRef.current = setTimeout(() => player.togglePlay(), 3000)
+    }
+  }, [dl.getLocalSrc, player.playSong, player.togglePlay, isPremium, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.

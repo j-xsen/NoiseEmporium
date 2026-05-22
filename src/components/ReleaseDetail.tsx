@@ -44,6 +44,15 @@ export default function ReleaseDetail({
   const playableSongs = hasFullAccess ? release.songs : publicSongs
 
   const count = release.songs.length
+  const totalSeconds = release.songs.reduce((sum, s) => sum + (s.duration ?? 0), 0)
+  const durationLabel = (() => {
+    if (totalSeconds === 0) return null
+    const h = Math.floor(totalSeconds / 3600)
+    const m = Math.floor((totalSeconds % 3600) / 60)
+    const s = Math.floor(totalSeconds % 60)
+    if (h > 0) return `${h} hr ${m} min ${s} sec`
+    return m > 0 ? `${m} min ${s} sec` : `${s} sec`
+  })()
   const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
   const anyDownloading = playableSongs.some(s => dlStatuses[s.id] === 'downloading')
 
@@ -77,7 +86,7 @@ export default function ReleaseDetail({
             <p className="rps2-description">{release.description}</p>
           )}
           <p className="rps2-meta">
-            {[formattedDate, !locked && `${count} ${count === 1 ? 'track' : 'tracks'}`].filter(Boolean).join(' · ')}
+            {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`, durationLabel].filter(Boolean).join(' · ')}
           </p>
         </div>
         {!locked && (

@@ -517,9 +517,10 @@ return (
                 />
               </div>
             )}
-          <Routes>
-            <Route path="/" element={
-              viewMode === '2d' ? (
+            {/* Persistent 2D home screen — kept mounted so scroll position survives back-navigation.
+                display:none hides it from layout without removing the DOM node, preserving scrollTop. */}
+            {viewMode === '2d' && (
+              <div style={location.pathname !== '/' ? { display: 'none' } : undefined}>
                 <Library
                   releases={releases}
                   featuredPlaylists={featuredPlaylists}
@@ -530,8 +531,10 @@ return (
                   onSelectFeaturedPlaylist={handleSelectFeaturedPlaylist}
                   onOpenAccount={handleOpenAccount}
                 />
-              ) : null
-            } />
+              </div>
+            )}
+          <Routes>
+            <Route path="/" element={null} />
 
             <Route path="/ep/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />
             <Route path="/album/:slug" element={<ReleaseDetailRoute {...releaseRouteProps} />} />

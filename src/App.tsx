@@ -345,7 +345,7 @@ export default function App() {
   const location = useLocation()
 
   const isPremium = auth.user?.tier === 'premium'
-  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previewBlobRef = useRef<string | null>(null)
 
   // Derive active tab from the URL for BottomNav highlighting.
   const tab: Tab = location.pathname.startsWith('/player') ? 'player'
@@ -388,7 +388,12 @@ export default function App() {
           // Pre-fetch preview bytes and create a local Blob URL so the browser's
           // audio element never makes range requests against our non-seekable proxy.
           const r = await fetch(tokenUrl)
-          if (r.ok) return { ...s, src: URL.createObjectURL(await r.blob()) }
+          if (r.ok) {
+            if (previewBlobRef.current) URL.revokeObjectURL(previewBlobRef.current)
+            const blobUrl = URL.createObjectURL(await r.blob())
+            previewBlobRef.current = blobUrl
+            return { ...s, src: blobUrl }
+          }
         }
         // Append the auth token so the stream proxy can verify identity without headers.
         return { ...s, src: tokenUrl }
@@ -396,12 +401,9 @@ export default function App() {
       return s
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
-    if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
     player.playSong(target, resolved)
-    if (isPreview) {
-      previewTimerRef.current = setTimeout(() => player.togglePlay(), 3000)
-    }
-  }, [dl.getLocalSrc, player.playSong, player.togglePlay, isPremium, auth.token, purchases.hasPurchased])
+    if (isPreview) player.setPreview(3)
+  }, [dl.getLocalSrc, player.playSong, player.setPreview, isPremium, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.
@@ -446,6 +448,15 @@ const handleSelectFeaturedPlaylist = useCallback((id: string) => {
       console.error('WAV download failed:', err)
     }
   }, [auth.token])
+
+  // Revoke the preview Blob URL when the preview ends so the raw audio bytes
+  // are no longer accessible from DevTools or direct URL access.
+  useEffect(() => {
+    if (player.previewEnded && previewBlobRef.current) {
+      URL.revokeObjectURL(previewBlobRef.current)
+      previewBlobRef.current = null
+    }
+  }, [player.previewEnded])
 
   // Handle Stripe checkout redirect: ?tab=shop → /shop
   useEffect(() => {

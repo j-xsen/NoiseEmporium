@@ -20,7 +20,10 @@ export interface PlayerAPI {
   loopMode: LoopMode
   isShuffle: boolean
   volume: number
+  previewEnded: boolean
   playSong: (song: Song, queue?: Song[]) => void
+  pause: () => void
+  seekToEnd: () => void
   togglePlay: () => void
   seek: (time: number) => void
   skipNext: () => void
@@ -28,6 +31,7 @@ export interface PlayerAPI {
   cycleLoop: () => void
   toggleShuffle: () => void
   setVolume: (v: number) => void
+  setPreview: (duration: number | null) => void
 }
 
 const MS = 'mediaSession' in navigator
@@ -46,6 +50,11 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   // Guards against double-advance when both 'ended' and the timeupdate fallback fire.
   const endFiredRef = useRef(false)
 
+  // Preview cap: when set, playback auto-pauses at this many seconds of audio time.
+  const previewDurationRef = useRef<number | null>(null)
+  // True after a preview cap fires — blocks togglePlay from resuming.
+  const previewEndedRef = useRef(false)
+
   // Play-count tracking — accumulates forward-only deltas to exclude seeks.
   const listenedRef = useRef(0)        // cumulative seconds listened for current song
   const lastTimeRef = useRef(0)        // previous currentTime sample
@@ -61,11 +70,17 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const [loopMode, setLoopModeState] = useState<LoopMode>('off')
   const [isShuffle, setIsShuffle] = useState(false)
   const [volume, setVolumeState] = useState(1)
+  const [previewEnded, setPreviewEndedState] = useState(false)
+  const [previewCap, setPreviewCap] = useState<number | null>(null)
 
   const loadAndPlay = useCallback((song: Song, qi: number, queue: Song[]) => {
     const el = audioRef.current
     if (!el) return
     endFiredRef.current = false
+    previewDurationRef.current = null
+    previewEndedRef.current = false
+    setPreviewEndedState(false)
+    setPreviewCap(null)
     // Reset listen-time counters for the new song.
     listenedRef.current = 0
     lastTimeRef.current = 0
@@ -130,6 +145,10 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     // iOS PWA: the 'ended' event doesn't always fire when the screen is locked.
     // The timeupdate handler acts as a fallback: advance when < 0.3 s remain.
     const onTime = () => {
+      // After a preview cap fires we seek el.currentTime to el.duration, which fires
+      // another timeupdate. The guard below prevents that seek from overwriting state.
+      if (previewEndedRef.current) return
+
       const now = el.currentTime
       // Only accumulate small forward increments — seeks produce large deltas
       // that would artificially inflate the listen time.
@@ -144,7 +163,23 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
       }
       lastTimeRef.current = now
       setCurrentTime(now)
-      if (!endFiredRef.current && el.duration > 0 && (el.duration - el.currentTime) < 0.3) {
+
+      // Preview cap: stop at the declared preview duration.
+      const cap = previewDurationRef.current
+      if (cap !== null && now >= cap) {
+        el.pause()
+        // Use cap (not el.duration) as the end position so currentTime === previewCap
+        // exactly, giving progress = cap/cap = 1.0 regardless of frame-aligned duration.
+        el.currentTime = cap  // fires another timeupdate, caught by early-return above
+        setCurrentTime(cap)   // overrides setCurrentTime(now) above (React batches)
+        previewEndedRef.current = true
+        previewDurationRef.current = null
+        setPreviewEndedState(true)
+        return
+      }
+
+      // Don't auto-advance while a preview cap is pending — the cap fires first.
+      if (!previewDurationRef.current && !endFiredRef.current && el.duration > 0 && (el.duration - el.currentTime) < 0.3) {
         advance()
       }
     }
@@ -215,12 +250,32 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     loadAndPlay(song, qi >= 0 ? qi : 0, q)
   }, [loadAndPlay])
 
+  // pause() and seekToEnd() are stable (no deps) — safe to call from setTimeout.
+  const pause = useCallback(() => { audioRef.current?.pause() }, [])
+  const seekToEnd = useCallback(() => {
+    const el = audioRef.current
+    if (!el) return
+    const d = isNaN(el.duration) ? 0 : el.duration
+    el.currentTime = d
+    setCurrentTime(d)
+  }, [])
+
   const togglePlay = useCallback(() => {
     const el = audioRef.current
     if (!el || !currentSong) return
+    if (previewEndedRef.current) return
     if (el.paused) el.play().catch(console.error)
     else el.pause()
   }, [currentSong])
+
+  const setPreview = useCallback((durationSec: number | null) => {
+    previewDurationRef.current = durationSec
+    if (durationSec !== null) {
+      previewEndedRef.current = false
+      setPreviewEndedState(false)
+      setPreviewCap(durationSec)
+    }
+  }, [])
 
   const seek = useCallback((time: number) => {
     const el = audioRef.current
@@ -288,11 +343,14 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     currentSong,
     isPlaying,
     currentTime,
-    duration,
+    duration: previewCap ?? duration,
     loopMode,
     isShuffle,
     volume,
+    previewEnded,
     playSong,
+    pause,
+    seekToEnd,
     togglePlay,
     seek,
     skipNext,
@@ -300,5 +358,6 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     cycleLoop,
     toggleShuffle,
     setVolume,
+    setPreview,
   }
 }

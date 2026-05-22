@@ -74,14 +74,14 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
     const fileSize = fileField?.details?.size as number | undefined
     const duration = entry.fields.duration as number | undefined
 
-    if (!fileSize || !duration || duration < PREVIEW_SECONDS) {
+    if (!fileSize) {
       return res.status(403).json({ error: 'Premium membership required' })
     }
 
-    const previewBytes = Math.min(
-      fileSize - 1,
-      Math.ceil((PREVIEW_SECONDS / duration) * fileSize) + MOOV_BUFFER_BYTES,
-    )
+    // If duration is missing or very short, fall back to 400 KB (~12 s at 256 kbps).
+    const previewBytes = (duration && duration >= PREVIEW_SECONDS)
+      ? Math.min(fileSize - 1, Math.ceil((PREVIEW_SECONDS / duration) * fileSize) + MOOV_BUFFER_BYTES)
+      : Math.min(fileSize - 1, 400 * 1024)
 
     const cdnRes = await fetch(audioUrl, { headers: { Range: `bytes=0-${previewBytes}` } })
     if (!cdnRes.ok && cdnRes.status !== 206) {

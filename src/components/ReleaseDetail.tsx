@@ -200,9 +200,9 @@ export default function ReleaseDetail({
                           displayNum={publicSongs.length + i + 1}
                           isActive={song.id === player.currentSong?.id}
                           isPlaying={player.isPlaying}
-                          locked={true}
+                          locked={false}
                           dlStatus={dlStatuses[song.id] ?? 'none'}
-                          onPlay={() => onPlay(song, playableSongs)}
+                          onPlay={() => onPlay(song)}
                           onDownload={() => onDownload(song)}
                           onRemoveDownload={() => onRemoveDownload(song.id)}
                           onAddToPlaylist={() => onAddToPlaylist(song.id)}

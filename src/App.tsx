@@ -14,7 +14,7 @@
 //
 // LyricsView remains state-based (full-screen overlay, not a distinct page).
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
@@ -345,6 +345,7 @@ export default function App() {
   const location = useLocation()
 
   const isPremium = auth.user?.tier === 'premium'
+  const previewBlobRef = useRef<string | null>(null)
 
   // Derive active tab from the URL for BottomNav highlighting.
   const tab: Tab = location.pathname.startsWith('/player') ? 'player'
@@ -371,21 +372,38 @@ export default function App() {
       const rId = releaseIdFromSrc(s.src)
       return rId ? purchases.hasPurchased(rId) : false
     }
-    if (!canPlay(song)) return
-    const q = (queue ?? [song]).filter(canPlay)
+    // A memberOnly song clicked without a queue is a solo preview — allow it even
+    // without full access. The stream proxy will serve only the first 3 seconds.
+    const isPreview = song.memberOnly && !canPlay(song)
+    if (!canPlay(song) && !isPreview) return
+    // Preview plays solo so the queue doesn't auto-advance into other member tracks.
+    const q = isPreview ? [song] : (queue ?? [song]).filter(canPlay)
     if (q.length === 0) return
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)
       if (localSrc) return { ...s, src: localSrc }
-      // Append the auth token so the stream proxy can verify identity without headers.
       if (s.memberOnly && s.src.startsWith('/api/plays?stream=') && auth.token) {
-        return { ...s, src: `${s.src}&token=${auth.token}` }
+        const tokenUrl = `${s.src}&token=${auth.token}`
+        if (isPreview) {
+          // Pre-fetch preview bytes and create a local Blob URL so the browser's
+          // audio element never makes range requests against our non-seekable proxy.
+          const r = await fetch(tokenUrl)
+          if (r.ok) {
+            if (previewBlobRef.current) URL.revokeObjectURL(previewBlobRef.current)
+            const blobUrl = URL.createObjectURL(await r.blob())
+            previewBlobRef.current = blobUrl
+            return { ...s, src: blobUrl }
+          }
+        }
+        // Append the auth token so the stream proxy can verify identity without headers.
+        return { ...s, src: tokenUrl }
       }
       return s
     }))
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
-  }, [dl.getLocalSrc, player.playSong, isPremium, auth.token, purchases.hasPurchased])
+    if (isPreview) player.setPreview(3)
+  }, [dl.getLocalSrc, player.playSong, player.setPreview, isPremium, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.
@@ -430,6 +448,15 @@ const handleSelectFeaturedPlaylist = useCallback((id: string) => {
       console.error('WAV download failed:', err)
     }
   }, [auth.token])
+
+  // Revoke the preview Blob URL when the preview ends so the raw audio bytes
+  // are no longer accessible from DevTools or direct URL access.
+  useEffect(() => {
+    if (player.previewEnded && previewBlobRef.current) {
+      URL.revokeObjectURL(previewBlobRef.current)
+      previewBlobRef.current = null
+    }
+  }, [player.previewEnded])
 
   // Handle Stripe checkout redirect: ?tab=shop → /shop
   useEffect(() => {

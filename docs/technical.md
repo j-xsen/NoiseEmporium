@@ -216,6 +216,71 @@ This value is passed down to all components that need it. Enforcement points:
 
 > **Note:** Contentful CDN URLs are public. Client-side enforcement (points 1–4) is the UX layer. The stream proxy (point 5) is server-side enforcement for the audio stream itself — it does not protect album art or metadata.
 
+## Song Preview System
+
+Non-premium users can preview any `memberOnly` track for exactly 3 seconds. After that, the audio stops, the progress bar shows 100%, the play button is blocked, and the Blob URL containing the audio data is revoked.
+
+### Server side — `api/plays/index.ts`
+
+`buildPreview(audioUrl, fileSize)` constructs a self-contained 3-second MP4 blob from two (sometimes three) CDN range requests:
+
+**File layout for typical Contentful M4A (non-faststart):**
+```
+ftyp (28 B) | [free / skip (variable)] | mdat (full audio data) | moov (~18 KB)
+```
+
+**Fetch strategy:**
+1. `bytes=0–614399` — gets `ftyp` + start of `mdat` (enough audio for ~22 seconds)
+2. Walk the top-level boxes to locate `ftyp` and `mdat`:
+   - If an intermediate box (`free`, `skip`, etc.) extends past the 600 KB window, its declared end is recorded as the `mdat` file offset and a second range fetch retrieves the `mdat` data from there
+3. `bytes={mdatStart + mdatDeclaredSize}–{fileSize-1}` — fetches the `moov` atom from the end of the file
+
+**Assembly:**
+```
+ftyp  +  moov (patched)  +  mdat_header (8 B)  +  audio_data
+```
+
+`patchPreviewMoov()` edits the moov in-place:
+- `mvhd` / `tkhd` / `mdhd` duration → `3 × timescale`
+- `stts` time-to-sample table → trimmed to exactly 3 seconds of frames (prevents the browser from inferring the full duration from sample count)
+- `stco` / `co64` chunk offsets → each entry shifted by `stcoOffset = ftypEnd + moovSize - mdatStart` (accounts for moov moving from the end to the front of the file), then clamped to `previewSize - 1`
+
+**stcoOffset intuition:** stco entries are absolute byte positions in the original file. Moving moov to the front shifts every mdat chunk's position by exactly `moovSize` bytes.
+
+**File format requirement:** `buildPreview` only handles ISO base media files (M4A/MP4). MP3 files do not contain `ftyp`/`mdat`/`moov` boxes — they will cause a 502. All songs must be uploaded as M4A via the conversion pipeline.
+
+### Client side — `App.tsx` + `useAudio.ts`
+
+**`handlePlay` in `App.tsx`** detects `isPreview = song.memberOnly && !canPlay(song)`:
+- Fetches the preview bytes from the stream proxy into a `Blob URL` (`URL.createObjectURL`) so the browser never makes range requests against the non-seekable proxy
+- Calls `player.playSong(target, [song])` with a solo queue (prevents auto-advance into other member tracks)
+- Calls `player.setPreview(3)` — arms the 3-second cap inside `useAudio`
+- Stores the Blob URL in `previewBlobRef`
+
+**`setPreview(seconds)` in `useAudio`** sets `previewDurationRef.current` and resets the `previewEndedRef` flag.
+
+**`onTime` handler in `useAudio`** (fires on every `timeupdate` event):
+- Early-returns if `previewEndedRef.current` — prevents any seek-triggered `timeupdate` from overwriting state after the cap fires
+- When `now >= previewDurationRef.current` (the cap): pauses the element, seeks to `cap` (not `el.duration`, so `currentTime` is exactly `3.0`), updates React state, sets `previewEndedRef = true`, fires `setPreviewEndedState(true)`
+- Skips the `advance()` (queue auto-advance) logic while a preview cap is pending
+
+**`togglePlay` in `useAudio`** returns early if `previewEndedRef.current` — prevents the play button from resuming after the preview.
+
+**`player.duration`** is overridden to `previewCap ?? duration` while a preview is active, so the progress bar denominator is exactly `3` regardless of what `el.duration` reports (frame alignment can make it `3.023…`). Progress = `currentTime / 3` → clean 0→1 ratio.
+
+**Blob URL cleanup:** a `useEffect` in `App.tsx` watches `player.previewEnded`; when it fires, it calls `URL.revokeObjectURL(previewBlobRef.current)`. This prevents DevTools access to the raw audio bytes after the preview ends. The Blob physically contains ~22 seconds of audio data (the first 600 KB of the file); the moov only declares 3 seconds, but revoking the URL closes the direct download vector.
+
+### Key files
+
+| File | Role |
+|------|------|
+| `api/plays/index.ts` | `buildPreview()` + `patchPreviewMoov()` + stream proxy |
+| `src/App.tsx` | `handlePlay` — preview detection, blob fetch, `setPreview(3)`, blob revocation |
+| `src/hooks/useAudio.ts` | `setPreview`, `previewEnded`, `previewCap` state, `onTime` cap logic, `togglePlay` guard |
+| `src/components/ReleaseDetail.tsx` | `locked={false}` + `onPlay={() => onPlay(song)}` for non-premium users on `memberOnly` tracks |
+
+---
+
 ## Deployment
 
 - **Vercel** hosts both the static frontend and the serverless API

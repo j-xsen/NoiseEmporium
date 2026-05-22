@@ -11,7 +11,6 @@
 //   PLAY_THRESHOLD seconds of actual listening (enforced in useAudio.ts).
 //   song_id is a Contentful entry ID — Contentful is the music source of truth.
 
-import { Readable } from 'stream'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
@@ -87,12 +86,14 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
     if (!cdnRes.ok && cdnRes.status !== 206) {
       return res.status(502).json({ error: 'Preview unavailable' })
     }
-    if (!cdnRes.body) return res.status(502).json({ error: 'Preview unavailable' })
 
+    const preview = Buffer.from(await cdnRes.arrayBuffer())
     res.status(200)
     res.setHeader('Content-Type', 'audio/mp4')
+    res.setHeader('Content-Length', String(preview.length))
+    res.setHeader('Accept-Ranges', 'none')
     res.setHeader('Cache-Control', 'no-store')
-    Readable.fromWeb(cdnRes.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res)
+    res.end(preview)
   } catch {
     return res.status(404).json({ error: 'Song not found' })
   }

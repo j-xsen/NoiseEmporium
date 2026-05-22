@@ -2127,6 +2127,12 @@
     z-index: 20;
   }
 
+  /* Fix background so it doesn't scroll with content */
+  .rps2-bg {
+    position: fixed;
+    inset: 0;
+  }
+
   .rps2-cover-col {
     flex-shrink: 0;
     padding: 12px 20px 8px;
@@ -2152,17 +2158,13 @@
     padding: 0 20px 4px;
   }
 
-  /* Sticky action bar: sticks below the safe area + back button */
+  /* Sticky action bar: sticks at the very top of the screen */
   .rps2-header-actions {
     position: sticky;
-    top: calc(var(--safe-top) + 52px);
+    top: var(--safe-top);
     z-index: 10;
-    background: rgba(4, 10, 24, 0.9);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
     padding: 10px 20px;
     margin-bottom: 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px;

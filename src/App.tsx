@@ -382,9 +382,16 @@ export default function App() {
     const resolved = await Promise.all(q.map(async s => {
       const localSrc = await dl.getLocalSrc(s.id)
       if (localSrc) return { ...s, src: localSrc }
-      // Append the auth token so the stream proxy can verify identity without headers.
       if (s.memberOnly && s.src.startsWith('/api/plays?stream=') && auth.token) {
-        return { ...s, src: `${s.src}&token=${auth.token}` }
+        const tokenUrl = `${s.src}&token=${auth.token}`
+        if (isPreview) {
+          // Pre-fetch preview bytes and create a local Blob URL so the browser's
+          // audio element never makes range requests against our non-seekable proxy.
+          const r = await fetch(tokenUrl)
+          if (r.ok) return { ...s, src: URL.createObjectURL(await r.blob()) }
+        }
+        // Append the auth token so the stream proxy can verify identity without headers.
+        return { ...s, src: tokenUrl }
       }
       return s
     }))

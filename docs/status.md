@@ -14,6 +14,7 @@
 | Collections | ✅ Working | Contentful `collection` content type; premium gate at collection level |
 | Lyrics page | ✅ Working | Per-song lyrics from Contentful; auto-plays on open; gated for memberOnly songs |
 | Premium access enforcement | ✅ Working | `handlePlay` filters memberOnly songs; UI shows lock icons |
+| Song preview (3 s) | ✅ Working | Non-premium users hear 3 s; play blocked after; blob URL revoked |
 | Offline downloads | ✅ Working | IndexedDB cache |
 | Cover art + gradient fallback | ✅ Working | |
 | Bottom navigation | ✅ Working | |
@@ -52,7 +53,7 @@ Items are ordered so each one unblocks or sets up the next.
 ### Part 2 — Artist Platform
 
 - [ ] **8. Open registration** — remove the single-user gate.
-- [ ] **9. Preview enforcement** — 30-second preview for free users on memberOnly songs instead of hard block (current behavior is full lock).
+- [x] **9. Preview enforcement** — branch `song-preview`; fully working. See technical.md for implementation details.
 - [ ] **10. Membership UI** — tier shown in `AccountModal.tsx`; upgrade CTA surfaces the Shop. ✅ Basic version done.
 - [x] **11. Stripe Subscriptions** — Checkout + webhook implemented; one tier ($5/mo) active. $10/$15 tiers commented out in `shopData.ts` — too much friction for now.
 - [ ] **12. Link songs to artist records** — `artists` table and `song_artist_map` in the DB.
@@ -79,5 +80,13 @@ Items are ordered so each one unblocks or sets up the next.
 - **`noise.jaxsenville.com` vs `emporium.jaxsenville.com`** — either works; subdomains are free on Porkbun
 - **`@neondatabase/serverless` vs raw `pg`** — current Neon client is fine; no reason to change
 - **Contentful vs self-hosted audio** — Contentful CDN is fast and free at current scale; revisit if catalog grows significantly
-- **Server-side audio gating** — current `memberOnly` enforcement is client-side only (Contentful CDN URLs are public). A server-side audio proxy would provide hard enforcement but adds infrastructure complexity. Deferred until premium membership is live and worth protecting.
+- **Server-side audio gating** — implemented in `api/plays/index.ts` on the `song-preview` branch. JWT verified via query param (since `<audio src>` can't send headers); non-members get a 3-second preview blob instead of a 302 redirect to the CDN URL. Still a bug to fix before merging (see song preview note below).
 - **Home screen architecture at scale** — currently shows all releases flat. When multiple artists join, artist pages become the primary navigation layer and the home screen should only show pinned/curated content. Collections and featured playlists are already designed for this model; the missing piece is artist pages (N6 above).
+
+---
+
+## Song Preview Feature
+
+Non-premium users can click any `memberOnly` track to hear a 3-second preview. After 3 seconds the audio stops, the progress bar shows 100%, and the play button is disabled. The preview Blob URL is revoked immediately so the raw audio bytes are no longer accessible. See `docs/technical.md` → **Song Preview System** for full implementation details.
+
+**File format requirement:** Songs must be uploaded as M4A to Contentful. MP3 files will return a 502 preview error. Run them through the conversion pipeline first.

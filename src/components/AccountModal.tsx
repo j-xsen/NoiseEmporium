@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { XIcon, StarIcon, CheckIcon } from './Icons'
+import { api } from '../lib/api'
 import type { AuthUser } from '../hooks/useAuth'
 
 interface AccountModalProps {
@@ -33,13 +34,7 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
     if (newPassword.length < 8) { setPwError('New password must be at least 8 characters'); return }
     setPwLoading(true); setPwError(null)
     try {
-      const r = await fetch('/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Failed to change password')
+      await api.post('/api/account', { currentPassword, newPassword }, token)
       setPwSuccess(true)
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
     } catch (err) {
@@ -52,13 +47,7 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
   async function handleDeleteAccount() {
     setDeleteLoading(true); setDeleteError(null)
     try {
-      const r = await fetch('/api/account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: deletePassword }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Failed to delete account')
+      await api.delete('/api/account', { password: deletePassword }, token)
       onLogout()
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Unknown error')

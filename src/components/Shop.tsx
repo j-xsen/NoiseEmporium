@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { StarIcon, CheckIcon, PlayIcon, PauseIcon } from './Icons'
 import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct, type InstrumentalLicenseType } from '../shopData'
 import { formatPrice } from '../utils/format'
+import { api } from '../lib/api'
 import type { Song } from '../types'
 
 interface ShopProps {
@@ -45,11 +46,8 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
       window.history.replaceState({}, '', window.location.pathname)
       const sessionId = params.get('session_id')
       if (sessionId && token) {
-        fetch('/api/stripe/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ action: 'fulfill', sessionId }),
-        }).finally(() => onUpgradeSuccess())
+        api.post('/api/stripe/checkout', { action: 'fulfill', sessionId }, token)
+          .finally(() => onUpgradeSuccess())
       } else {
         onUpgradeSuccess()
       }
@@ -63,18 +61,12 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
     if (!token || !product.priceId) return
     setLoading(product.id)
     try {
-      const r = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          priceId: product.priceId,
-          mode: product.mode,
-          ...(product.contentfulId && { contentfulId: product.contentfulId }),
-        }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Checkout failed')
-      window.location.href = data.url
+      const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
+        priceId: product.priceId,
+        mode: product.mode,
+        ...(product.contentfulId ? { contentfulId: product.contentfulId } : {}),
+      }, token)
+      window.location.href = url
     } catch (err) {
       console.error(err)
       alert('Something went wrong. Please try again.')
@@ -88,20 +80,14 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
     setLoading(`license-${song.id}`)
     const tier = INSTRUMENTAL_LICENSE[licenseType]
     try {
-      const r = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          priceId: tier.priceId,
-          mode: 'payment',
-          songId: song.id,
-          songTitle: song.title,
-          licenseType,
-        }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Checkout failed')
-      window.location.href = data.url
+      const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
+        priceId: tier.priceId,
+        mode: 'payment',
+        songId: song.id,
+        songTitle: song.title,
+        licenseType,
+      }, token)
+      window.location.href = url
     } catch (err) {
       console.error(err)
       alert('Something went wrong. Please try again.')

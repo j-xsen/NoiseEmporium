@@ -317,16 +317,20 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
     hasFullAccess = hasPurchase
   }
 
+  // Typed shape of the Contentful song entry fields we need.
+  interface CfAudioSongFields {
+    file?: { fields?: { file?: { url?: string; details?: { size?: number } } } }
+  }
+
   try {
     const client = createClient({
       space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
       accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entry = await client.getEntry<any>(songId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fileField = (entry.fields.file as any)?.fields?.file
-    const raw = fileField?.url as string | undefined
+    const entry = await client.getEntry(songId)
+    const fields = entry.fields as unknown as CfAudioSongFields
+    const fileField = fields.file?.fields?.file
+    const raw = fileField?.url
     if (!raw) return res.status(404).json({ error: 'Audio not found' })
     const audioUrl = raw.startsWith('//') ? 'https:' + raw : raw
 
@@ -335,7 +339,7 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
       return res.redirect(302, audioUrl)
     }
 
-    const fileSize = fileField?.details?.size as number | undefined
+    const fileSize = fileField?.details?.size
     if (!fileSize) return res.status(403).json({ error: 'Premium membership required' })
 
     const preview = await buildPreview(audioUrl, fileSize)

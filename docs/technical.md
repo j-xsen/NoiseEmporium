@@ -27,6 +27,16 @@ src/hooks/
   useAudio.ts              HTML5 audio, queue, playback state, volume
   useDownloads.ts          IndexedDB cache for offline songs
   usePurchases.ts          Fetches purchased release IDs from /api/downloads?purchases on login; exposes hasPurchased(contentfulId)
+
+src/lib/
+  api.ts                   Centralized fetch wrapper — auth header injection, JSON parsing, error normalization.
+                           All API calls go through api.get / api.post / api.delete / api.patch.
+                           Server error messages ({ error: string }) are thrown as Error instances.
+  contentful.ts            Contentful CMS client; typed field interfaces for releases, collections, songs.
+
+src/components/
+  SongActionsSheet.tsx     Bottom sheet for per-song actions (download, playlist add/remove, lyrics).
+                           Extracted from App.tsx to keep the root component focused on wiring.
 ```
 
 `App.tsx` wires these hooks together and passes state down to components. No prop drilling — hooks are called at the top level and relevant slices are passed to child components.

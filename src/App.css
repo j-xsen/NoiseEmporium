@@ -1529,6 +1529,12 @@
   margin-bottom: 16px;
 }
 
+.rps2-inline-play {
+  display: flex;
+  align-items: center;
+  order: 0;
+}
+
 .rps2-transient-actions {
   display: flex;
   align-items: center;
@@ -1537,18 +1543,17 @@
   order: 1;
 }
 
+/* Fixed overlay — hidden on desktop, shown on mobile via media query */
 .rps2-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  order: 0; /* play button first */
+  display: none;
 }
 
 .rps2-sticky-name {
   display: none;
 }
 
-.rps2-header-actions .release-hero__play {
+.rps2-header-actions .release-hero__play,
+.rps2-inline-play .release-hero__play {
   margin-top: 0;
 }
 
@@ -2178,48 +2183,59 @@
   }
 
   .rps2-actions-wrapper {
-    display: contents; /* remove from layout so sticky child sticks within rps2-info-col */
-  }
-
-  .rps2-transient-actions {
-    order: 0;
-  }
-
-  .rps2-header-actions {
-    order: 0;
+    display: contents;
   }
 
   /* Transient actions: scroll with page, fade away when user scrolls */
   .rps2-transient-actions {
+    order: 0;
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px;
     padding: 0 20px 10px;
-    transition: opacity 0.25s ease, transform 0.2s ease;
+    transition: opacity 0.3s ease;
   }
 
   .rps2-transient-actions--hidden {
     opacity: 0;
-    transform: translateY(-6px);
     pointer-events: none;
   }
 
-  /* Sticky bar: centered play button before scroll; name + right play button after */
-  .rps2-header-actions {
-    position: sticky;
-    top: var(--safe-top);
-    z-index: 10;
+  /* In-flow play button: centered, fades out when scrolled */
+  .rps2-inline-play {
     display: flex;
     justify-content: center;
+    margin-bottom: 16px;
+    transition: opacity 0.3s ease;
+  }
+
+  .rps2-inline-play--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Fixed overlay bar: always rendered, crossfades in when scrolled */
+  .rps2-header-actions {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
+    position: fixed;
+    top: env(safe-area-inset-top, 0px);
+    left: 0;
+    right: 0;
+    z-index: 20;
     padding: 8px 16px;
-    margin-bottom: 4px;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
   }
 
   .rps2-header-actions--scrolled {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
   }
 
   .rps2-sticky-name {
@@ -2233,14 +2249,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 55vw;
-    display: none;
   }
 
-  .rps2-header-actions--scrolled .rps2-sticky-name {
-    display: block;
-  }
-
-  .rps2-header-actions--scrolled .release-hero__play {
+  .rps2-header-actions .release-hero__play {
     grid-column: 3;
     justify-self: end;
   }
@@ -2633,6 +2644,19 @@
   top: calc(var(--safe-top) + 8px);
   right: 14px;
   z-index: 20;
+}
+
+.account-btn-overlay .account-trigger {
+  background: rgba(5, 12, 28, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.account-btn-overlay .signout-email {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ── BubbleWorld loading overlay ─────────────────────────────────────────────── */

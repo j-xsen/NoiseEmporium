@@ -106,43 +106,57 @@ export default function ReleaseDetail({
           </p>
         </div>
         {!locked && (
-          <div className="rps2-actions-wrapper">
-            <div ref={transientRef} className={`rps2-transient-actions${isScrolled ? ' rps2-transient-actions--hidden' : ''}`}>
+          <>
+            <div className="rps2-actions-wrapper">
+              <div ref={transientRef} className={`rps2-transient-actions${isScrolled ? ' rps2-transient-actions--hidden' : ''}`}>
+                {playableSongs.length > 0 && (
+                  <button
+                    className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
+                    onClick={handleDownloadAll}
+                    disabled={anyDownloading}
+                    aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
+                  >
+                    {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
+                    <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
+                  </button>
+                )}
+                {hasPurchasedRelease && (
+                  <button
+                    className="release-hero__wav-dl"
+                    onClick={() => onDownloadWav(release.id)}
+                    aria-label="Download WAV ZIP"
+                  >
+                    <DownloadIcon size={16} />
+                    <span>Download WAV</span>
+                  </button>
+                )}
+                {!hasPurchasedRelease && release.downloadFile && (
+                  <button
+                    className="release-hero__buy"
+                    onClick={() => onBuyRelease(release.id)}
+                    aria-label="Buy permanent download"
+                  >
+                    {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
+                    <span>Buy {formatPrice(discountedPrice)}</span>
+                  </button>
+                )}
+              </div>
               {playableSongs.length > 0 && (
-                <button
-                  className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
-                  onClick={handleDownloadAll}
-                  disabled={anyDownloading}
-                  aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
-                >
-                  {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
-                  <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
-                </button>
-              )}
-              {hasPurchasedRelease && (
-                <button
-                  className="release-hero__wav-dl"
-                  onClick={() => onDownloadWav(release.id)}
-                  aria-label="Download WAV ZIP"
-                >
-                  <DownloadIcon size={16} />
-                  <span>Download WAV</span>
-                </button>
-              )}
-              {!hasPurchasedRelease && release.downloadFile && (
-                <button
-                  className="release-hero__buy"
-                  onClick={() => onBuyRelease(release.id)}
-                  aria-label="Buy permanent download"
-                >
-                  {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
-                  <span>Buy {formatPrice(discountedPrice)}</span>
-                </button>
+                <div className={`rps2-inline-play${isScrolled ? ' rps2-inline-play--hidden' : ''}`}>
+                  <button
+                    className="release-hero__play"
+                    onClick={() => onPlay(playableSongs[0], playableSongs)}
+                    aria-label="Play all"
+                  >
+                    <PlayIcon size={20} />
+                    <span>Play</span>
+                  </button>
+                </div>
               )}
             </div>
-            <div className={`rps2-header-actions${isScrolled ? ' rps2-header-actions--scrolled' : ''}`}>
-              <span className="rps2-sticky-name">{release.name}</span>
-              {playableSongs.length > 0 && (
+            {playableSongs.length > 0 && (
+              <div className={`rps2-header-actions${isScrolled ? ' rps2-header-actions--scrolled' : ''}`}>
+                <span className="rps2-sticky-name">{release.name}</span>
                 <button
                   className="release-hero__play"
                   onClick={() => onPlay(playableSongs[0], playableSongs)}
@@ -151,9 +165,9 @@ export default function ReleaseDetail({
                   <PlayIcon size={20} />
                   <span>Play</span>
                 </button>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
+          </>
         )}
 
         <div className="rps2-tracks-scroll">

@@ -516,7 +516,7 @@ return (
           </div>
         )}
 
-        {tab === 'home' && !lyricsSong && !(viewMode === '2d' && location.pathname === '/') && auth.user && (
+        {tab === 'home' && !lyricsSong && location.pathname === '/' && viewMode === '3d' && auth.user && (
           <div className="account-btn-overlay">
             <AccountButton email={auth.user.email} onClick={handleOpenAccount} />
           </div>

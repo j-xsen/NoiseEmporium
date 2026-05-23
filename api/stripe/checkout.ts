@@ -23,6 +23,7 @@ import Stripe from 'stripe'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { DEFAULT_RELEASE_PRICES } from '../_prices.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -33,12 +34,13 @@ const ALLOWED_PRICE_IDS = new Set(
   (process.env.STRIPE_ALLOWED_PRICE_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
 )
 
-// Default prices in cents when not set on the Contentful release entry.
-const DEFAULT_PRICE: Record<string, { full: number; member: number }> = {
-  single:     { full: 200,  member: 100 },
-  album:      { full: 700,  member: 500 },
-  ep:         { full: 700,  member: 500 },
-  collection: { full: 700,  member: 500 },
+// Typed shape of the Contentful entry fields we access during checkout.
+interface CfPurchasableFields {
+  downloadUrl?: string
+  name?: string
+  title?: string
+  releaseType?: string
+  memberPrice?: number
 }
 
 function appOrigin(req: VercelRequest): string {
@@ -64,16 +66,14 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
       space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
       accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entry = await cf.getEntry<any>(contentfulId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fields = entry.fields as any
-    if (!fields?.downloadUrl) return res.status(400).json({ error: 'Release not available for purchase' })
-    const releaseName: string = (fields.name as string | undefined) ?? (fields.title as string | undefined) ?? 'Music Download'
-    const releaseType: string = ((fields.releaseType as string | undefined) ?? 'album').toLowerCase()
-    const defaults = DEFAULT_PRICE[releaseType] ?? DEFAULT_PRICE.album
+    const entry = await cf.getEntry(contentfulId)
+    const fields = entry.fields as unknown as CfPurchasableFields
+    if (!fields.downloadUrl) return res.status(400).json({ error: 'Release not available for purchase' })
+    const releaseName = fields.name ?? fields.title ?? 'Music Download'
+    const releaseType = (fields.releaseType ?? 'album').toLowerCase()
+    const defaults = DEFAULT_RELEASE_PRICES[releaseType] ?? DEFAULT_RELEASE_PRICES.album
     // All authenticated users get the member (discounted) price for release downloads.
-    const priceCents = (fields.memberPrice as number | undefined) ?? defaults.member
+    const priceCents = fields.memberPrice ?? defaults.member
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

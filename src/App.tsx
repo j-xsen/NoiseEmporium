@@ -37,7 +37,8 @@ import BottomNav from './components/BottomNav'
 import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
 import AccountButton from './components/AccountButton'
-import { ChevronLeftIcon, DownloadIcon, MinusCircleIcon, PlusIcon, XIcon } from './components/Icons'
+import SongActionsSheet from './components/SongActionsSheet'
+import { api } from './lib/api'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release } from './types'
 
@@ -58,137 +59,6 @@ function ErrorScreen({ message }: { message: string | null }) {
       <div className="empty-icon" style={{ fontSize: 40 }}>⚠</div>
       <p className="empty-title">Couldn't load songs</p>
       <p className="empty-hint">{message ?? 'Check your Contentful credentials'}</p>
-    </div>
-  )
-}
-
-// ── Song actions bottom sheet ─────────────────────────────────────────────────
-
-interface SongActionsSheetProps {
-  songTitle: string
-  playlists: Playlist[]
-  fromPlaylist: Playlist | null
-  dlStatus: DlStatus
-  onAdd: (playlistId: string) => Promise<void>
-  onCreate: (name: string) => Promise<void>
-  onRemove: (() => Promise<void>) | null
-  onDownload: () => void
-  onRemoveDownload: () => void
-  onViewLyrics?: () => void
-  onClose: () => void
-}
-
-function SongActionsSheet({ songTitle, playlists, fromPlaylist, dlStatus, onAdd, onCreate, onRemove, onDownload, onRemoveDownload, onViewLyrics, onClose }: SongActionsSheetProps) {
-  const [view, setView] = useState<'main' | 'playlists'>('main')
-  const [creating, setCreating] = useState(false)
-  const [name, setName] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  async function handleCreate() {
-    if (!name.trim() || submitting) return
-    setSubmitting(true)
-    await onCreate(name.trim())
-    setName('')
-    setCreating(false)
-    setSubmitting(false)
-  }
-
-  const addablePlaylists = fromPlaylist
-    ? playlists.filter(p => p.id !== fromPlaylist.id)
-    : playlists
-
-  return (
-    <div className="sheet-overlay" onClick={onClose}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div className="sheet-header">
-          {view === 'playlists' && (
-            <button className="sheet-back" onClick={() => { setView('main'); setCreating(false); setName('') }} aria-label="Back">
-              <ChevronLeftIcon size={18} />
-            </button>
-          )}
-          <h3 className="sheet-title">{view === 'main' ? songTitle : 'Add to playlist'}</h3>
-          <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
-        </div>
-        <div className="sheet-body">
-          {view === 'main' ? (
-            <>
-              {onViewLyrics && (
-                <button className="sheet-new" onClick={() => { onViewLyrics(); onClose() }}>
-                  <span>Lyrics</span>
-                </button>
-              )}
-              {dlStatus === 'done' ? (
-                <button className="sheet-remove" onClick={() => { onRemoveDownload(); onClose() }}>
-                  <XIcon size={16} />
-                  <span>Remove Download</span>
-                </button>
-              ) : (
-                <button
-                  className="sheet-new"
-                  onClick={() => { onDownload(); onClose() }}
-                  disabled={dlStatus === 'downloading'}
-                >
-                  <DownloadIcon size={16} />
-                  <span>{dlStatus === 'downloading' ? 'Downloading…' : 'Download'}</span>
-                </button>
-              )}
-              {onRemove && (
-                <button
-                  className="sheet-remove"
-                  onClick={async () => { await onRemove(); onClose() }}
-                >
-                  <MinusCircleIcon size={16} />
-                  <span>Remove from {fromPlaylist?.name ?? 'playlist'}</span>
-                </button>
-              )}
-              <button className="sheet-new" onClick={() => setView('playlists')}>
-                <PlusIcon size={16} />
-                <span>Add to playlist</span>
-              </button>
-            </>
-          ) : (
-            <>
-              {addablePlaylists.length > 0 && (
-                <ul className="sheet-list">
-                  {addablePlaylists.map(p => (
-                    <li key={p.id}>
-                      <button className="sheet-item" onClick={() => { onAdd(p.id); onClose() }}>
-                        <span className="sheet-item__name">{p.name}</span>
-                        <span className="sheet-item__count">{p.songIds.length}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {creating ? (
-                <div className="sheet-create">
-                  <input
-                    autoFocus
-                    className="sheet-input"
-                    placeholder="Playlist name…"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleCreate()
-                      if (e.key === 'Escape') { setCreating(false); setName('') }
-                    }}
-                  />
-                  <div className="sheet-create__btns">
-                    <button className="btn-ghost" onClick={() => { setCreating(false); setName('') }}>Cancel</button>
-                    <button className="btn-accent" onClick={handleCreate} disabled={!name.trim() || submitting}>Create</button>
-                  </div>
-                </div>
-              ) : (
-                <button className="sheet-new" onClick={() => setCreating(true)}>
-                  <PlusIcon size={16} />
-                  <span>New playlist</span>
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
@@ -317,11 +187,7 @@ export default function App() {
 
   const recordPlay = useCallback((songId: string) => {
     if (!auth.token) return
-    fetch('/api/plays', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-      body: JSON.stringify({ songId }),
-    }).catch(console.error)
+    api.post('/api/plays', { songId }, auth.token).catch(console.error)
   }, [auth.token])
 
   const player = useAudio(recordPlay)
@@ -412,7 +278,7 @@ export default function App() {
     if (r) navigate(`/${r.releaseType}/${r.slug}`)
   }, [releases, navigate])
 
-const handleSelectFeaturedPlaylist = useCallback((id: string) => {
+  const handleSelectFeaturedPlaylist = useCallback((id: string) => {
     navigate(`/playlist/${id}`)
   }, [navigate])
 
@@ -423,13 +289,8 @@ const handleSelectFeaturedPlaylist = useCallback((id: string) => {
   const handleBuyRelease = useCallback(async (contentfulId: string) => {
     if (!auth.token) return
     try {
-      const r = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-        body: JSON.stringify({ mode: 'payment', contentfulId }),
-      })
-      const data = await r.json()
-      if (data.url) window.location.href = data.url
+      const { url } = await api.post<{ url: string }>('/api/stripe/checkout', { mode: 'payment', contentfulId }, auth.token)
+      if (url) window.location.href = url
     } catch (err) {
       console.error('Buy release failed:', err)
     }
@@ -438,11 +299,7 @@ const handleSelectFeaturedPlaylist = useCallback((id: string) => {
   const handleDownloadWav = useCallback(async (contentfulId: string) => {
     if (!auth.token) return
     try {
-      const r = await fetch(`/api/downloads?release=${encodeURIComponent(contentfulId)}`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      })
-      if (!r.ok) return
-      const { url } = await r.json()
+      const { url } = await api.get<{ url: string }>(`/api/downloads?release=${encodeURIComponent(contentfulId)}`, auth.token)
       if (url) window.location.href = url
     } catch (err) {
       console.error('WAV download failed:', err)

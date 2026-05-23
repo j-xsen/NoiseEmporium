@@ -27,13 +27,15 @@ Use docs to form a hypothesis, then verify in code. Never skip straight to grep/
 
 ```
 src/                   React frontend (Vite + TypeScript + Tailwind v4)
-  components/          UI components
+  components/          UI components (including SongActionsSheet for per-song actions)
   hooks/               Domain hooks (auth, songs, playlists, audio, downloads)
+  lib/api.ts           Typed fetch wrapper — use for all API calls (auth headers, error handling)
   lib/contentful.ts    Contentful CMS client (music source of truth)
   types.ts             Shared TypeScript interfaces
 api/                   Serverless-style API handlers (Vercel Functions)
   _auth.ts             JWT utilities
   _db.ts               Database client
+  _prices.ts           Release price defaults (server-side; keep in sync with src/utils/format.ts)
   auth/                register, login, me
   playlists/           CRUD + song management
 server.ts              Local Express dev server (proxies api/ handlers)

@@ -45,19 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(403).json({ error: 'No purchase found' })
 
     // Fetch the downloadUrl from Contentful
+    interface CfDownloadFields { downloadUrl?: string }
     const client = createClient({
       space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
       accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entry = await client.getEntry<any>(contentfulId, { include: 1 })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fields = entry.fields as any
-    const url = fields?.downloadUrl as string | undefined
-    if (!url) return res.status(404).json({ error: 'No download file on this release' })
+    const entry = await client.getEntry(contentfulId, { include: 1 })
+    const { downloadUrl } = entry.fields as unknown as CfDownloadFields
+    if (!downloadUrl) return res.status(404).json({ error: 'No download file on this release' })
 
     // Generate a short-lived signed URL so the raw private Blob URL is never exposed to clients
-    const pathname = new URL(url).pathname.slice(1)
+    const pathname = new URL(downloadUrl).pathname.slice(1)
     const signedToken = await issueSignedToken({
       pathname,
       operations: ['get'],
@@ -66,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     const { presignedUrl } = await presignUrl(signedToken, { operation: 'get', pathname, access: 'private' })
     return res.json({ url: presignedUrl })
+
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })

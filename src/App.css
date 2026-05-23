@@ -2062,9 +2062,21 @@
   top: calc(var(--safe-top) + 12px);
   left: 12px;
   z-index: 10;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.rps2-back:active {
+  background: rgba(0, 0, 0, 0.85);
 }
 
 .rps2-cover-col {

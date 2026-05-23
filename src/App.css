@@ -2385,6 +2385,13 @@
   font-size: 14px;
   line-height: 1;
   color: var(--text-dim);
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.shop-section__chevron--open {
+  transform: rotate(90deg);
+  margin-left: 1px;
 }
 
 .shop-section__empty {

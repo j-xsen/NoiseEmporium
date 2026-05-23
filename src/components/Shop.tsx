@@ -176,7 +176,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('membership')}>
                   Membership
-                  <span className="shop-section__chevron">{collapsed['membership'] ? '›' : '⌄'}</span>
+                  <span className={`shop-section__chevron${collapsed['membership'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
                 {!collapsed['membership'] && membershipProducts.map(product => {
                   const owned = isPremium
@@ -220,7 +220,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('cd')}>
                   CDs
-                  <span className="shop-section__chevron">{collapsed['cd'] ? '›' : '⌄'}</span>
+                  <span className={`shop-section__chevron${collapsed['cd'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
                 {!collapsed['cd'] && cdProducts.map(product => {
                   const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
@@ -252,7 +252,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('download')}>
                   Downloads
-                  <span className="shop-section__chevron">{collapsed['download'] ? '›' : '⌄'}</span>
+                  <span className={`shop-section__chevron${collapsed['download'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
                 {!collapsed['download'] && downloadProducts.map(product => {
                   const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
@@ -284,7 +284,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('license')}>
                   Licenses
-                  <span className="shop-section__chevron">{collapsed['license'] ? '›' : '⌄'}</span>
+                  <span className={`shop-section__chevron${collapsed['license'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
                 {!collapsed['license'] && (instrumentals.length === 0 ? (
                   <p className="shop-section__empty">No instrumental tracks available for licensing yet.</p>

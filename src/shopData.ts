@@ -44,7 +44,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   {
     id: 'membership-tier-1',
     category: 'membership',
-    name: 'Premium Membership',
+    name: 'Emporium Enthusiast',
     description: 'Full access to all member-only tracks, plus discounted prices on all downloads.',
     price: 500,
     priceId: 'price_1TWopFKHXukW25xlfG3qRJea',

@@ -1520,13 +1520,32 @@
 
 .release-hero__play:active { opacity: 0.8; }
 
-.rps2-header-actions {
+.rps2-actions-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.rps2-transient-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  order: 1;
+}
+
+.rps2-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  order: 0; /* play button first */
+}
+
+.rps2-sticky-name {
+  display: none;
 }
 
 .rps2-header-actions .release-hero__play {
@@ -2158,16 +2177,72 @@
     padding: 0 20px 4px;
   }
 
-  /* Sticky action bar: sticks at the very top of the screen */
+  .rps2-actions-wrapper {
+    display: contents; /* remove from layout so sticky child sticks within rps2-info-col */
+  }
+
+  .rps2-transient-actions {
+    order: 0;
+  }
+
+  .rps2-header-actions {
+    order: 0;
+  }
+
+  /* Transient actions: scroll with page, fade away when user scrolls */
+  .rps2-transient-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 20px 10px;
+    transition: opacity 0.25s ease, transform 0.2s ease;
+  }
+
+  .rps2-transient-actions--hidden {
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+  }
+
+  /* Sticky bar: centered play button before scroll; name + right play button after */
   .rps2-header-actions {
     position: sticky;
     top: var(--safe-top);
     z-index: 10;
-    padding: 10px 20px;
-    margin-bottom: 4px;
+    display: flex;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    padding: 8px 16px;
+    margin-bottom: 4px;
+  }
+
+  .rps2-header-actions--scrolled {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .rps2-sticky-name {
+    display: block;
+    grid-column: 2;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-bright);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 55vw;
+    display: none;
+  }
+
+  .rps2-header-actions--scrolled .rps2-sticky-name {
+    display: block;
+  }
+
+  .rps2-header-actions--scrolled .release-hero__play {
+    grid-column: 3;
+    justify-self: end;
   }
 
   .rps2-tracks-scroll {

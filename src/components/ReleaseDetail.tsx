@@ -2,6 +2,7 @@
 // Free users see public tracks normally and locked tracks greyed out with a lock icon.
 // Premium users see and can play everything.
 
+import { useState, useRef, useEffect } from 'react'
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
 import { formatPrice, releasePrice } from '../utils/format'
 import SongTrack from './SongTrack'
@@ -56,6 +57,21 @@ export default function ReleaseDetail({
   const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
   const anyDownloading = playableSongs.some(s => dlStatuses[s.id] === 'downloading')
 
+  const [isScrolled, setIsScrolled] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const transientRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    const el = transientRef.current
+    if (!container || !el) return
+    function check() {
+      setIsScrolled(el!.getBoundingClientRect().bottom <= 0)
+    }
+    container.addEventListener('scroll', check, { passive: true })
+    return () => container.removeEventListener('scroll', check)
+  }, [])
+
   function handleDownloadAll() {
     if (allDone) {
       playableSongs.forEach(s => onRemoveDownload(s.id))
@@ -65,7 +81,7 @@ export default function ReleaseDetail({
   }
 
   return (
-    <div className={`release-detail-ps2${release.cover ? '' : ' release-detail-ps2--no-cover'}`}>
+    <div ref={scrollContainerRef} className={`release-detail-ps2${release.cover ? '' : ' release-detail-ps2--no-cover'}`}>
       {release.cover && (
         <div className="rps2-bg" style={{ backgroundImage: `url(${release.cover})` }} />
       )}
@@ -90,17 +106,9 @@ export default function ReleaseDetail({
           </p>
         </div>
         {!locked && (
-          <div className="rps2-header-actions">
-            {playableSongs.length > 0 && (
-              <>
-                <button
-                  className="release-hero__play"
-                  onClick={() => onPlay(playableSongs[0], playableSongs)}
-                  aria-label="Play all"
-                >
-                  <PlayIcon size={20} />
-                  <span>Play</span>
-                </button>
+          <div className="rps2-actions-wrapper">
+            <div ref={transientRef} className={`rps2-transient-actions${isScrolled ? ' rps2-transient-actions--hidden' : ''}`}>
+              {playableSongs.length > 0 && (
                 <button
                   className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
                   onClick={handleDownloadAll}
@@ -110,28 +118,41 @@ export default function ReleaseDetail({
                   {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
                   <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
                 </button>
-              </>
-            )}
-            {hasPurchasedRelease && (
-              <button
-                className="release-hero__wav-dl"
-                onClick={() => onDownloadWav(release.id)}
-                aria-label="Download WAV ZIP"
-              >
-                <DownloadIcon size={16} />
-                <span>Download WAV</span>
-              </button>
-            )}
-            {!hasPurchasedRelease && release.downloadFile && (
-              <button
-                className="release-hero__buy"
-                onClick={() => onBuyRelease(release.id)}
-                aria-label="Buy permanent download"
-              >
-                {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
-                <span>Buy {formatPrice(discountedPrice)}</span>
-              </button>
-            )}
+              )}
+              {hasPurchasedRelease && (
+                <button
+                  className="release-hero__wav-dl"
+                  onClick={() => onDownloadWav(release.id)}
+                  aria-label="Download WAV ZIP"
+                >
+                  <DownloadIcon size={16} />
+                  <span>Download WAV</span>
+                </button>
+              )}
+              {!hasPurchasedRelease && release.downloadFile && (
+                <button
+                  className="release-hero__buy"
+                  onClick={() => onBuyRelease(release.id)}
+                  aria-label="Buy permanent download"
+                >
+                  {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
+                  <span>Buy {formatPrice(discountedPrice)}</span>
+                </button>
+              )}
+            </div>
+            <div className={`rps2-header-actions${isScrolled ? ' rps2-header-actions--scrolled' : ''}`}>
+              <span className="rps2-sticky-name">{release.name}</span>
+              {playableSongs.length > 0 && (
+                <button
+                  className="release-hero__play"
+                  onClick={() => onPlay(playableSongs[0], playableSongs)}
+                  aria-label="Play all"
+                >
+                  <PlayIcon size={20} />
+                  <span>Play</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 

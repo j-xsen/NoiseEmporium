@@ -10,3 +10,8 @@ export const DEFAULT_RELEASE_PRICES: Record<string, { full: number; member: numb
   ep:         { full: 700, member: 500 },
   collection: { full: 700, member: 500 },
 }
+
+export const INSTRUMENTAL_LICENSE_PRICES: Record<string, { full: number; member: number }> = {
+  personal:   { full: 500,  member: 250  },
+  commercial: { full: 5000, member: 2500 },
+}

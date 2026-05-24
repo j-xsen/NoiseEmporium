@@ -315,10 +315,14 @@ export default function App() {
     }
   }, [player.previewEnded])
 
-  // Handle Stripe checkout redirect: ?tab=shop → /shop
+  // Handle Stripe checkout redirect: ?tab=shop → /shop (preserve other params for fulfill)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('tab') === 'shop') navigate('/shop', { replace: true })
+    if (params.get('tab') === 'shop') {
+      params.delete('tab')
+      const qs = params.toString()
+      navigate(qs ? `/shop?${qs}` : '/shop', { replace: true })
+    }
   }, [])
 
   if (auth.loading) return <LoadingScreen />

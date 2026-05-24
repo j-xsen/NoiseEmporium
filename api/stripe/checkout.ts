@@ -23,7 +23,7 @@ import Stripe from 'stripe'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
-import { DEFAULT_RELEASE_PRICES } from '../_prices.js'
+import { DEFAULT_RELEASE_PRICES, INSTRUMENTAL_LICENSE_PRICES } from '../_prices.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -44,8 +44,10 @@ interface CfPurchasableFields {
 }
 
 function appOrigin(req: VercelRequest): string {
-  const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
+  if (process.env.APP_ORIGIN) return process.env.APP_ORIGIN
   const host  = req.headers.host ?? 'noise.jaxsenville.com'
+  const isLocal = host.startsWith('localhost') || host.startsWith('127.')
+  const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? (isLocal ? 'http' : 'https')
   return `${proto}://${host}`
 }
 
@@ -94,6 +96,38 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     return res.json({ url: session.url })
   }
 
+  // Instrumental license — compute price server-side; apply member discount if tier === 'premium'
+  if (mode === 'payment' && typeof songId === 'string' && songId) {
+    const prices = INSTRUMENTAL_LICENSE_PRICES[licenseType as string]
+    if (!prices) return res.status(400).json({ error: 'Invalid license type' })
+    const [user] = await sql`SELECT tier FROM users WHERE id = ${userId}`
+    const isPremium = user?.tier === 'premium'
+    const priceCents = isPremium ? prices.member : prices.full
+    const licenseLabel = licenseType === 'commercial' ? 'Commercial' : 'Personal'
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: priceCents,
+          product_data: { name: `${licenseLabel} Instrumental License — ${songTitle ?? songId}` },
+        },
+      }],
+      success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
+      client_reference_id: userId,
+      metadata: {
+        purchase_type: 'instrumental_license',
+        song_id: String(songId),
+        song_title: String(songTitle ?? ''),
+        license_type: String(licenseType ?? 'personal'),
+      },
+      ...(customerEmail && { customer_email: customerEmail }),
+    })
+    return res.json({ url: session.url })
+  }
+
   // Subscription (membership): validate priceId against allowlist
   if (!priceId) return res.status(400).json({ error: 'Missing priceId' })
   if (!ALLOWED_PRICE_IDS.has(priceId)) return res.status(400).json({ error: 'Invalid price' })
@@ -105,14 +139,6 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,
     ...(customerEmail && { customer_email: customerEmail }),
-    ...(songId && {
-      metadata: {
-        purchase_type: 'instrumental_license',
-        song_id: String(songId),
-        song_title: String(songTitle ?? ''),
-        license_type: String(licenseType ?? 'personal'),
-      },
-    }),
   })
   res.json({ url: session.url })
 }
@@ -121,17 +147,11 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
   const { sessionId } = req.body ?? {}
   if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' })
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ['line_items'],
-  })
+  const session = await stripe.checkout.sessions.retrieve(sessionId)
   if (session.status !== 'complete') return res.status(400).json({ error: 'Session not complete' })
   if (session.client_reference_id !== userId) return res.status(403).json({ error: 'Session mismatch' })
 
   if (session.mode === 'subscription') {
-    const purchasedPriceId = session.line_items?.data[0]?.price?.id
-    if (!purchasedPriceId || !ALLOWED_PRICE_IDS.has(purchasedPriceId)) {
-      return res.status(400).json({ error: 'Invalid purchase' })
-    }
     const stripeCustomerId = typeof session.customer === 'string' ? session.customer : null
     await sql`
       UPDATE users

@@ -78,10 +78,8 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   async function handleLicense(song: Song) {
     if (!token) return
     setLoading(`license-${song.id}`)
-    const tier = INSTRUMENTAL_LICENSE[licenseType]
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
-        priceId: tier.priceId,
         mode: 'payment',
         songId: song.id,
         songTitle: song.title,
@@ -122,20 +120,6 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
           <h1 className="screen-title">Shop</h1>
         </div>
       </div>
-
-      {checkoutStatus === 'success' && (
-        <div className="shop-banner shop-banner--success">
-          <CheckIcon size={16} />
-          <span>Purchase complete — thank you!</span>
-          <button className="shop-banner__close" onClick={() => setCheckoutStatus(null)}>✕</button>
-        </div>
-      )}
-      {checkoutStatus === 'cancelled' && (
-        <div className="shop-banner shop-banner--cancelled">
-          <span>Checkout cancelled.</span>
-          <button className="shop-banner__close" onClick={() => setCheckoutStatus(null)}>✕</button>
-        </div>
-      )}
 
       <div className="shop-filters">
         {FILTER_LABELS.map(({ id, label }) => (
@@ -326,7 +310,17 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                       </div>
                     </div>
                     <div className="shop-row__right">
-                      <span className="shop-row__price">{formatPrice(INSTRUMENTAL_LICENSE[licenseType].priceCents)}</span>
+                      <span className="shop-row__price">
+                        {isPremium && (
+                          <span className="shop-row__price--original">
+                            {formatPrice(INSTRUMENTAL_LICENSE[licenseType].priceCents)}
+                          </span>
+                        )}
+                        {formatPrice(isPremium
+                          ? Math.floor(INSTRUMENTAL_LICENSE[licenseType].priceCents / 2)
+                          : INSTRUMENTAL_LICENSE[licenseType].priceCents
+                        )}
+                      </span>
                       {(() => {
                         const selected = instrumentals.find(s => s.id === selectedInstrumentalId)
                         const isLoading = !!selected && loading === `license-${selected.id}`
@@ -354,6 +348,19 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
           </div>
         )}
       </div>
+      {checkoutStatus === 'success' && (
+        <div className="shop-toast shop-toast--success">
+          <CheckIcon size={14} />
+          <span>Purchase complete — thank you!</span>
+          <button className="shop-toast__close" onClick={() => setCheckoutStatus(null)}>✕</button>
+        </div>
+      )}
+      {checkoutStatus === 'cancelled' && (
+        <div className="shop-toast shop-toast--cancelled">
+          <span>Checkout cancelled.</span>
+          <button className="shop-toast__close" onClick={() => setCheckoutStatus(null)}>✕</button>
+        </div>
+      )}
     </div>
   )
 }

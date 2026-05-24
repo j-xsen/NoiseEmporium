@@ -37,6 +37,7 @@ import BottomNav from './components/BottomNav'
 import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
 import AccountButton from './components/AccountButton'
+import PwaTipButton from './components/PwaTipButton'
 import SongActionsSheet from './components/SongActionsSheet'
 import OnboardingModal from './components/OnboardingModal'
 import { api } from './lib/api'
@@ -389,6 +390,7 @@ return (
         {tab === 'home' && !lyricsSong && location.pathname === '/' && viewMode === '3d' && auth.user && (
           <div className="account-btn-overlay">
             <AccountButton email={auth.user.email} onClick={handleOpenAccount} />
+            <PwaTipButton />
           </div>
         )}
 

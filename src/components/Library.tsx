@@ -6,6 +6,7 @@
 import { memo, useEffect, useState } from 'react'
 import CoverArt from './CoverArt'
 import AccountButton from './AccountButton'
+import PwaTipButton from './PwaTipButton'
 import { ChevronDownIcon, LockIcon } from './Icons'
 import type { Playlist, Release, Song } from '../types'
 
@@ -60,7 +61,10 @@ function Library({
         <div className="screen-header__center">
           <h1 className="screen-title">Home</h1>
         </div>
-        <AccountButton email={userEmail} onClick={onOpenAccount} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <AccountButton email={userEmail} onClick={onOpenAccount} />
+          <PwaTipButton />
+        </div>
       </div>
 
       <div className="scroll-area">

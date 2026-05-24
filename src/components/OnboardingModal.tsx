@@ -1,4 +1,3 @@
-import { useState } from 'react'
 
 function isIOSDevice(): boolean {
   return /iPhone|iPad/.test(navigator.userAgent)

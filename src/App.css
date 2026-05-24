@@ -2335,14 +2335,14 @@
 }
 
 .shop-toast--success {
-  background: var(--accent-dim);
-  border: 1px solid var(--accent-border);
+  background: #1a2e20;
+  border: 1px solid #253828;
   color: var(--accent);
 }
 
 .shop-toast--cancelled {
-  background: color-mix(in srgb, var(--danger) 14%, #111);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background: #1a2e20;
+  border: 1px solid #253828;
   color: var(--danger);
 }
 

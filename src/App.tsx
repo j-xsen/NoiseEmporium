@@ -38,6 +38,7 @@ import Shop from './components/Shop'
 import AccountModal from './components/AccountModal'
 import AccountButton from './components/AccountButton'
 import SongActionsSheet from './components/SongActionsSheet'
+import OnboardingModal from './components/OnboardingModal'
 import { api } from './lib/api'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release } from './types'
@@ -202,6 +203,14 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(() =>
     (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '2d'
   )
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem('noise-onboarding-v1') !== 'true'
+  )
+
+  const dismissOnboarding = useCallback(() => {
+    localStorage.setItem('noise-onboarding-v1', 'true')
+    setShowOnboarding(false)
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('noise-view-mode', viewMode)
@@ -519,6 +528,13 @@ return (
           onClose={() => setAccountModalOpen(false)}
           onLogout={() => { setAccountModalOpen(false); auth.logout() }}
           onGoToShop={() => { setAccountModalOpen(false); changeTab('shop') }}
+        />
+      )}
+
+      {showOnboarding && (
+        <OnboardingModal
+          onDismiss={dismissOnboarding}
+          onGoToShop={() => { dismissOnboarding(); changeTab('shop') }}
         />
       )}
 

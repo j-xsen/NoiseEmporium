@@ -80,7 +80,7 @@ Items are ordered so each one unblocks or sets up the next.
 - **`noise.jaxsenville.com` vs `emporium.jaxsenville.com`** — either works; subdomains are free on Porkbun
 - **`@neondatabase/serverless` vs raw `pg`** — current Neon client is fine; no reason to change
 - **Contentful vs self-hosted audio** — Contentful CDN is fast and free at current scale; revisit if catalog grows significantly
-- **Server-side audio gating** — implemented in `api/plays/index.ts` on the `song-preview` branch. JWT verified via query param (since `<audio src>` can't send headers); non-members get a 3-second preview blob instead of a 302 redirect to the CDN URL. Still a bug to fix before merging (see song preview note below).
+- **Server-side audio gating** — implemented in `api/plays/index.ts`. JWT verified via query param (since `<audio src>` can't send headers); non-members get a 3-second preview blob instead of a 302 redirect to the CDN URL.
 - **Home screen architecture at scale** — currently shows all releases flat. When multiple artists join, artist pages become the primary navigation layer and the home screen should only show pinned/curated content. Collections and featured playlists are already designed for this model; the missing piece is artist pages (N6 above).
 
 ---
@@ -90,3 +90,38 @@ Items are ordered so each one unblocks or sets up the next.
 Non-premium users can click any `memberOnly` track to hear a 3-second preview. After 3 seconds the audio stops, the progress bar shows 100%, and the play button is disabled. The preview Blob URL is revoked immediately so the raw audio bytes are no longer accessible. See `docs/technical.md` → **Song Preview System** for full implementation details.
 
 **File format requirement:** Songs must be uploaded as M4A to Contentful. MP3 files will return a 502 preview error. Run them through the conversion pipeline first.
+
+---
+
+## Known Issues & Technical Debt
+
+Findings from a full code-review and security audit (2026-05-24). Ordered by priority within each tier.
+
+### Security
+
+| Priority | Issue | Location |
+|----------|-------|----------|
+| High | No rate limiting on auth endpoints — login/register/stream proxy are open to brute force and credential stuffing | `api/auth/[action].ts`, `api/plays/index.ts` |
+| High | Minimum password length is 6 characters — below NIST recommendation of 12 | `api/auth/[action].ts:35`, `src/components/AuthScreen.tsx` |
+| High | Missing HTTP security headers on all API responses — no `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, or `Content-Security-Policy` | All `api/` handlers |
+| High | `appOrigin()` in Stripe checkout trusts `req.headers.host` and `x-forwarded-proto` — Host Header Injection possible in dev/staging (safe in production because `APP_ORIGIN` env var takes precedence) | `api/stripe/checkout.ts:46–52` |
+| Medium | JWT tokens stored in `localStorage` — any XSS on the page can steal them; HttpOnly cookies would prevent this | `src/hooks/useAuth.ts` |
+| Medium | No CSRF token on state-changing endpoints (playlist CRUD, account changes, checkout) — low risk while auth is Bearer-header-only, but worth addressing before adding cookie auth | `api/playlists/`, `api/account/`, `api/stripe/checkout.ts` |
+| Medium | Login error message distinguishes "user not found" from "wrong password" — enables user enumeration | `api/auth/[action].ts` |
+| Medium | Stripe webhook metadata (`contentful_id`, `amount_total`) is not re-validated against Contentful at fulfillment time — a delayed webhook with stale metadata could grant wrong access | `api/stripe/webhook.ts:56–69` |
+
+### Correctness / Bugs
+
+| Priority | Issue | Location |
+|----------|-------|----------|
+| High | Account deletion executes four sequential DELETEs without a transaction — a failure midway leaves the user row alive with playlists already gone | `api/account/index.ts` |
+| High | Stripe `checkout.session.completed` webhook updates `users.tier` without an idempotency guard — Stripe retries can apply the upgrade twice (harmless in practice, but the duplicate `orders` INSERT is guarded while the tier update is not) | `api/stripe/webhook.ts` |
+| Medium | `el.duration` can be `Infinity` on some streams; `isNaN(Infinity)` is `false`, so `setDuration(Infinity)` is called — breaks progress bar math | `src/hooks/useAudio.ts:110` |
+| Medium | Preview Blob URL is only revoked on `previewEnded`; if the user navigates away mid-preview the URL is never revoked — memory leak over many previews | `src/App.tsx` |
+| Medium | Contentful fetch is hard-capped at 200 entries per type with no pagination — a 201st release is silently dropped | `src/lib/contentful.ts:140–141` |
+| Medium | Contentful and stream proxy fetches have no timeout — a slow/unreachable Contentful hangs the app indefinitely with no error state | `src/lib/contentful.ts`, `api/plays/index.ts` |
+| Medium | `buildPreview` does not guard against `fileSize <= 0` — a 0-byte file produces a malformed `Range: bytes=0--1` request | `api/plays/index.ts` |
+| Low | `BLOB_READ_WRITE_TOKEN` unset → `issueSignedToken` receives an empty string with no error thrown | `api/downloads/index.ts` |
+| Low | Optimistic playlist mutations have no rollback on server error — local state diverges from DB if the request fails | `src/hooks/usePlaylists.ts` |
+| Low | `SongActionsSheet` create handler leaves `submitting = true` permanently if `onCreate()` throws | `src/components/SongActionsSheet.tsx:36–43` |
+| Low | Playlist name has no `maxLength` — database has a non-empty check but no upper bound; very long names pass through | `api/playlists/index.ts`, `api/playlists/[id].ts` |

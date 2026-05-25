@@ -5,7 +5,7 @@
 Users authenticate with email + password. JWT tokens are issued on login (30-day expiration).
 
 ### Current state
-- Registration and login endpoints exist (`api/auth/register.ts`, `api/auth/login.ts`, `api/auth/me.ts`)
+- Registration and login endpoints exist (consolidated in `api/auth/[action].ts` — branches on `req.query.action`; URLs `/api/auth/login`, `/api/auth/register`, `/api/auth/me` are unchanged)
 - Frontend auth screen exists (`src/components/AuthScreen.tsx`)
 - **Restriction:** Currently gated so only Jaxsen can log in (Phase 1 intent)
 
@@ -71,8 +71,7 @@ Each paid subscription month:
 - `AccountModal.tsx` — shows current tier; change password; delete account
 
 ### Not Yet Implemented
-- Preview enforcement in the player (truncate playback at ~30s for non-premium non-free-stream songs — current model locks entirely instead of previewing)
-- Auth gate on downloads (currently no check)
+- Auth gate on IndexedDB downloads (any logged-in user — free or premium — can cache audio offline; no tier check on the client-side download path)
 - Play-weighted revenue calculation
 - Artist payout system
 
@@ -216,9 +215,11 @@ All music metadata and audio files are stored in **Contentful CMS**. The databas
 **Song** (content type: `song`)
 - `pos` — Integer (sort order within release; ignored for collections)
 - `name` — Short text (display field)
-- `file` — Media (audio file)
+- `file` — Media (audio file — must be M4A; MP3 will break the preview system)
+- `duration` — Integer (seconds; set automatically by the NoiseConverter upload tab via ffprobe)
 - `memberOnly` — Boolean (if true, only premium members can stream or view lyrics)
 - `instrumental` — Boolean (if true, the track is available for individual licensing in the Shop)
+- `artist` — Short text (optional; overrides the release-level artist for this track)
 - `lyrics` — Long text (optional; line breaks preserved in the lyrics view)
 
 **Collection** (content type: `collection`) — see Collections section above; maps to `Release` with `releaseType: 'collection'`

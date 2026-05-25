@@ -103,6 +103,18 @@ function assetUrl(url: string | undefined): string | undefined {
   return url.startsWith('//') ? 'https:' + url : url
 }
 
+// Appends Contentful Image API transform params to a CDN URL.
+// Only applies to ctfassets.net URLs — passes other URLs through unchanged.
+export function contentfulImageUrl(
+  url: string | undefined,
+  width: number,
+  quality = 85,
+): string | undefined {
+  if (!url) return undefined
+  if (!url.includes('ctfassets.net')) return url
+  return `${url}?w=${width}&fm=webp&q=${quality}&fit=fill`
+}
+
 function mapTracks(
   rawTracks: CfSongEntry[],
   artist: string,

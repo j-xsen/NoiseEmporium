@@ -96,8 +96,8 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                         <button
                           className="playlist-row__action"
                           onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
-                          aria-label="Download WAV"
-                          title="Download WAV"
+                          aria-label="Download Files"
+                          title="Download Files"
                         >
                           ↓
                         </button>

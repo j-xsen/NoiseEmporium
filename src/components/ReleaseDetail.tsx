@@ -117,20 +117,20 @@ export default function ReleaseDetail({
                     className={`release-hero__dl-all${allDone ? ' release-hero__dl-all--done' : ''}`}
                     onClick={handleDownloadAll}
                     disabled={anyDownloading}
-                    aria-label={allDone ? 'Remove all downloads' : anyDownloading ? 'Downloading…' : 'Download all for offline'}
+                    aria-label={allDone ? 'Remove offline cache' : anyDownloading ? 'Saving offline…' : 'Save for offline playback'}
                   >
                     {anyDownloading ? <span className="dl-spinner" /> : allDone ? <CheckIcon size={16} /> : <DownloadIcon size={16} />}
-                    <span>{allDone ? 'Downloaded' : anyDownloading ? 'Downloading…' : 'Download All'}</span>
+                    <span>{allDone ? 'Saved Offline' : anyDownloading ? 'Saving…' : 'Save Offline'}</span>
                   </button>
                 )}
                 {hasPurchasedRelease && (
                   <button
                     className="release-hero__wav-dl"
                     onClick={() => onDownloadWav(release.id)}
-                    aria-label="Download WAV ZIP"
+                    aria-label="Download release files (best quality)"
                   >
                     <DownloadIcon size={16} />
-                    <span>Download WAV</span>
+                    <span>Download Files</span>
                   </button>
                 )}
                 {!hasPurchasedRelease && release.downloadFile && (

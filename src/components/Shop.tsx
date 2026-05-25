@@ -259,7 +259,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                             onClick={() => onDownloadWav(release.id)}
                             disabled={isLoading}
                           >
-                            {isLoading ? '…' : 'Download WAV'}
+                            {isLoading ? '…' : 'Download Files'}
                           </button>
                         ) : (
                           <button

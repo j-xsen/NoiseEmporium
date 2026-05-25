@@ -19,7 +19,7 @@
 | Cover art + gradient fallback | ✅ Working | |
 | Bottom navigation | ✅ Working | |
 | Sign out | ✅ Working | Available on Home screen header and Now Playing screen |
-| Shop UI | ✅ Working | `Shop.tsx` — filter by category, collapsible sections, Stripe Checkout for memberships and per-song instrumental licenses; CD/download listings ready to populate |
+| Shop UI | ✅ Working | `Shop.tsx` — filter by category, collapsible sections, Stripe Checkout for memberships, downloads, and per-song instrumental licenses; Downloads tab auto-populated from Contentful releases with `downloadUrl` set; CD listings ready to populate |
 | Stripe Checkout + webhook | ✅ Working | `api/stripe/checkout.ts` creates sessions + fulfills; `api/stripe/webhook.ts` upgrades `users.tier` on `checkout.session.completed` |
 | Account modal | ✅ Working | `AccountModal.tsx` — shows tier, change password, delete account |
 | 3D bubble world | ✅ Working | Two-row carousel (releases + collections); drag/swipe, arrow nav, auto-scroll to now-playing release, mobile + desktop layouts |

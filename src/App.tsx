@@ -508,6 +508,9 @@ return (
                 hasPurchased={purchases.hasPurchased}
                 onUpgradeSuccess={() => { auth.refreshUser(); purchases.refresh() }}
                 songs={songs}
+                releases={releases}
+                onBuyRelease={handleBuyRelease}
+                onDownloadWav={handleDownloadWav}
                 onPreview={handlePlay}
                 onPause={player.togglePlay}
                 currentSongId={player.currentSong?.id}

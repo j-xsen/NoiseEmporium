@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { StarIcon, CheckIcon, PlayIcon, PauseIcon } from './Icons'
 import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct, type InstrumentalLicenseType } from '../shopData'
-import { formatPrice } from '../utils/format'
+import { formatPrice, releasePrice } from '../utils/format'
 import { api } from '../lib/api'
-import type { Song } from '../types'
+import type { Song, Release } from '../types'
 
 interface ShopProps {
   isPremium: boolean
@@ -11,6 +11,9 @@ interface ShopProps {
   hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
   songs: Song[]
+  releases: Release[]
+  onBuyRelease: (contentfulId: string) => Promise<void> | void
+  onDownloadWav: (contentfulId: string) => Promise<void> | void
   onPreview?: (song: Song, queue: Song[]) => void
   onPause?: () => void
   currentSongId?: string
@@ -27,7 +30,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, releases, onBuyRelease, onDownloadWav, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -100,7 +103,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
   const membershipProducts = SHOP_PRODUCTS.filter(p => p.category === 'membership')
   const cdProducts = SHOP_PRODUCTS.filter(p => p.category === 'cd')
-  const downloadProducts = SHOP_PRODUCTS.filter(p => p.category === 'download')
+  const downloadableReleases = releases.filter(r => r.downloadFile)
 
   const showMembership = filter === 'all' || filter === 'membership'
   const showCd = filter === 'all' || filter === 'cd'
@@ -110,7 +113,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   const hasContent =
     (showMembership && membershipProducts.length > 0) ||
     (showCd && cdProducts.length > 0) ||
-    (showDownload && downloadProducts.length > 0) ||
+    (showDownload && downloadableReleases.length > 0) ||
     (showLicense && instrumentals.length > 0)
 
   return (
@@ -218,28 +221,42 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
               </section>
             )}
 
-            {showDownload && downloadProducts.length > 0 && (
+            {showDownload && downloadableReleases.length > 0 && (
               <section className="shop-section">
                 <button className="shop-section__title" onClick={() => toggleSection('download')}>
                   Downloads
                   <span className={`shop-section__chevron${collapsed['download'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
-                {!collapsed['download'] && downloadProducts.map(product => {
-                  const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
-                  const isLoading = loading === product.id
+                {!collapsed['download'] && downloadableReleases.map(release => {
+                  const owned = hasPurchased(release.id)
+                  const isLoading = loading === `download-${release.id}`
+                  const price = releasePrice(release, isPremium)
                   return (
-                    <div key={product.id} className="shop-row">
+                    <div key={release.id} className="shop-row">
                       <div className="shop-row__icon">⬇︎</div>
                       <div className="shop-row__info">
-                        <div className="shop-row__name">{product.name}</div>
-                        <div className="shop-row__desc">{product.description}</div>
+                        <div className="shop-row__name">{release.name}</div>
+                        <div className="shop-row__desc">{release.releaseType.charAt(0).toUpperCase() + release.releaseType.slice(1)}</div>
                       </div>
                       <div className="shop-row__right">
-                        <span className="shop-row__price">{product.price != null ? formatPrice(product.price) : '—'}</span>
+                        {!owned && <span className="shop-row__price">{formatPrice(price)}</span>}
                         {owned ? (
-                          <span className="shop-row__active"><CheckIcon size={12} />Owned</span>
+                          <button
+                            className="shop-row__btn"
+                            onClick={() => onDownloadWav(release.id)}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '…' : 'Download WAV'}
+                          </button>
                         ) : (
-                          <button className="shop-row__btn" onClick={() => handleBuy(product)} disabled={isLoading}>
+                          <button
+                            className="shop-row__btn"
+                            onClick={async () => {
+                              setLoading(`download-${release.id}`)
+                              try { await onBuyRelease(release.id) } finally { setLoading(null) }
+                            }}
+                            disabled={isLoading}
+                          >
                             {isLoading ? '…' : 'Buy'}
                           </button>
                         )}

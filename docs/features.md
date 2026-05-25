@@ -318,7 +318,7 @@ The server validates purchases against Contentful directly. A release is purchas
 1. Upload the WAV ZIP to Vercel Blob as a **private** blob (via Vercel dashboard or `npx vercel blob put`)
 2. Copy the resulting Blob URL into the `downloadUrl` field on the Contentful release entry
 3. Optionally set `price` / `memberPrice` fields on the entry to override default pricing
-4. That's it — the Buy button appears automatically on the release detail page when `downloadUrl` is set
+4. That's it — the release appears automatically in both the release detail page and the Shop's **Downloads** tab when `downloadUrl` is set
 
 ### Digital Downloads (name-your-price, not yet implemented)
 - Every release available as a free download
@@ -334,7 +334,7 @@ The server validates purchases against Contentful directly. A release is purchas
 ### Instrumental Licenses (implemented)
 Individual songs can be licensed directly from the Shop. Any song with `instrumental: true` in Contentful appears in the "Instrumental Licenses" section of the Shop.
 
-- **Flat rate:** $50/song, charged via a single shared Stripe Price ID (`INSTRUMENTAL_LICENSE.priceId` in `src/shopData.ts`)
+- **Flat rate:** $5/song (personal) or $50/song (commercial) — prices defined in `INSTRUMENTAL_LICENSE` in `src/shopData.ts` and enforced server-side via `api/_prices.ts`; no Stripe Price ID is required
 - **Per-song metadata:** Checkout session includes `purchase_type: 'instrumental_license'`, `song_id`, and `song_title` in Stripe metadata
 - Requires an account (auth required to initiate checkout)
 - The contact hint below the section prompts users who want a vocal or full-release license to email instead

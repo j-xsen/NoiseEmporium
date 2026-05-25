@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
 import { formatPrice, releasePrice } from '../utils/format'
+import { contentfulImageUrl } from '../lib/contentful'
 import SongTrack from './SongTrack'
 import type { DlStatus } from '../hooks/useDownloads'
 import type { Release, Song } from '../types'
@@ -56,6 +57,8 @@ export default function ReleaseDetail({
   })()
   const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
   const anyDownloading = playableSongs.some(s => dlStatuses[s.id] === 'downloading')
+  const coverHeroUrl = contentfulImageUrl(release.cover, 800)
+  const coverBgUrl = contentfulImageUrl(release.cover, 400, 60)
 
   const [isScrolled, setIsScrolled] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -83,7 +86,7 @@ export default function ReleaseDetail({
   return (
     <div ref={scrollContainerRef} className={`release-detail-ps2${release.cover ? '' : ' release-detail-ps2--no-cover'}`}>
       {release.cover && (
-        <div className="rps2-bg" style={{ backgroundImage: `url(${release.cover})` }} />
+        <div className="rps2-bg" style={{ backgroundImage: `url(${coverBgUrl})` }} />
       )}
       <button className="rps2-back" onClick={onBack} aria-label="Back">
         <ChevronLeftIcon size={22} />
@@ -91,7 +94,7 @@ export default function ReleaseDetail({
 
       {release.cover && (
         <div className="rps2-cover-col">
-          <img src={release.cover} alt={release.name} className="rps2-cover" />
+          <img src={coverHeroUrl} alt={release.name} className="rps2-cover" />
         </div>
       )}
 

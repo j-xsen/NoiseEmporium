@@ -2,6 +2,7 @@ import { memo, useRef, useState, Suspense, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, Billboard, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { contentfulImageUrl } from '../lib/contentful'
 
 // ── Soap-bubble shader ────────────────────────────────────────────────────────
 // Fresnel transparency: nearly invisible at center, iridescent at edges —
@@ -185,12 +186,22 @@ function BubbleShellWithArt({ radius, hovered, coverUrl, isMobile }: {
   isMobile?: boolean
 }) {
   const artTexture = useTexture(coverUrl)
+  if (artTexture.generateMipmaps) {
+    artTexture.generateMipmaps = false
+    artTexture.minFilter = THREE.LinearFilter
+    artTexture.needsUpdate = true
+  }
   return <BubbleShell radius={radius} hovered={hovered} artTexture={artTexture} isMobile={isMobile} />
 }
 
 // ── Art plane helpers ─────────────────────────────────────────────────────────
 function ArtPlane({ url, artSize }: { url: string; artSize: number }) {
   const texture = useTexture(url)
+  if (texture.generateMipmaps) {
+    texture.generateMipmaps = false
+    texture.minFilter = THREE.LinearFilter
+    texture.needsUpdate = true
+  }
   return (
     <mesh renderOrder={0}>
       <planeGeometry args={[artSize, artSize]} />
@@ -302,6 +313,7 @@ function ReleaseBubble({
     })
   })
 
+  const coverTexUrl = contentfulImageUrl(cover, 300)
   const artSize = radius * 1.1
   // Glare sprite covers ~40% of bubble diameter — soft, not sharp
   const glareScale = radius * 0.85
@@ -315,9 +327,9 @@ function ReleaseBubble({
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto' }}
     >
       {/* Art plane — only when there's a real cover; gradient bubbles have no inner plane */}
-      {cover && (
+      {coverTexUrl && (
         <Suspense fallback={<FallbackPlane artSize={artSize} />}>
-          <ArtPlane url={cover} artSize={artSize} />
+          <ArtPlane url={coverTexUrl} artSize={artSize} />
         </Suspense>
       )}
 
@@ -337,9 +349,9 @@ function ReleaseBubble({
           <meshBasicMaterial color="#a0ccf0" transparent opacity={0.05} side={THREE.BackSide} depthWrite={false} />
         </mesh>
         {/* Fresnel + iridescence shell; tinted by cover art or seeded gradient */}
-        {cover ? (
+        {coverTexUrl ? (
           <Suspense fallback={<BubbleShell radius={radius} hovered={hovered} isMobile={isMobile} />}>
-            <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={cover} isMobile={isMobile} />
+            <BubbleShellWithArt radius={radius} hovered={hovered} coverUrl={coverTexUrl} isMobile={isMobile} />
           </Suspense>
         ) : (
           <BubbleShell radius={radius} hovered={hovered} artTexture={gradientTexture ?? undefined} isMobile={isMobile} />

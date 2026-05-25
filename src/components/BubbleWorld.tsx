@@ -6,6 +6,7 @@ import { useDrag } from '@use-gesture/react'
 import ReleaseBubble from './ReleaseBubble'
 import type { Release } from '../types'
 import * as THREE from 'three'
+import { contentfulImageUrl } from '../lib/contentful'
 
 // Desktop layout: camera at z=26
 const COL_SPACING = 4.5
@@ -299,7 +300,10 @@ function ReadyProbe({ onReady }: { onReady: () => void }) {
 // Preloads every cover in a row into Three.js texture cache so Suspense boundaries
 // resolve immediately as the user scrolls to each bubble.
 function preloadRowCovers(items: Item[]) {
-  items.forEach(item => { if (item.cover) useTexture.preload(item.cover) })
+  items.forEach(item => {
+    const url = contentfulImageUrl(item.cover, 300)
+    if (url) useTexture.preload(url)
+  })
 }
 
 interface BubbleWorldProps {

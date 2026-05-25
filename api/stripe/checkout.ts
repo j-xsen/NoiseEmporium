@@ -24,6 +24,7 @@ import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
 import { DEFAULT_RELEASE_PRICES, INSTRUMENTAL_LICENSE_PRICES } from '../_prices.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -43,12 +44,19 @@ interface CfPurchasableFields {
   memberPrice?: number
 }
 
+const ALLOWED_HOSTS = ['noise.jaxsenville.com', 'emporium.jaxsenville.com']
+
 function appOrigin(req: VercelRequest): string {
   if (process.env.APP_ORIGIN) return process.env.APP_ORIGIN
-  const host  = req.headers.host ?? 'noise.jaxsenville.com'
-  const isLocal = host.startsWith('localhost') || host.startsWith('127.')
+  const raw = req.headers.host ?? ''
+  const hostname = raw.split(':')[0]
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+  if (!isLocal && !ALLOWED_HOSTS.includes(hostname)) {
+    // Reject unknown hosts to prevent Host Header Injection; fall back to primary domain.
+    return `https://${ALLOWED_HOSTS[0]}`
+  }
   const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? (isLocal ? 'http' : 'https')
-  return `${proto}://${host}`
+  return `${proto}://${raw}`
 }
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
@@ -174,6 +182,7 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   if (req.method !== 'POST') return res.status(405).end()
 
   const userId = requireAuth(req, res)

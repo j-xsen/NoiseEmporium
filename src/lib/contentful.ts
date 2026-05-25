@@ -135,11 +135,39 @@ function mapTracks(
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
+const CONTENTFUL_TIMEOUT_MS = 10_000
+const PAGE_LIMIT = 200
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAllEntries(contentType: string, query: Record<string, unknown>): Promise<any[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: any[] = []
+  let skip = 0
+  while (true) {
+    const res = await contentfulClient.getEntries({ content_type: contentType, ...query, limit: PAGE_LIMIT, skip })
+    items.push(...res.items)
+    if (items.length >= res.total || res.items.length < PAGE_LIMIT) break
+    skip += PAGE_LIMIT
+  }
+  return items
+}
+
 export async function fetchReleases(): Promise<Release[]> {
-  const [releaseRes, collectionRes] = await Promise.all([
-    contentfulClient.getEntries({ content_type: 'release', order: ['-fields.date'], include: 2, limit: 200 }),
-    contentfulClient.getEntries({ content_type: 'collection', order: ['fields.sortOrder', 'fields.title'], include: 2, limit: 200 }),
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Contentful request timed out')), CONTENTFUL_TIMEOUT_MS)
+  )
+
+  const [releaseItems, collectionItems] = await Promise.race([
+    Promise.all([
+      fetchAllEntries('release', { order: ['-fields.date'], include: 2 }),
+      fetchAllEntries('collection', { order: ['fields.sortOrder', 'fields.title'], include: 2 }),
+    ]),
+    timeout,
   ])
+
+  // Shim into the shape the rest of the function expects.
+  const releaseRes = { items: releaseItems }
+  const collectionRes = { items: collectionItems }
 
   const releases: Release[] = []
 

@@ -95,33 +95,33 @@ Non-premium users can click any `memberOnly` track to hear a 3-second preview. A
 
 ## Known Issues & Technical Debt
 
-Findings from a full code-review and security audit (2026-05-24). Ordered by priority within each tier.
+Findings from a full code-review and security audit (2026-05-24). All resolved 2026-05-24. Ordered by priority within each tier.
 
 ### Security
 
-| Priority | Issue | Location |
-|----------|-------|----------|
-| High | No rate limiting on auth endpoints — login/register/stream proxy are open to brute force and credential stuffing | `api/auth/[action].ts`, `api/plays/index.ts` |
-| High | Minimum password length is 6 characters — below NIST recommendation of 12 | `api/auth/[action].ts:35`, `src/components/AuthScreen.tsx` |
-| High | Missing HTTP security headers on all API responses — no `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, or `Content-Security-Policy` | All `api/` handlers |
-| High | `appOrigin()` in Stripe checkout trusts `req.headers.host` and `x-forwarded-proto` — Host Header Injection possible in dev/staging (safe in production because `APP_ORIGIN` env var takes precedence) | `api/stripe/checkout.ts:46–52` |
-| Medium | JWT tokens stored in `localStorage` — any XSS on the page can steal them; HttpOnly cookies would prevent this | `src/hooks/useAuth.ts` |
-| Medium | No CSRF token on state-changing endpoints (playlist CRUD, account changes, checkout) — low risk while auth is Bearer-header-only, but worth addressing before adding cookie auth | `api/playlists/`, `api/account/`, `api/stripe/checkout.ts` |
-| Medium | Login error message distinguishes "user not found" from "wrong password" — enables user enumeration | `api/auth/[action].ts` |
-| Medium | Stripe webhook metadata (`contentful_id`, `amount_total`) is not re-validated against Contentful at fulfillment time — a delayed webhook with stale metadata could grant wrong access | `api/stripe/webhook.ts:56–69` |
+| Priority | Issue | Status |
+|----------|-------|--------|
+| High | No rate limiting on auth endpoints — login/register/stream proxy are open to brute force and credential stuffing | ✅ Fixed — `api/_rateLimit.ts`; login 10/15 min, register 5/15 min, stream 60/60 s per IP |
+| High | Minimum password length is 6 characters — below NIST recommendation of 12 | ✅ Fixed — raised to 12 in `api/auth/[action].ts`, `api/account/index.ts`, `src/components/AuthScreen.tsx` |
+| High | Missing HTTP security headers on all API responses — no `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, or `Content-Security-Policy` | ✅ Fixed — `api/_headers.ts`; `setSecurityHeaders(res)` called in all API handlers |
+| High | `appOrigin()` in Stripe checkout trusts `req.headers.host` and `x-forwarded-proto` — Host Header Injection possible in dev/staging | ✅ Fixed — host validated against allowlist; falls back to primary domain on unknown host |
+| Medium | JWT tokens stored in `localStorage` — any XSS on the page can steal them; HttpOnly cookies would prevent this | Deferred — migrating to cookies requires CSRF infrastructure and breaks current bearer-token flow |
+| Medium | No CSRF token on state-changing endpoints — low risk while auth is Bearer-header-only | Deferred — will address when/if cookie auth is added |
+| Medium | Login error message distinguishes "user not found" from "wrong password" — enables user enumeration | N/A — already returns uniform `'Invalid email or password'` in both cases |
+| Medium | Stripe webhook metadata (`contentful_id`, `amount_total`) is not re-validated against Contentful at fulfillment time | ✅ Fixed — `api/stripe/webhook.ts` re-fetches the Contentful entry before inserting the order |
 
 ### Correctness / Bugs
 
-| Priority | Issue | Location |
-|----------|-------|----------|
-| High | Account deletion executes four sequential DELETEs without a transaction — a failure midway leaves the user row alive with playlists already gone | `api/account/index.ts` |
-| High | Stripe `checkout.session.completed` webhook updates `users.tier` without an idempotency guard — Stripe retries can apply the upgrade twice (harmless in practice, but the duplicate `orders` INSERT is guarded while the tier update is not) | `api/stripe/webhook.ts` |
-| Medium | `el.duration` can be `Infinity` on some streams; `isNaN(Infinity)` is `false`, so `setDuration(Infinity)` is called — breaks progress bar math | `src/hooks/useAudio.ts:110` |
-| Medium | Preview Blob URL is only revoked on `previewEnded`; if the user navigates away mid-preview the URL is never revoked — memory leak over many previews | `src/App.tsx` |
-| Medium | Contentful fetch is hard-capped at 200 entries per type with no pagination — a 201st release is silently dropped | `src/lib/contentful.ts:140–141` |
-| Medium | Contentful and stream proxy fetches have no timeout — a slow/unreachable Contentful hangs the app indefinitely with no error state | `src/lib/contentful.ts`, `api/plays/index.ts` |
-| Medium | `buildPreview` does not guard against `fileSize <= 0` — a 0-byte file produces a malformed `Range: bytes=0--1` request | `api/plays/index.ts` |
-| Low | `BLOB_READ_WRITE_TOKEN` unset → `issueSignedToken` receives an empty string with no error thrown | `api/downloads/index.ts` |
-| Low | Optimistic playlist mutations have no rollback on server error — local state diverges from DB if the request fails | `src/hooks/usePlaylists.ts` |
-| Low | `SongActionsSheet` create handler leaves `submitting = true` permanently if `onCreate()` throws | `src/components/SongActionsSheet.tsx:36–43` |
-| Low | Playlist name has no `maxLength` — database has a non-empty check but no upper bound; very long names pass through | `api/playlists/index.ts`, `api/playlists/[id].ts` |
+| Priority | Issue | Status |
+|----------|-------|--------|
+| High | Account deletion executes four sequential DELETEs without a transaction | ✅ Fixed — `api/account/index.ts` uses `sql.transaction([...])` |
+| High | Stripe `checkout.session.completed` webhook updates `users.tier` without an idempotency guard | ✅ Fixed — `WHERE tier != 'premium'` added to the UPDATE |
+| Medium | `el.duration` can be `Infinity` on some streams — breaks progress bar math | ✅ Fixed — `isNaN` → `!isFinite` in `useAudio.ts` `onMeta` and `seekToEnd` |
+| Medium | Preview Blob URL is only revoked on `previewEnded`; mid-preview navigation leaks the URL | ✅ Fixed — `src/App.tsx` revokes on `player.currentSong` change via cleanup effect |
+| Medium | Contentful fetch is hard-capped at 200 entries per type with no pagination | ✅ Fixed — `src/lib/contentful.ts` uses paginated `fetchAllEntries()` loop |
+| Medium | Contentful and stream proxy fetches have no timeout | ✅ Fixed — 10 s timeout on Contentful in `contentful.ts`; 15 s `AbortController` on each fetch in `api/plays/index.ts` |
+| Medium | `buildPreview` does not guard against `fileSize <= 0` | ✅ Fixed — early return `null` added at top of `buildPreview` |
+| Low | `BLOB_READ_WRITE_TOKEN` unset → `issueSignedToken` receives an empty string with no error thrown | ✅ Fixed — `api/downloads/index.ts` returns 503 if env var is missing |
+| Low | Optimistic playlist mutations have no rollback on server error | ✅ Fixed — `src/hooks/usePlaylists.ts` saves previous state and restores on catch |
+| Low | `SongActionsSheet` create handler leaves `submitting = true` permanently if `onCreate()` throws | ✅ Fixed — `setSubmitting(false)` moved to `finally` block |
+| Low | Playlist name has no `maxLength` | ✅ Fixed — 100-char limit enforced in `api/playlists/index.ts` and `api/playlists/[id].ts` |

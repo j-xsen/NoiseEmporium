@@ -324,6 +324,16 @@ export default function App() {
     }
   }, [player.previewEnded])
 
+  // Also revoke on song change — covers mid-preview navigation where previewEnded never fires.
+  useEffect(() => {
+    return () => {
+      if (previewBlobRef.current) {
+        URL.revokeObjectURL(previewBlobRef.current)
+        previewBlobRef.current = null
+      }
+    }
+  }, [player.currentSong?.id])
+
   // Handle Stripe checkout redirect: ?tab=shop → /shop (preserve other params for fulfill)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

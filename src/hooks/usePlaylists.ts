@@ -1,9 +1,7 @@
 // usePlaylists.ts — user playlist CRUD backed by the /api/playlists API.
 //
 // All mutations use optimistic updates: local state is changed immediately and
-// the API call happens in the background. This keeps the UI instant.
-// If an API call fails the state will be out of sync until the next reload,
-// which is acceptable for a personal playlist use case.
+// the API call happens in the background. On error, the previous state is restored.
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Playlist } from '../types'
@@ -37,38 +35,61 @@ export function usePlaylists(token: string | null) {
   }, [authHeaders])
 
   const deletePlaylist = useCallback(async (id: string) => {
-    // Optimistic: remove from UI first, then delete on server.
+    const prev = playlists
     setPlaylists(ps => ps.filter(p => p.id !== id))
-    await fetch(`/api/playlists/${id}`, { method: 'DELETE', headers: authHeaders })
-  }, [authHeaders])
+    try {
+      await fetch(`/api/playlists/${id}`, { method: 'DELETE', headers: authHeaders })
+    } catch (err) {
+      setPlaylists(prev)
+      throw err
+    }
+  }, [authHeaders, playlists])
 
   const renamePlaylist = useCallback(async (id: string, name: string) => {
+    const prev = playlists
     setPlaylists(ps => ps.map(p => p.id === id ? { ...p, name } : p))
-    await fetch(`/api/playlists/${id}`, {
-      method: 'PATCH', headers: authHeaders, body: JSON.stringify({ name }),
-    })
-  }, [authHeaders])
+    try {
+      await fetch(`/api/playlists/${id}`, {
+        method: 'PATCH', headers: authHeaders, body: JSON.stringify({ name }),
+      })
+    } catch (err) {
+      setPlaylists(prev)
+      throw err
+    }
+  }, [authHeaders, playlists])
 
   const addToPlaylist = useCallback(async (playlistId: string, songId: string) => {
+    const prev = playlists
     // Guard against duplicates client-side; the server also enforces uniqueness.
     setPlaylists(ps => ps.map(p =>
       p.id === playlistId && !p.songIds.includes(songId)
         ? { ...p, songIds: [...p.songIds, songId] }
         : p
     ))
-    await fetch(`/api/playlists/${playlistId}/songs`, {
-      method: 'POST', headers: authHeaders, body: JSON.stringify({ songId }),
-    })
-  }, [authHeaders])
+    try {
+      await fetch(`/api/playlists/${playlistId}/songs`, {
+        method: 'POST', headers: authHeaders, body: JSON.stringify({ songId }),
+      })
+    } catch (err) {
+      setPlaylists(prev)
+      throw err
+    }
+  }, [authHeaders, playlists])
 
   const removeFromPlaylist = useCallback(async (playlistId: string, songId: string) => {
+    const prev = playlists
     setPlaylists(ps => ps.map(p =>
       p.id === playlistId ? { ...p, songIds: p.songIds.filter(id => id !== songId) } : p
     ))
-    await fetch(`/api/playlists/${playlistId}/songs/${songId}`, {
-      method: 'DELETE', headers: authHeaders,
-    })
-  }, [authHeaders])
+    try {
+      await fetch(`/api/playlists/${playlistId}/songs/${songId}`, {
+        method: 'DELETE', headers: authHeaders,
+      })
+    } catch (err) {
+      setPlaylists(prev)
+      throw err
+    }
+  }, [authHeaders, playlists])
 
   return { playlists, createPlaylist, deletePlaylist, renamePlaylist, addToPlaylist, removeFromPlaylist }
 }

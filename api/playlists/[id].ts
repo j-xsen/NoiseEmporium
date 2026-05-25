@@ -4,8 +4,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   const userId = requireAuth(req, res)
   if (!userId) return
 
@@ -18,6 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'PATCH') {
     const { name } = req.body ?? {}
     if (!name?.trim()) return res.status(400).json({ error: 'Name is required' })
+    if (name.trim().length > 100) return res.status(400).json({ error: 'Name must be 100 characters or fewer' })
     await sql`UPDATE playlists SET name = ${name.trim()} WHERE id = ${id}`
     return res.json({ ok: true })
   }

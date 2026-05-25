@@ -2,15 +2,16 @@
 //
 //   POST   — change password. Body: { currentPassword, newPassword }
 //   DELETE — delete account.  Body: { password }
-//            Cascades: deletes playlists → playlist_songs (via FK), and song_plays.
-//            The user row is deleted last; ON DELETE CASCADE handles most cleanup.
+//            Uses a DB transaction so all rows are removed atomically.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   const userId = requireAuth(req, res)
   if (!userId) return
 
@@ -23,8 +24,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
       return res.status(400).json({ error: 'Invalid input' })
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'New password must be at least 8 characters' })
+    if (newPassword.length < 12) {
+      return res.status(400).json({ error: 'New password must be at least 12 characters' })
     }
     try {
       const rows = await sql`SELECT password_hash FROM users WHERE id = ${userId}`
@@ -40,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // DELETE — delete account
+  // DELETE — delete account (all deletes wrapped in a transaction)
   if (req.method === 'DELETE') {
     const { password } = req.body ?? {}
     if (!password) return res.status(400).json({ error: 'Password is required' })
@@ -50,10 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!rows[0]) return res.status(404).json({ error: 'User not found' })
       const valid = await bcrypt.compare(password, rows[0].password_hash)
       if (!valid) return res.status(401).json({ error: 'Incorrect password' })
-      await sql`DELETE FROM playlist_songs WHERE playlist_id IN (SELECT id FROM playlists WHERE user_id = ${userId})`
-      await sql`DELETE FROM playlists WHERE user_id = ${userId}`
-      await sql`DELETE FROM song_plays WHERE user_id = ${userId}`
-      await sql`DELETE FROM users WHERE id = ${userId}`
+      await sql.transaction([
+        sql`DELETE FROM playlist_songs WHERE playlist_id IN (SELECT id FROM playlists WHERE user_id = ${userId})`,
+        sql`DELETE FROM playlists WHERE user_id = ${userId}`,
+        sql`DELETE FROM song_plays WHERE user_id = ${userId}`,
+        sql`DELETE FROM users WHERE id = ${userId}`,
+      ])
       return res.json({ ok: true })
     } catch (err) {
       console.error(err)

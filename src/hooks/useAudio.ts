@@ -107,7 +107,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
     el.preload = 'metadata'
     audioRef.current = el
 
-    const onMeta = () => setDuration(isNaN(el.duration) ? 0 : el.duration)
+    const onMeta = () => setDuration(!isFinite(el.duration) ? 0 : el.duration)
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
 
@@ -255,7 +255,7 @@ export function useAudio(onCountPlay?: (songId: string) => void): PlayerAPI {
   const seekToEnd = useCallback(() => {
     const el = audioRef.current
     if (!el) return
-    const d = isNaN(el.duration) ? 0 : el.duration
+    const d = !isFinite(el.duration) ? 0 : el.duration
     el.currentTime = d
     setCurrentTime(d)
   }, [])

@@ -7,6 +7,7 @@ import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -21,6 +22,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   if (req.method !== 'POST') return res.status(405).end()
 
   const sig = req.headers['stripe-signature']
@@ -42,10 +44,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (userId && session.mode === 'subscription') {
       const stripeCustomerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? null
       try {
+        // WHERE clause makes duplicate webhook deliveries explicit no-ops.
         await sql`
           UPDATE users
           SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
-          WHERE id = ${userId}
+          WHERE id = ${userId} AND tier != 'premium'
         `
       } catch (err) {
         console.error('Failed to upgrade user tier:', err)
@@ -57,43 +60,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const contentfulId = session.metadata.contentful_id
       const amountTotal = session.amount_total ?? 0
 
+      // Re-validate the contentfulId against Contentful before fulfilling.
+      // A delayed retry with stale metadata could otherwise grant access to the wrong release.
       try {
+        const ctf = createClient({
+          space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+          accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const entry = await ctf.getEntry<any>(contentfulId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const releaseName = ((entry.fields as any)?.name as string | undefined) ?? 'your purchase'
+
         await sql`
           INSERT INTO orders (user_id, contentful_id, stripe_session_id, amount_total)
           VALUES (${userId}, ${contentfulId}, ${session.id}, ${amountTotal})
           ON CONFLICT (stripe_session_id) DO NOTHING
         `
-      } catch (err) {
-        console.error('Failed to insert order:', err)
-        return res.status(500).end()
-      }
 
-      // Send purchase confirmation email — failure must never fail the webhook response
-      if (process.env.RESEND_API_KEY) {
-        try {
-          const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
-          if (userRow) {
-            const ctf = createClient({
-              space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
-              accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
-            })
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const entry = await ctf.getEntry<any>(contentfulId)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const releaseName = ((entry.fields as any)?.name as string | undefined) ?? 'your purchase'
-            const resend = new Resend(process.env.RESEND_API_KEY)
-            await resend.emails.send({
-              from: 'Noise Emporium <noreply@noise.jaxsenville.com>',
-              to: userRow.email as string,
-              subject: `Your purchase: ${releaseName}`,
-              html: `<p>Thanks for your purchase!</p>
-                     <p>You now have permanent streaming rights and WAV download access for <strong>${releaseName}</strong>.</p>
-                     <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
-            })
+        // Send purchase confirmation email — failure must never fail the webhook response
+        if (process.env.RESEND_API_KEY) {
+          try {
+            const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
+            if (userRow) {
+              const resend = new Resend(process.env.RESEND_API_KEY)
+              await resend.emails.send({
+                from: 'Noise Emporium <noreply@noise.jaxsenville.com>',
+                to: userRow.email as string,
+                subject: `Your purchase: ${releaseName}`,
+                html: `<p>Thanks for your purchase!</p>
+                       <p>You now have permanent streaming rights and WAV download access for <strong>${releaseName}</strong>.</p>
+                       <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
+              })
+            }
+          } catch (emailErr) {
+            console.error('Failed to send purchase email:', emailErr)
           }
-        } catch (emailErr) {
-          console.error('Failed to send purchase email:', emailErr)
         }
+      } catch (err) {
+        console.error('Failed to fulfill release_download purchase:', err)
+        return res.status(500).end()
       }
     }
   }

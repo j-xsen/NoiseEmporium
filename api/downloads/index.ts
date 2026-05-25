@@ -13,8 +13,10 @@ import { issueSignedToken, presignUrl } from '@vercel/blob'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   if (req.method !== 'GET') return res.status(405).end()
 
   const userId = requireAuth(req, res)
@@ -35,6 +37,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const contentfulId = req.query.release
   if (typeof contentfulId !== 'string' || !contentfulId) {
     return res.status(400).json({ error: 'Missing release parameter' })
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('BLOB_READ_WRITE_TOKEN is not configured')
+    return res.status(503).json({ error: 'Downloads not configured' })
   }
 
   try {
@@ -60,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pathname,
       operations: ['get'],
       validUntil: Date.now() + 60 * 60 * 1000, // 1 hour
-      token: process.env.BLOB_READ_WRITE_TOKEN ?? '',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     })
     const { presignedUrl } = await presignUrl(signedToken, { operation: 'get', pathname, access: 'private' })
     return res.json({ url: presignedUrl })

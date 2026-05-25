@@ -36,10 +36,13 @@ export default function SongActionsSheet({
   async function handleCreate() {
     if (!name.trim() || submitting) return
     setSubmitting(true)
-    await onCreate(name.trim())
-    setName('')
-    setCreating(false)
-    setSubmitting(false)
+    try {
+      await onCreate(name.trim())
+      setName('')
+      setCreating(false)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const addablePlaylists = fromPlaylist

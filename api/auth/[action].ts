@@ -6,9 +6,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
 import { signToken, requireAuth } from '../_auth.js'
+import { isRateLimited, clientIp } from '../_rateLimit.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
+  if (isRateLimited(`login:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
   const { email, password } = req.body ?? {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' })
   if (typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Invalid input' })
@@ -29,10 +34,13 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 
 async function handleRegister(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
+  if (isRateLimited(`register:${clientIp(req)}`, 5, 15 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
   const { email, password } = req.body ?? {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' })
   if (typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Invalid input' })
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
+  if (password.length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' })
   try {
     const hash = await bcrypt.hash(password, 10)
     const rows = await sql`
@@ -64,6 +72,7 @@ async function handleMe(req: VercelRequest, res: VercelResponse) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   const { action } = req.query
   if (action === 'login')    return handleLogin(req, res)
   if (action === 'register') return handleRegister(req, res)

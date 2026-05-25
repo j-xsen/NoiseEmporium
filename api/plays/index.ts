@@ -15,6 +15,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth, verifyToken } from '../_auth.js'
+import { isRateLimited, clientIp } from '../_rateLimit.js'
+import { setSecurityHeaders } from '../_headers.js'
 
 const PREVIEW_SECONDS = 3
 // How much of the start of the file to fetch (ftyp + moov if faststart + audio data).
@@ -174,9 +176,18 @@ function patchPreviewMoov(moovBuf: Buffer, stcoOffset: number, maxValidOffset: n
 // byte 0 of the full file. After we move moov to the front, every chunk's position
 // increases by moovSize. We add that delta to every stco entry so they still point at
 // the right bytes in our reassembled buffer.
+const PREVIEW_FETCH_TIMEOUT_MS = 15_000
+
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), PREVIEW_FETCH_TIMEOUT_MS)
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(id))
+}
+
 async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer | null> {
+  if (fileSize <= 0) return null
   const audioEndByte = Math.min(fileSize - 1, AUDIO_FETCH_BYTES - 1)
-  const startRes = await fetch(audioUrl, { headers: { Range: `bytes=0-${audioEndByte}` } })
+  const startRes = await fetchWithTimeout(audioUrl, { headers: { Range: `bytes=0-${audioEndByte}` } })
   if (!startRes.ok && startRes.status !== 206) return null
 
   const startBuf = Buffer.from(await startRes.arrayBuffer())
@@ -226,7 +237,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
   if (!mdatInStartBuf) {
     if (mdatStart >= fileSize) return null
     const mdatEnd = Math.min(fileSize - 1, mdatStart + AUDIO_FETCH_BYTES - 1)
-    const mdatRes = await fetch(audioUrl, { headers: { Range: `bytes=${mdatStart}-${mdatEnd}` } })
+    const mdatRes = await fetchWithTimeout(audioUrl, { headers: { Range: `bytes=${mdatStart}-${mdatEnd}` } })
     if (!mdatRes.ok && mdatRes.status !== 206) return null
     mdatBuf = Buffer.from(await mdatRes.arrayBuffer())
     mdatBufOff = 0
@@ -248,7 +259,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
 
     if (moovStartInFile >= fileSize) return null
 
-    const endRes = await fetch(audioUrl, { headers: { Range: `bytes=${moovStartInFile}-${fileSize - 1}` } })
+    const endRes = await fetchWithTimeout(audioUrl, { headers: { Range: `bytes=${moovStartInFile}-${fileSize - 1}` } })
     if (!endRes.ok && endRes.status !== 206) return null
 
     const endBuf = Buffer.from(await endRes.arrayBuffer())
@@ -291,6 +302,9 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
 }
 
 async function streamHandler(req: VercelRequest, res: VercelResponse) {
+  if (isRateLimited(`stream:${clientIp(req)}`, 60, 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
   const songId = req.query.stream
   const token  = req.query.token
   if (!songId || typeof songId !== 'string') {
@@ -358,6 +372,7 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setSecurityHeaders(res)
   // GET — stream proxy for member-only audio
   if (req.method === 'GET') return streamHandler(req, res)
 

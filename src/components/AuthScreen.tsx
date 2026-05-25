@@ -69,7 +69,7 @@ export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
             value={password}
             onChange={e => setPassword(e.target.value)}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={6}
+            minLength={12}
             required
           />
           {error && <p className="auth-error">{error}</p>}

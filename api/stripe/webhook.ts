@@ -56,6 +56,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (userId && session.mode === 'payment' && session.metadata?.purchase_type === 'instrumental_license') {
+      const songId = session.metadata.song_id
+      const songTitle = session.metadata.song_title ?? ''
+      const amountTotal = session.amount_total ?? 0
+      try {
+        await sql`
+          INSERT INTO instrumental_licenses (user_id, song_id, song_title, stripe_session_id, amount_total)
+          VALUES (${userId}, ${songId}, ${songTitle}, ${session.id}, ${amountTotal})
+          ON CONFLICT (stripe_session_id) DO NOTHING
+        `
+      } catch (err) {
+        console.error('Failed to fulfill instrumental_license purchase:', err)
+        return res.status(500).end()
+      }
+    }
+
     if (userId && session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {
       const contentfulId = session.metadata.contentful_id
       const amountTotal = session.amount_total ?? 0

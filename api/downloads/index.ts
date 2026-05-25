@@ -1,8 +1,8 @@
 // api/downloads/index.ts — GET /api/downloads
 //
 // ?purchases
-//   Returns { purchases: string[] } — Contentful release IDs the authenticated
-//   user has purchased. Called once on app load to gate streaming + show buttons.
+//   Returns { purchases: PurchaseDetail[], licenses: LicenseDetail[] } for the
+//   authenticated user. Used by usePurchases to gate streaming + populate Library.
 //
 // ?release=<contentfulId>
 //   Verifies purchase, reads the private Blob URL from the release's
@@ -22,11 +22,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = requireAuth(req, res)
   if (!userId) return
 
-  // ?purchases — list all purchased contentful IDs for this user
+  // ?purchases — list all purchases and licenses for this user
   if ('purchases' in req.query) {
     try {
-      const rows = await sql`SELECT contentful_id FROM orders WHERE user_id = ${userId}`
-      return res.json({ purchases: rows.map(r => r.contentful_id as string) })
+      const [orderRows, licenseRows] = await Promise.all([
+        sql`SELECT contentful_id, amount_total, created_at FROM orders WHERE user_id = ${userId} ORDER BY created_at DESC`,
+        sql`SELECT song_id, song_title, amount_total, created_at FROM instrumental_licenses WHERE user_id = ${userId} ORDER BY created_at DESC`,
+      ])
+      return res.json({ purchases: orderRows, licenses: licenseRows })
     } catch (err) {
       console.error(err)
       return res.status(500).json({ error: 'Server error' })

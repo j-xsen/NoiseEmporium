@@ -82,3 +82,21 @@ CREATE TABLE orders (
 );
 
 CREATE INDEX orders_user_id_idx ON orders (user_id);
+
+-- ─── Instrumental license purchases ──────────────────────────────────────────
+
+-- One row per completed license purchase. ON CONFLICT DO NOTHING handles
+-- duplicate webhook/redirect deliveries safely.
+CREATE TABLE instrumental_licenses (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  song_id           TEXT        NOT NULL,        -- Contentful song entry ID
+  song_title        TEXT        NOT NULL,
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE (user_id, song_id)
+);
+
+CREATE INDEX instrumental_licenses_user_id_idx ON instrumental_licenses (user_id);

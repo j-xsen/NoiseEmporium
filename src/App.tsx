@@ -475,10 +475,15 @@ return (
               <Playlists
                 playlists={pm.playlists}
                 songs={songs}
+                purchases={purchases.purchaseDetails}
+                licenses={purchases.licenses}
+                releases={releases}
                 onCreate={pm.createPlaylist}
                 onSelect={id => navigate(`/library/playlist/${id}`)}
                 onDelete={pm.deletePlaylist}
                 onRename={pm.renamePlaylist}
+                onSelectRelease={handleSelectRelease}
+                onDownloadWav={handleDownloadWav}
               />
             } />
 

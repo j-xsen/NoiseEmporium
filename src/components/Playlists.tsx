@@ -1,17 +1,28 @@
 import { useState } from 'react'
 import { PencilIcon, PlusIcon, TrashIcon } from './Icons'
-import type { Playlist, Song } from '../types'
+import type { Playlist, Song, Release } from '../types'
+import type { PurchaseDetail, LicenseDetail } from '../hooks/usePurchases'
 
 interface PlaylistsProps {
   playlists: Playlist[]
   songs: Song[]
+  purchases: PurchaseDetail[]
+  licenses: LicenseDetail[]
+  releases: Release[]
   onCreate: (name: string) => void
   onSelect: (id: string) => void
   onDelete: (id: string) => void
   onRename: (id: string, name: string) => void
+  onSelectRelease: (contentfulId: string) => void
+  onDownloadWav: (contentfulId: string) => void
 }
 
-export default function Playlists({ playlists, songs, onCreate, onSelect, onDelete, onRename }: PlaylistsProps) {
+function formatDate(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+export default function Playlists({ playlists, songs, purchases, licenses, releases, onCreate, onSelect, onDelete, onRename, onSelectRelease, onDownloadWav }: PlaylistsProps) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -41,13 +52,91 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
   return (
     <div className="screen-layout">
       <div className="screen-header">
-        <h1 className="screen-title">Playlists</h1>
+        <h1 className="screen-title">Library</h1>
         <button className="header-action" onClick={() => setCreating(true)} aria-label="New playlist">
           <PlusIcon size={20} />
         </button>
       </div>
 
       <div className="scroll-area">
+
+        {/* ── Purchased Downloads ── */}
+        <div className="library-section">
+          <h2 className="library-section__heading">Purchased Downloads</h2>
+          {purchases.length === 0 ? (
+            <p className="library-section__empty">No purchases yet</p>
+          ) : (
+            <ul className="playlist-list">
+              {purchases.map(p => {
+                const release = releases.find(r => r.id === p.contentful_id)
+                const title = release?.name ?? p.contentful_id
+                const cover = release?.cover
+                const hasWav = !!release?.downloadFile
+                return (
+                  <li key={p.contentful_id} className="playlist-row">
+                    <button className="playlist-row__main" onClick={() => onSelectRelease(p.contentful_id)}>
+                      <div className="playlist-row__swatch playlist-row__swatch--cover">
+                        {cover
+                          ? <img src={cover} alt="" className="playlist-row__cover-img" />
+                          : <span className="playlist-row__empty-swatch">♪</span>
+                        }
+                      </div>
+                      <div className="playlist-row__info">
+                        <span className="playlist-row__name">{title}</span>
+                        <span className="playlist-row__meta">
+                          {release?.releaseType ?? 'release'} · {formatDate(p.created_at)}
+                        </span>
+                      </div>
+                    </button>
+                    {hasWav && (
+                      <button
+                        className="playlist-row__action"
+                        onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
+                        aria-label="Download WAV"
+                        title="Download WAV"
+                      >
+                        ↓
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* ── Instrumental Licenses ── */}
+        <div className="library-section">
+          <h2 className="library-section__heading">Instrumental Licenses</h2>
+          {licenses.length === 0 ? (
+            <p className="library-section__empty">No licenses yet</p>
+          ) : (
+            <ul className="playlist-list">
+              {licenses.map(l => (
+                <li key={l.song_id} className="playlist-row">
+                  <div className="playlist-row__main playlist-row__main--static">
+                    <div className="playlist-row__swatch">
+                      <span className="playlist-row__empty-swatch">♩</span>
+                    </div>
+                    <div className="playlist-row__info">
+                      <span className="playlist-row__name">{l.song_title}</span>
+                      <span className="playlist-row__meta">
+                        Licensed · {formatDate(l.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="library-section__badge">Licensed</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ── Playlists ── */}
+        <div className="library-section">
+          <h2 className="library-section__heading">Playlists</h2>
+        </div>
+
         {creating && (
           <div className="playlist-create">
             <input
@@ -69,11 +158,7 @@ export default function Playlists({ playlists, songs, onCreate, onSelect, onDele
         )}
 
         {playlists.length === 0 && !creating ? (
-          <div className="empty-state">
-            <div className="empty-icon">☰</div>
-            <p className="empty-title">No playlists yet</p>
-            <p className="empty-hint">Tap + to create your first playlist</p>
-          </div>
+          <p className="library-section__empty">No playlists yet — tap + to create one</p>
         ) : (
           <ul className="playlist-list">
             {playlists.map(p => {

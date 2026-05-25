@@ -30,6 +30,8 @@ export interface Release {
   premiumOnly?: boolean
   /** URL to the high-fidelity ZIP download (WAV/FLAC), stored in Contentful downloadUrl field, hosted on Vercel Blob. */
   downloadFile?: string
+  /** File size of the download in bytes, from Contentful asset metadata. */
+  downloadFileSize?: number
   /** One-time purchase price in cents for non-members. Falls back to type-based default if unset. */
   price?: number
   /** One-time purchase price in cents for premium members. Falls back to type-based default if unset. */

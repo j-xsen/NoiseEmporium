@@ -38,6 +38,12 @@ export function hashStr(s: string): number {
 }
 
 /** Returns the best available subtitle: artist, then album, then empty string. */
+export function formatFileSize(bytes: number): string {
+  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`
+  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MB`
+  return `${(bytes / 1024).toFixed(0)} KB`
+}
+
 export function songSubtitle(song: { artist?: string; album?: string }): string {
   return song.artist ?? song.album ?? ''
 }

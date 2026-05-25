@@ -9,7 +9,7 @@
 //   `downloadFile` field in Contentful, and returns a short-lived signed URL.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { issueSignedToken, presignUrl } from '@vercel/blob'
+import { head, issueSignedToken, presignUrl } from '@vercel/blob'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
@@ -18,6 +18,28 @@ import { setSecurityHeaders } from '../_headers.js'
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setSecurityHeaders(res)
   if (req.method !== 'GET') return res.status(405).end()
+
+  // ?size=<contentfulId> — file size lookup, no auth required (size is non-sensitive)
+  if ('size' in req.query) {
+    const sizeId = req.query.size
+    if (typeof sizeId !== 'string' || !sizeId) return res.status(400).json({ error: 'Missing size parameter' })
+    if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: 'Blob not configured' })
+    try {
+      const client = createClient({
+        space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+        accessToken: process.env.VITE_CONTENTFUL_ACCESS_TOKEN ?? '',
+      })
+      const entry = await client.getEntry(sizeId, { include: 1 })
+      interface CfDownloadFields { downloadUrl?: string }
+      const { downloadUrl } = entry.fields as unknown as CfDownloadFields
+      if (!downloadUrl) return res.status(404).json({ error: 'No download file' })
+      const info = await head(downloadUrl, { token: process.env.BLOB_READ_WRITE_TOKEN })
+      return res.json({ size: info.size })
+    } catch (err) {
+      console.error(err)
+      return res.status(500).json({ error: 'Server error' })
+    }
+  }
 
   const userId = requireAuth(req, res)
   if (!userId) return

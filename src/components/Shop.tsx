@@ -103,7 +103,10 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
   const membershipProducts = SHOP_PRODUCTS.filter(p => p.category === 'membership')
   const cdProducts = SHOP_PRODUCTS.filter(p => p.category === 'cd')
-  const downloadableReleases = releases.filter(r => r.downloadFile)
+  const RELEASE_TYPE_ORDER = ['ep', 'single', 'collection', 'album']
+  const downloadableReleases = releases
+    .filter(r => r.downloadFile)
+    .sort((a, b) => RELEASE_TYPE_ORDER.indexOf(a.releaseType) - RELEASE_TYPE_ORDER.indexOf(b.releaseType))
 
   const showMembership = filter === 'all' || filter === 'membership'
   const showCd = filter === 'all' || filter === 'cd'
@@ -230,16 +233,26 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                 {!collapsed['download'] && downloadableReleases.map(release => {
                   const owned = hasPurchased(release.id)
                   const isLoading = loading === `download-${release.id}`
+                  const fullPrice = releasePrice(release, false)
                   const price = releasePrice(release, isPremium)
+                  const isDiscounted = isPremium && price < fullPrice
                   return (
                     <div key={release.id} className="shop-row">
-                      <div className="shop-row__icon">⬇︎</div>
+                      {release.cover
+                        ? <img src={release.cover} alt={release.name} className="shop-row__cover" />
+                        : <div className="shop-row__icon">⬇︎</div>
+                      }
                       <div className="shop-row__info">
                         <div className="shop-row__name">{release.name}</div>
-                        <div className="shop-row__desc">{release.releaseType.charAt(0).toUpperCase() + release.releaseType.slice(1)}</div>
+                        <div className="shop-row__desc">{release.releaseType === 'ep' ? 'EP' : release.releaseType.charAt(0).toUpperCase() + release.releaseType.slice(1)}</div>
                       </div>
                       <div className="shop-row__right">
-                        {!owned && <span className="shop-row__price">{formatPrice(price)}</span>}
+                        {!owned && (
+                          <span className="shop-row__price">
+                            {isDiscounted && <span className="shop-row__price-original">{formatPrice(fullPrice)}</span>}
+                            <span className={isDiscounted ? 'shop-row__price-discounted' : ''}>{formatPrice(price)}</span>
+                          </span>
+                        )}
                         {owned ? (
                           <button
                             className="shop-row__btn"

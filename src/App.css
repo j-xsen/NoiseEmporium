@@ -1653,6 +1653,19 @@
 }
 .playlist-row__action:active { color: var(--text-bright); }
 
+.playlist-row__dl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.playlist-row__filesize {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
 .playlist-row__rename-input {
   font-size: 15px;
   font-weight: 400;
@@ -2499,6 +2512,14 @@
   color: var(--accent);
 }
 
+.shop-row__cover {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .shop-row__info {
   flex: 1;
   min-width: 0;
@@ -2618,6 +2639,18 @@
   margin-right: 4px;
   font-size: 11px;
   font-weight: 400;
+}
+
+.shop-row__price-original {
+  text-decoration: line-through;
+  opacity: 0.45;
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.shop-row__price-discounted {
+  color: var(--accent);
 }
 
 .shop-row__period {

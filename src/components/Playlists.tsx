@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PencilIcon, PlusIcon, TrashIcon } from './Icons'
 import type { Playlist, Song, Release } from '../types'
 import type { PurchaseDetail, LicenseDetail } from '../hooks/usePurchases'
+import { formatFileSize } from '../utils/format'
 
 interface PlaylistsProps {
   playlists: Playlist[]
@@ -72,6 +73,7 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                 const title = release?.name ?? p.contentful_id
                 const cover = release?.cover
                 const hasWav = !!release?.downloadFile
+                const fileSize = release?.downloadFileSize
                 return (
                   <li key={p.contentful_id} className="playlist-row">
                     <button className="playlist-row__main" onClick={() => onSelectRelease(p.contentful_id)}>
@@ -89,14 +91,17 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                       </div>
                     </button>
                     {hasWav && (
-                      <button
-                        className="playlist-row__action"
-                        onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
-                        aria-label="Download WAV"
-                        title="Download WAV"
-                      >
-                        ↓
-                      </button>
+                      <div className="playlist-row__dl">
+                        {fileSize && <span className="playlist-row__filesize">{formatFileSize(fileSize)}</span>}
+                        <button
+                          className="playlist-row__action"
+                          onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
+                          aria-label="Download WAV"
+                          title="Download WAV"
+                        >
+                          ↓
+                        </button>
+                      </div>
                     )}
                   </li>
                 )

@@ -180,6 +180,7 @@ export async function fetchReleases(): Promise<Release[]> {
     const artist = rf.artist ?? 'jaxsen'
     const coverUrl = assetUrl(rf.cover?.fields?.file?.url)
     const downloadFile = rf.downloadUrl ?? assetUrl(rf.downloadFile?.fields?.file?.url)
+    const downloadFileSize = rf.downloadFile?.fields?.file?.details?.size
     const rawTracks = (rf.tracks ?? []) as CfSongEntry[]
     const sorted = rawTracks.filter(t => t?.fields).sort((a, b) => (a.fields?.pos ?? 0) - (b.fields?.pos ?? 0))
     const songs = mapTracks(sorted, artist, coverUrl, entry.sys.id)
@@ -189,6 +190,7 @@ export async function fetchReleases(): Promise<Release[]> {
       date: rf.date,
       cover: coverUrl, spotify: rf.spotify,
       downloadFile,
+      downloadFileSize,
       price: rf.price,
       memberPrice: rf.memberPrice,
       songs,
@@ -211,6 +213,22 @@ export async function fetchReleases(): Promise<Release[]> {
       memberPrice: f.memberPrice,
       songs,
     })
+  }
+
+  // Resolve file sizes for blob-URL releases (no Contentful asset size metadata available).
+  const needsSize = releases.filter(r => r.downloadFile && !r.downloadFileSize)
+  if (needsSize.length > 0) {
+    await Promise.allSettled(needsSize.map(async r => {
+      try {
+        const res = await fetch(`/api/downloads?size=${encodeURIComponent(r.id)}`)
+        if (res.ok) {
+          const { size } = await res.json()
+          if (typeof size === 'number') r.downloadFileSize = size
+        }
+      } catch {
+        // size stays undefined — not critical
+      }
+    }))
   }
 
   return releases

@@ -178,6 +178,17 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
     `
   }
 
+  if (session.mode === 'payment' && session.metadata?.purchase_type === 'instrumental_license') {
+    const songId = session.metadata.song_id
+    const songTitle = session.metadata.song_title ?? ''
+    const amountTotal = session.amount_total ?? 0
+    await sql`
+      INSERT INTO instrumental_licenses (user_id, song_id, song_title, stripe_session_id, amount_total)
+      VALUES (${userId}, ${songId}, ${songTitle}, ${session.id}, ${amountTotal})
+      ON CONFLICT (stripe_session_id) DO NOTHING
+    `
+  }
+
   res.json({ ok: true })
 }
 

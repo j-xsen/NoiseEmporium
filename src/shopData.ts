@@ -22,16 +22,14 @@ export interface ShopProduct {
   contentfulId?: string
 }
 
-/** Per-song instrumental licenses — priceId shared across all songs for each tier. */
+/** Per-song instrumental licenses — prices computed server-side from api/_prices.ts. */
 export const INSTRUMENTAL_LICENSE = {
   personal: {
-    priceId: 'price_1TZJb3KHXukW25xlr8A5C18i',
     priceCents: 500,
     label: 'Personal',
     description: 'Non-commercial videos, podcasts, personal projects, and hobby content.',
   },
   commercial: {
-    priceId: 'price_1TYLmpKHXukW25xlEcAHahta',
     priceCents: 5000,
     label: 'Commercial',
     description: 'Ads, brand content, client work, and monetized YouTube channels.',

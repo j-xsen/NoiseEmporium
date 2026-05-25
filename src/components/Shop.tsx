@@ -12,8 +12,8 @@ interface ShopProps {
   onUpgradeSuccess: () => void
   songs: Song[]
   releases: Release[]
-  onBuyRelease: (contentfulId: string) => void
-  onDownloadWav: (contentfulId: string) => void
+  onBuyRelease: (contentfulId: string) => Promise<void> | void
+  onDownloadWav: (contentfulId: string) => Promise<void> | void
   onPreview?: (song: Song, queue: Song[]) => void
   onPause?: () => void
   currentSongId?: string
@@ -251,7 +251,10 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                         ) : (
                           <button
                             className="shop-row__btn"
-                            onClick={() => { setLoading(`download-${release.id}`); onBuyRelease(release.id) }}
+                            onClick={async () => {
+                              setLoading(`download-${release.id}`)
+                              try { await onBuyRelease(release.id) } finally { setLoading(null) }
+                            }}
                             disabled={isLoading}
                           >
                             {isLoading ? '…' : 'Buy'}

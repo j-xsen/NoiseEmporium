@@ -95,96 +95,6 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
       <div className="scroll-area">
         <div className="library-list">
 
-          {/* ── Purchased Downloads ── */}
-          {showDownloads && (
-            <section className="library-section">
-              <button className="library-section__title" onClick={() => toggleSection('downloads')}>
-                Purchased Downloads
-                <span className={`library-section__chevron${collapsed['downloads'] ? '' : ' library-section__chevron--open'}`}>›</span>
-              </button>
-              {!collapsed['downloads'] && (
-                purchases.length === 0 ? (
-                  <p className="library-section__empty">No purchases yet</p>
-                ) : (
-                  <ul className="playlist-list">
-                    {purchases.map(p => {
-                      const release = releases.find(r => r.id === p.contentful_id)
-                      const title = release?.name ?? p.contentful_id
-                      const cover = release?.cover
-                      const hasWav = !!release?.downloadFile
-                      const fileSize = release?.downloadFileSize
-                      return (
-                        <li key={p.contentful_id} className="playlist-row">
-                          <button className="playlist-row__main" onClick={() => onSelectRelease(p.contentful_id)}>
-                            <div className="playlist-row__swatch playlist-row__swatch--cover">
-                              {cover
-                                ? <img src={cover} alt="" className="playlist-row__cover-img" />
-                                : <span className="playlist-row__empty-swatch">♪</span>
-                              }
-                            </div>
-                            <div className="playlist-row__info">
-                              <span className="playlist-row__name">{title}</span>
-                              <span className="playlist-row__meta">
-                                {release?.releaseType ?? 'release'} · {formatDate(p.created_at)}
-                              </span>
-                            </div>
-                          </button>
-                          {hasWav && (
-                            <div className="playlist-row__dl">
-                              {fileSize && <span className="playlist-row__filesize">{formatFileSize(fileSize)}</span>}
-                              <button
-                                className="playlist-row__action"
-                                onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
-                                aria-label="Download Files"
-                                title="Download Files"
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )
-              )}
-            </section>
-          )}
-
-          {/* ── Instrumental Licenses ── */}
-          {showLicenses && (
-            <section className="library-section">
-              <button className="library-section__title" onClick={() => toggleSection('licenses')}>
-                Instrumental Licenses
-                <span className={`library-section__chevron${collapsed['licenses'] ? '' : ' library-section__chevron--open'}`}>›</span>
-              </button>
-              {!collapsed['licenses'] && (
-                licenses.length === 0 ? (
-                  <p className="library-section__empty">No licenses yet</p>
-                ) : (
-                  <ul className="playlist-list">
-                    {licenses.map(l => (
-                      <li key={l.song_id} className="playlist-row">
-                        <div className="playlist-row__main playlist-row__main--static">
-                          <div className="playlist-row__swatch">
-                            <span className="playlist-row__empty-swatch">♩</span>
-                          </div>
-                          <div className="playlist-row__info">
-                            <span className="playlist-row__name">{l.song_title}</span>
-                            <span className="playlist-row__meta">
-                              Licensed · {formatDate(l.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="library-section__badge">Licensed</span>
-                      </li>
-                    ))}
-                  </ul>
-                )
-              )}
-            </section>
-          )}
-
           {/* ── Playlists ── */}
           {showPlaylists && (
             <section className="library-section">
@@ -281,6 +191,96 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                     </ul>
                   )}
                 </>
+              )}
+            </section>
+          )}
+
+          {/* ── Purchased Downloads ── */}
+          {showDownloads && (
+            <section className="library-section">
+              <button className="library-section__title" onClick={() => toggleSection('downloads')}>
+                Purchased Downloads
+                <span className={`library-section__chevron${collapsed['downloads'] ? '' : ' library-section__chevron--open'}`}>›</span>
+              </button>
+              {!collapsed['downloads'] && (
+                purchases.length === 0 ? (
+                  <p className="library-section__empty">No purchases yet</p>
+                ) : (
+                  <ul className="playlist-list">
+                    {purchases.map(p => {
+                      const release = releases.find(r => r.id === p.contentful_id)
+                      const title = release?.name ?? p.contentful_id
+                      const cover = release?.cover
+                      const hasWav = !!release?.downloadFile
+                      const fileSize = release?.downloadFileSize
+                      return (
+                        <li key={p.contentful_id} className="playlist-row">
+                          <button className="playlist-row__main" onClick={() => onSelectRelease(p.contentful_id)}>
+                            <div className="playlist-row__swatch playlist-row__swatch--cover">
+                              {cover
+                                ? <img src={cover} alt="" className="playlist-row__cover-img" />
+                                : <span className="playlist-row__empty-swatch">♪</span>
+                              }
+                            </div>
+                            <div className="playlist-row__info">
+                              <span className="playlist-row__name">{title}</span>
+                              <span className="playlist-row__meta">
+                                {release?.releaseType ?? 'release'} · {formatDate(p.created_at)}
+                              </span>
+                            </div>
+                          </button>
+                          {hasWav && (
+                            <div className="playlist-row__dl">
+                              {fileSize && <span className="playlist-row__filesize">{formatFileSize(fileSize)}</span>}
+                              <button
+                                className="playlist-row__action"
+                                onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
+                                aria-label="Download Files"
+                                title="Download Files"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )
+              )}
+            </section>
+          )}
+
+          {/* ── Instrumental Licenses ── */}
+          {showLicenses && (
+            <section className="library-section">
+              <button className="library-section__title" onClick={() => toggleSection('licenses')}>
+                Instrumental Licenses
+                <span className={`library-section__chevron${collapsed['licenses'] ? '' : ' library-section__chevron--open'}`}>›</span>
+              </button>
+              {!collapsed['licenses'] && (
+                licenses.length === 0 ? (
+                  <p className="library-section__empty">No licenses yet</p>
+                ) : (
+                  <ul className="playlist-list">
+                    {licenses.map(l => (
+                      <li key={l.song_id} className="playlist-row">
+                        <div className="playlist-row__main playlist-row__main--static">
+                          <div className="playlist-row__swatch">
+                            <span className="playlist-row__empty-swatch">♩</span>
+                          </div>
+                          <div className="playlist-row__info">
+                            <span className="playlist-row__name">{l.song_title}</span>
+                            <span className="playlist-row__meta">
+                              Licensed · {formatDate(l.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="library-section__badge">Licensed</span>
+                      </li>
+                    ))}
+                  </ul>
+                )
               )}
             </section>
           )}

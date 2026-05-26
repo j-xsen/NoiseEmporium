@@ -201,7 +201,7 @@ export default function App() {
   const [accountModalOpen, setAccountModalOpen] = useState(false)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(() =>
-    (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '2d'
+    (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '3d'
   )
   const [showOnboarding, setShowOnboarding] = useState(
     () => localStorage.getItem('noise-onboarding-v1') !== 'true'

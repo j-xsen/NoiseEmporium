@@ -4,10 +4,10 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
-import { Resend } from 'resend'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { setSecurityHeaders } from '../_headers.js'
+import { sendEmail } from '../_email.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -95,23 +95,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `
 
         // Send purchase confirmation email — failure must never fail the webhook response
-        if (process.env.RESEND_API_KEY) {
-          try {
-            const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
-            if (userRow) {
-              const resend = new Resend(process.env.RESEND_API_KEY)
-              await resend.emails.send({
-                from: 'Noise Emporium <noreply@noise.jaxsenville.com>',
-                to: userRow.email as string,
-                subject: `Your purchase: ${releaseName}`,
-                html: `<p>Thanks for your purchase!</p>
-                       <p>You now have permanent streaming rights and WAV download access for <strong>${releaseName}</strong>.</p>
-                       <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
-              })
-            }
-          } catch (emailErr) {
-            console.error('Failed to send purchase email:', emailErr)
+        try {
+          const [userRow] = await sql`SELECT email FROM users WHERE id = ${userId}`
+          if (userRow) {
+            await sendEmail(
+              userRow.email as string,
+              `Your purchase: ${releaseName}`,
+              `<p>Thanks for your purchase!</p>
+               <p>You now have permanent streaming rights and WAV download access for <strong>${releaseName}</strong>.</p>
+               <p>Log in to <a href="https://noise.jaxsenville.com">Noise Emporium</a> to stream or download your files.</p>`,
+            )
           }
+        } catch (emailErr) {
+          console.error('Failed to send purchase email:', emailErr)
         }
       } catch (err) {
         console.error('Failed to fulfill release_download purchase:', err)

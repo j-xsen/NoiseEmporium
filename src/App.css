@@ -101,6 +101,60 @@
 }
 .auth-submit:disabled { opacity: 0.5; }
 
+.auth-pending-title {
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.auth-pending-body {
+  font-size: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.auth-resend {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-bottom: 10px;
+}
+.auth-resend:disabled { opacity: 0.5; }
+.auth-resend-inline {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.auth-resend-confirm {
+  font-size: 13px;
+  color: var(--success, #4ade80);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.auth-unverified { margin-bottom: 4px; }
+.auth-back {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* ── Loading / error splash ─────────────────────────────────────────────────── */
 
 .splash {

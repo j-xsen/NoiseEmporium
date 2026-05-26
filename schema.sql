@@ -13,6 +13,10 @@ CREATE TABLE users (
 
   stripe_customer_id TEXT,
 
+  email_verified                BOOLEAN     NOT NULL DEFAULT false,
+  email_verification_token      TEXT,
+  email_verification_expires_at TIMESTAMPTZ,
+
   CONSTRAINT users_email_lower       CHECK (email = lower(email)),
   CONSTRAINT users_email_unique      UNIQUE (email),
   CONSTRAINT users_tier_valid        CHECK (tier IN ('free', 'premium')),

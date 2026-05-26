@@ -345,7 +345,14 @@ export default function App() {
   }, [])
 
   if (auth.loading) return <LoadingScreen />
-  if (!auth.user) return <AuthScreen onLogin={auth.login} onRegister={auth.register} />
+  if (!auth.user) return (
+    <AuthScreen
+      onLogin={auth.login}
+      onRegister={auth.register}
+      onResendVerification={auth.resendVerification}
+      verificationError={auth.verificationError}
+    />
+  )
   if (status === 'loading') return <LoadingScreen />
   if (status === 'error') return <ErrorScreen message={error} />
 

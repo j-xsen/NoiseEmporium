@@ -41,6 +41,7 @@ interface CfPurchasableFields {
   name?: string
   title?: string
   releaseType?: string
+  price?: number
   memberPrice?: number
 }
 
@@ -66,8 +67,9 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     return res.status(400).json({ error: 'Invalid mode' })
   }
 
-  const rows = await sql`SELECT email FROM users WHERE id = ${userId}`
+  const rows = await sql`SELECT email, tier FROM users WHERE id = ${userId}`
   const customerEmail = rows[0]?.email as string | undefined
+  const isPremium = rows[0]?.tier === 'premium'
   const origin = appOrigin(req)
 
   // Release download: validate via Contentful — downloadUrl must be set on the entry
@@ -82,8 +84,9 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     const releaseName = fields.name ?? fields.title ?? 'Music Download'
     const releaseType = (fields.releaseType ?? 'album').toLowerCase()
     const defaults = DEFAULT_RELEASE_PRICES[releaseType] ?? DEFAULT_RELEASE_PRICES.album
-    // All authenticated users get the member (discounted) price for release downloads.
-    const priceCents = fields.memberPrice ?? defaults.member
+    const priceCents = isPremium
+      ? (fields.memberPrice ?? defaults.member)
+      : (fields.price ?? defaults.full)
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -108,8 +111,6 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
   if (mode === 'payment' && typeof songId === 'string' && songId) {
     const prices = INSTRUMENTAL_LICENSE_PRICES[licenseType as string]
     if (!prices) return res.status(400).json({ error: 'Invalid license type' })
-    const [user] = await sql`SELECT tier FROM users WHERE id = ${userId}`
-    const isPremium = user?.tier === 'premium'
     const priceCents = isPremium ? prices.member : prices.full
     const licenseLabel = licenseType === 'commercial' ? 'Commercial' : 'Personal'
     const session = await stripe.checkout.sessions.create({

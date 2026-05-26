@@ -34,7 +34,8 @@ export default function ReleaseDetail({
 }: ReleaseDetailProps) {
   const fullPrice = releasePrice(release, false)
   const discountedPrice = releasePrice(release, true)
-  const hasDiscount = fullPrice > discountedPrice
+  const displayPrice = releasePrice(release, isPremium)
+  const hasDiscount = isPremium && fullPrice > discountedPrice
 
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
@@ -140,7 +141,7 @@ export default function ReleaseDetail({
                     aria-label="Buy permanent download"
                   >
                     {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
-                    <span>Buy {formatPrice(discountedPrice)}</span>
+                    <span>Buy {formatPrice(displayPrice)}</span>
                   </button>
                 )}
               </div>
@@ -190,7 +191,7 @@ export default function ReleaseDetail({
                   aria-label="Buy permanent download"
                 >
                   {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
-                  <span>Buy {formatPrice(discountedPrice)}</span>
+                  <span>Buy {formatPrice(displayPrice)}</span>
                 </button>
               )}
             </div>

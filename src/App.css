@@ -2864,6 +2864,7 @@
   top: calc(100% + 8px);
   right: 0;
   width: 240px;
+  z-index: 300;
   background: rgba(5, 12, 28, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

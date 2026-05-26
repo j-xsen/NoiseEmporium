@@ -31,7 +31,7 @@ export default function PwaTipButton() {
             <li>
               <span className="account-pwa-tip-num">1</span>
               <span>
-                Tap the{' '}
+                <strong>Safari:</strong> Tap the{' '}
                 <span className="account-pwa-share" aria-label="Share button">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -39,11 +39,15 @@ export default function PwaTipButton() {
                     <line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
                 </span>{' '}
-                Share button in Safari
+                Share button — or <strong>Chrome:</strong> tap <strong>⋯</strong> then Share
               </span>
             </li>
             <li>
               <span className="account-pwa-tip-num">2</span>
+              <span>Scroll down (or tap <strong>"More"</strong>) if needed</span>
+            </li>
+            <li>
+              <span className="account-pwa-tip-num">3</span>
               <span>Tap <strong>"Add to Home Screen"</strong></span>
             </li>
           </ol>

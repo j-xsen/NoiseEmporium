@@ -40,7 +40,9 @@ app.post('/api/plays', (req, res) => handle('./api/plays/index.ts', {}, req, res
 // ── Auth ──────────────────────────────────────────────────────────────────────
 app.post('/api/auth/register', (req, res) => handle('./api/auth/[action].ts', { action: 'register' }, req, res))
 app.post('/api/auth/login',    (req, res) => handle('./api/auth/[action].ts', { action: 'login' },    req, res))
-app.get( '/api/auth/me',       (req, res) => handle('./api/auth/[action].ts', { action: 'me' },       req, res))
+app.get( '/api/auth/me',                  (req, res) => handle('./api/auth/[action].ts', { action: 'me' },                  req, res))
+app.post('/api/auth/verify-email',        (req, res) => handle('./api/auth/[action].ts', { action: 'verify-email' },        req, res))
+app.post('/api/auth/resend-verification', (req, res) => handle('./api/auth/[action].ts', { action: 'resend-verification' }, req, res))
 
 // ── Playlists ─────────────────────────────────────────────────────────────────
 app.get( '/api/playlists',          (req, res) => handle('./api/playlists/index.ts',    {}, req, res))

@@ -57,25 +57,27 @@ export default function AuthScreen({ onLogin, onRegister, onResendVerification, 
           <img src="/wordmark.webp" alt="Noise Emporium" className="auth-wordmark" />
         </div>
         <div className="auth-card">
-          <p className="auth-pending-title">Check your email</p>
-          <p className="auth-pending-body">
-            We sent a verification link to <strong>{pendingEmail}</strong>.<br />
-            Click the link to activate your account.
-          </p>
-          {resendStatus === 'sent' ? (
-            <p className="auth-resend-confirm">Sent! Check your inbox.</p>
-          ) : (
-            <button
-              className="auth-resend"
-              onClick={() => handleResend(pendingEmail)}
-              disabled={resendStatus === 'sending'}
-            >
-              {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
+          <div className="auth-pending">
+            <p className="auth-pending-title">Check your email</p>
+            <p className="auth-pending-body">
+              We sent a verification link to <strong>{pendingEmail}</strong>.<br />
+              Click the link to activate your account.
+            </p>
+            {resendStatus === 'sent' ? (
+              <p className="auth-resend-confirm">Sent! Check your inbox.</p>
+            ) : (
+              <button
+                className="auth-resend"
+                onClick={() => handleResend(pendingEmail)}
+                disabled={resendStatus === 'sending'}
+              >
+                {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
+              </button>
+            )}
+            <button className="auth-back" onClick={() => { setPendingEmail(null); setResendStatus('idle') }}>
+              Back to sign in
             </button>
-          )}
-          <button className="auth-back" onClick={() => { setPendingEmail(null); setResendStatus('idle') }}>
-            Back to sign in
-          </button>
+          </div>
         </div>
         <div className="grass-divider" aria-hidden="true" />
       </div>

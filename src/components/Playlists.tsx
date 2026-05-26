@@ -225,7 +225,7 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                             <div className="playlist-row__info">
                               <span className="playlist-row__name">{title}</span>
                               <span className="playlist-row__meta">
-                                {release?.releaseType ?? 'release'} · {formatDate(p.created_at)}
+                                {release ? (release.releaseType === 'ep' ? 'EP' : release.releaseType.charAt(0).toUpperCase() + release.releaseType.slice(1)) : 'Release'} · {formatDate(p.created_at)}
                               </span>
                             </div>
                           </button>

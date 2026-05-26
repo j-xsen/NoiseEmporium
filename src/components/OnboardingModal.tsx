@@ -24,7 +24,7 @@ export default function OnboardingModal({ onDismiss, onGoToShop }: Props) {
 
         <div className="onboarding-body">
           <div className="onboarding-step">
-            <div className="onboarding-icon" aria-hidden="true">🎵</div>
+            <img src="/android-chrome-192x192.png" alt="Noise Emporium" className="onboarding-icon" width="80" height="80" />
             <h2 className="onboarding-title">Welcome to<br />The Noise Emporium</h2>
             <p className="onboarding-desc">
               The complete collection of all noise-things Jaxsen.

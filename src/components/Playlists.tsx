@@ -20,13 +20,6 @@ interface PlaylistsProps {
 
 type LibraryFilter = 'all' | 'playlists' | 'downloads' | 'licenses'
 
-const FILTER_LABELS: { id: LibraryFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'playlists', label: 'Playlists' },
-  { id: 'downloads', label: 'Downloads' },
-  { id: 'licenses', label: 'Licenses' },
-]
-
 function formatDate(iso: string) {
   const d = new Date(iso)
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -65,9 +58,26 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
     setRenamingId(null)
   }
 
-  const showDownloads = filter === 'all' || filter === 'downloads'
-  const showLicenses = filter === 'all' || filter === 'licenses'
-  const showPlaylists = filter === 'all' || filter === 'playlists'
+  const hasDownloads = purchases.length > 0
+  const hasLicenses = licenses.length > 0
+  const hasMultipleTypes = hasDownloads || hasLicenses
+
+  // Normalize filter if it points to a section that no longer has content
+  const effectiveFilter: LibraryFilter =
+    (filter === 'downloads' && !hasDownloads) || (filter === 'licenses' && !hasLicenses)
+      ? 'all'
+      : filter
+
+  const showPlaylists  = effectiveFilter === 'all' || effectiveFilter === 'playlists'
+  const showDownloads  = hasDownloads && (effectiveFilter === 'all' || effectiveFilter === 'downloads')
+  const showLicenses   = hasLicenses  && (effectiveFilter === 'all' || effectiveFilter === 'licenses')
+
+  const filterLabels: { id: LibraryFilter; label: string }[] = [
+    { id: 'all',       label: 'All' },
+    { id: 'playlists', label: 'Playlists' },
+    ...(hasDownloads ? [{ id: 'downloads' as LibraryFilter, label: 'Downloads' }] : []),
+    ...(hasLicenses  ? [{ id: 'licenses'  as LibraryFilter, label: 'Licenses'  }] : []),
+  ]
 
   return (
     <div className="screen-layout">
@@ -80,17 +90,19 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
         )}
       </div>
 
-      <div className="library-filters">
-        {FILTER_LABELS.map(({ id, label }) => (
-          <button
-            key={id}
-            className={`library-filter${filter === id ? ' library-filter--active' : ''}`}
-            onClick={() => setFilter(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {hasMultipleTypes && (
+        <div className="library-filters">
+          {filterLabels.map(({ id, label }) => (
+            <button
+              key={id}
+              className={`library-filter${effectiveFilter === id ? ' library-filter--active' : ''}`}
+              onClick={() => setFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="scroll-area">
         <div className="library-list">

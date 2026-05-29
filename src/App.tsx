@@ -246,7 +246,7 @@ export default function App() {
   }
 
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
-    if (!auth.user) { setAuthPromptOpen(true); return }
+    if (!auth.user && song.memberOnly) { setAuthPromptOpen(true); return }
     const canPlay = (s: Song) => {
       if (!s.memberOnly) return true
       if (isPremium) return true

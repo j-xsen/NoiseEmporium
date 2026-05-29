@@ -57,6 +57,8 @@ export default function ReleaseDetail({
     if (h > 0) return `${h} hr ${m} min ${s} sec`
     return m > 0 ? `${m} min ${s} sec` : `${s} sec`
   })()
+  const isCollection = release.releaseType === 'collection'
+  const showAggregateStats = hasFullAccess || !isCollection || release.name === 'Unreleased'
   const allDone = playableSongs.length > 0 && playableSongs.every(s => dlStatuses[s.id] === 'done')
   const anyDownloading = playableSongs.some(s => dlStatuses[s.id] === 'downloading')
   const coverHeroUrl = contentfulImageUrl(release.cover, 800)
@@ -107,7 +109,11 @@ export default function ReleaseDetail({
             <p className="rps2-description">{release.description}</p>
           )}
           <p className="rps2-meta">
-            {[formattedDate, `${count} ${count === 1 ? 'track' : 'tracks'}`, durationLabel].filter(Boolean).join(' · ')}
+            {[
+              formattedDate,
+              showAggregateStats && `${count} ${count === 1 ? 'track' : 'tracks'}`,
+              showAggregateStats && durationLabel,
+            ].filter(Boolean).join(' · ')}
           </p>
         </div>
         {!locked && (

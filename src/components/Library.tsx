@@ -156,6 +156,15 @@ function Library({
                   <ul className="music-grid">
                     {collections.map(r => {
                       const locked = r.premiumOnly && !isPremium
+                      const freeCount = r.songs.filter(s => !s.memberOnly).length
+                      const showFullStats = isPremium || r.name === 'Unreleased'
+                      const collectionMeta = locked
+                        ? 'Members only'
+                        : showFullStats
+                          ? `${r.songs.length} ${r.songs.length === 1 ? 'track' : 'tracks'}`
+                          : freeCount > 0
+                            ? `${freeCount} free ${freeCount === 1 ? 'track' : 'tracks'}`
+                            : ''
                       return (
                         <li key={r.id} className="music-card">
                           <button className="music-card__select" onClick={() => onSelectRelease(r.id)}>
@@ -172,9 +181,7 @@ function Library({
                             </div>
                             <div className="music-card__info">
                               <span className="music-card__name">{r.name}</span>
-                              <span className="music-card__meta">
-                                {locked ? 'Members only' : `${r.songs.length} ${r.songs.length === 1 ? 'track' : 'tracks'}`}
-                              </span>
+                              <span className="music-card__meta">{collectionMeta}</span>
                             </div>
                           </button>
                         </li>

@@ -5,9 +5,10 @@ interface AuthScreenProps {
   onRegister: (email: string, password: string) => Promise<{ pending: true; email: string } | void>
   onResendVerification: (email: string) => Promise<void>
   verificationError?: string | null
+  onDismiss?: () => void
 }
 
-export default function AuthScreen({ onLogin, onRegister, onResendVerification, verificationError }: AuthScreenProps) {
+export default function AuthScreen({ onLogin, onRegister, onResendVerification, verificationError, onDismiss }: AuthScreenProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -50,36 +51,108 @@ export default function AuthScreen({ onLogin, onRegister, onResendVerification, 
     }
   }
 
-  if (pendingEmail) {
-    return (
-      <div className="auth-screen">
-        <div className="auth-top">
-          <img src="/wordmark.webp" alt="Noise Emporium" className="auth-wordmark" />
-        </div>
-        <div className="auth-card">
-          <div className="auth-pending">
-            <p className="auth-pending-title">Check your email</p>
-            <p className="auth-pending-body">
-              We sent a verification link to <strong>{pendingEmail}</strong>.<br />
-              Click the link to activate your account.
-            </p>
+  const card = pendingEmail ? (
+    <div className="auth-card">
+      <div className="auth-pending">
+        <p className="auth-pending-title">Check your email</p>
+        <p className="auth-pending-body">
+          We sent a verification link to <strong>{pendingEmail}</strong>.<br />
+          Click the link to activate your account.
+        </p>
+        {resendStatus === 'sent' ? (
+          <p className="auth-resend-confirm">Sent! Check your inbox.</p>
+        ) : (
+          <button
+            className="auth-resend"
+            onClick={() => handleResend(pendingEmail)}
+            disabled={resendStatus === 'sending'}
+          >
+            {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
+          </button>
+        )}
+        <button className="auth-back" onClick={() => { setPendingEmail(null); setResendStatus('idle') }}>
+          Back to sign in
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="auth-card">
+      <div className="auth-tabs">
+        <button
+          className={`auth-tab ${mode === 'login' ? 'auth-tab--active' : ''}`}
+          onClick={() => { setMode('login'); setError(null); setUnverifiedEmail(null); setResendStatus('idle') }}
+        >
+          Sign in
+        </button>
+        <button
+          className={`auth-tab ${mode === 'register' ? 'auth-tab--active' : ''}`}
+          onClick={() => { setMode('register'); setError(null); setUnverifiedEmail(null); setResendStatus('idle') }}
+        >
+          Create account
+        </button>
+      </div>
+
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <input
+          className="auth-input"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          autoComplete={mode === 'login' ? 'email' : 'new-password'}
+          required
+        />
+        <input
+          className="auth-input"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+          minLength={12}
+          required
+        />
+        {verificationError && (
+          <p className="auth-error">
+            {verificationError}{' '}
+            {email && (
+              <button type="button" className="auth-resend-inline" onClick={() => handleResend(email)}>
+                Resend link
+              </button>
+            )}
+          </p>
+        )}
+        {error && <p className="auth-error">{error}</p>}
+        {unverifiedEmail && (
+          <div className="auth-unverified">
             {resendStatus === 'sent' ? (
-              <p className="auth-resend-confirm">Sent! Check your inbox.</p>
+              <p className="auth-resend-confirm">Verification email sent! Check your inbox.</p>
             ) : (
               <button
+                type="button"
                 className="auth-resend"
-                onClick={() => handleResend(pendingEmail)}
+                onClick={() => handleResend(unverifiedEmail)}
                 disabled={resendStatus === 'sending'}
               >
                 {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
               </button>
             )}
-            <button className="auth-back" onClick={() => { setPendingEmail(null); setResendStatus('idle') }}>
-              Back to sign in
-            </button>
           </div>
+        )}
+        <button className="auth-submit" type="submit" disabled={loading}>
+          {loading ? '…' : mode === 'login' ? 'Sign in' : 'Create account'}
+        </button>
+      </form>
+    </div>
+  )
+
+  if (onDismiss) {
+    return (
+      <div className="auth-screen auth-screen--modal" onClick={onDismiss}>
+        <button className="auth-modal-close" onClick={onDismiss} aria-label="Close">✕</button>
+        <div onClick={e => e.stopPropagation()}>
+          {card}
         </div>
-        <div className="grass-divider" aria-hidden="true" />
       </div>
     )
   }
@@ -87,82 +160,9 @@ export default function AuthScreen({ onLogin, onRegister, onResendVerification, 
   return (
     <div className="auth-screen">
       <div className="auth-top">
-        <img
-          src="/wordmark.webp"
-          alt="Noise Emporium"
-          className="auth-wordmark"
-        />
+        <img src="/wordmark.webp" alt="Noise Emporium" className="auth-wordmark" />
       </div>
-
-      <div className="auth-card">
-        <div className="auth-tabs">
-          <button
-            className={`auth-tab ${mode === 'login' ? 'auth-tab--active' : ''}`}
-            onClick={() => { setMode('login'); setError(null); setUnverifiedEmail(null); setResendStatus('idle') }}
-          >
-            Sign in
-          </button>
-          <button
-            className={`auth-tab ${mode === 'register' ? 'auth-tab--active' : ''}`}
-            onClick={() => { setMode('register'); setError(null); setUnverifiedEmail(null); setResendStatus('idle') }}
-          >
-            Create account
-          </button>
-        </div>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <input
-            className="auth-input"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            autoComplete={mode === 'login' ? 'email' : 'new-password'}
-            required
-          />
-          <input
-            className="auth-input"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={12}
-            required
-          />
-          {verificationError && (
-            <p className="auth-error">
-              {verificationError}{' '}
-              {email && (
-                <button type="button" className="auth-resend-inline" onClick={() => handleResend(email)}>
-                  Resend link
-                </button>
-              )}
-            </p>
-          )}
-          {error && <p className="auth-error">{error}</p>}
-          {unverifiedEmail && (
-            <div className="auth-unverified">
-              {resendStatus === 'sent' ? (
-                <p className="auth-resend-confirm">Verification email sent! Check your inbox.</p>
-              ) : (
-                <button
-                  type="button"
-                  className="auth-resend"
-                  onClick={() => handleResend(unverifiedEmail)}
-                  disabled={resendStatus === 'sending'}
-                >
-                  {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
-                </button>
-              )}
-            </div>
-          )}
-          <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? '…' : mode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
-      </div>
-
+      {card}
       <div className="grass-divider" aria-hidden="true" />
     </div>
   )

@@ -31,11 +31,12 @@ interface LibraryProps {
   onSelectRelease: (id: string) => void
   onSelectFeaturedPlaylist: (id: string) => void
   onOpenAccount: () => void
+  onSignIn?: () => void
 }
 
 function Library({
   releases, featuredPlaylists, isPremium, userEmail, currentSongId,
-  onSelectRelease, onSelectFeaturedPlaylist, onOpenAccount,
+  onSelectRelease, onSelectFeaturedPlaylist, onOpenAccount, onSignIn,
 }: LibraryProps) {
   const albums      = releases.filter(r => r.releaseType === 'album' || r.releaseType === 'ep')
   const singles     = releases.filter(r => r.releaseType === 'single')
@@ -60,7 +61,10 @@ function Library({
         <div className="screen-header__center">
           <h1 className="screen-title">Home</h1>
         </div>
-        <AccountArea email={userEmail} onClick={onOpenAccount} />
+        {userEmail
+          ? <AccountArea email={userEmail} onClick={onOpenAccount} />
+          : <button className="sign-in-btn" onClick={onSignIn}>Sign In</button>
+        }
       </div>
 
       <div className="scroll-area">

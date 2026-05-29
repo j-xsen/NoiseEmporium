@@ -158,6 +158,36 @@
   text-decoration: underline;
 }
 
+/* Auth modal overlay (triggered by play/buy when unauthenticated) */
+.auth-screen--modal {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.75);
+  background-image: none;
+  min-height: unset;
+  padding: 0;
+  animation: fade-in 0.15s ease;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: max(var(--safe-top), 16px);
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  z-index: 1;
+}
+
 /* ── Loading / error splash ─────────────────────────────────────────────────── */
 
 .splash {
@@ -249,6 +279,19 @@
   flex: 1;
   text-align: center;
 }
+
+.sign-in-btn {
+  padding: 7px 16px;
+  background: var(--accent);
+  color: #071018;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sign-in-btn:active { opacity: 0.8; }
 
 .signout-block {
   display: flex;

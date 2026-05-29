@@ -201,6 +201,7 @@ export default function App() {
 
   const [lyricsSong, setLyricsSong] = useState<Song | null>(null)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
+  const [authPromptOpen, setAuthPromptOpen] = useState(false)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(() =>
     (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '3d'
@@ -243,6 +244,7 @@ export default function App() {
   }
 
   const handlePlay = useCallback(async (song: Song, queue?: Song[]) => {
+    if (!auth.user) { setAuthPromptOpen(true); return }
     const canPlay = (s: Song) => {
       if (!s.memberOnly) return true
       if (isPremium) return true
@@ -280,7 +282,7 @@ export default function App() {
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
     if (isPreview) player.setPreview(3)
-  }, [dl.getLocalSrc, player.playSong, player.setPreview, isPremium, auth.token, purchases.hasPurchased])
+  }, [dl.getLocalSrc, player.playSong, player.setPreview, isPremium, auth.user, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
   // every ~250 ms when useAudio's currentTime ticks.
@@ -298,7 +300,7 @@ export default function App() {
   }, [])
 
   const handleBuyRelease = useCallback(async (contentfulId: string) => {
-    if (!auth.token) return
+    if (!auth.token) { setAuthPromptOpen(true); return }
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', { mode: 'payment', contentfulId }, auth.token)
       if (url) window.location.href = url
@@ -312,7 +314,8 @@ export default function App() {
   const downloadToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleDownloadWav = useCallback(async (contentfulId: string) => {
-    if (!auth.token || downloadingReleaseId) return
+    if (!auth.token) { setAuthPromptOpen(true); return }
+    if (downloadingReleaseId) return
     setDownloadingReleaseId(contentfulId)
     try {
       const { url } = await api.get<{ url: string }>(`/api/downloads?release=${encodeURIComponent(contentfulId)}`, auth.token)
@@ -368,14 +371,6 @@ export default function App() {
   }, [])
 
   if (auth.loading) return <LoadingScreen />
-  if (!auth.user) return (
-    <AuthScreen
-      onLogin={auth.login}
-      onRegister={auth.register}
-      onResendVerification={auth.resendVerification}
-      verificationError={auth.verificationError}
-    />
-  )
   if (status === 'loading') return <LoadingScreen />
   if (status === 'error') return <ErrorScreen message={error} />
 
@@ -468,6 +463,7 @@ return (
                   onSelectRelease={handleSelectRelease}
                   onSelectFeaturedPlaylist={handleSelectFeaturedPlaylist}
                   onOpenAccount={handleOpenAccount}
+                  onSignIn={auth.user ? undefined : () => setAuthPromptOpen(true)}
                 />
               </div>
             )}
@@ -585,6 +581,16 @@ return (
           onClose={() => setAccountModalOpen(false)}
           onLogout={() => { setAccountModalOpen(false); auth.logout() }}
           onGoToShop={() => { setAccountModalOpen(false); changeTab('shop') }}
+        />
+      )}
+
+      {!auth.user && authPromptOpen && (
+        <AuthScreen
+          onLogin={auth.login}
+          onRegister={auth.register}
+          onResendVerification={auth.resendVerification}
+          verificationError={auth.verificationError}
+          onDismiss={() => setAuthPromptOpen(false)}
         />
       )}
 

@@ -309,10 +309,11 @@ function preloadRowCovers(items: Item[]) {
 interface BubbleWorldProps {
   releases: Release[]
   currentSongId?: string
+  onSignIn?: () => void
 }
 
 // ── BubbleWorld ───────────────────────────────────────────────────────────────
-function BubbleWorld({ releases, currentSongId }: BubbleWorldProps) {
+function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
   const navigate = useNavigate()
   const [pageRow0, setPageRow0] = useState(() => {
     try {
@@ -565,6 +566,10 @@ function BubbleWorld({ releases, currentSongId }: BubbleWorldProps) {
           <div className="bw-loading__dot" />
         </div>
       </div>
+
+      {onSignIn && (
+        <button className="bw-sign-in-btn sign-in-btn" onClick={onSignIn}>Sign In</button>
+      )}
 
       {/* Accessible navigation (visually hidden) */}
       <nav aria-label="Browse music" className="sr-only">

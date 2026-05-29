@@ -447,6 +447,7 @@ return (
                 <BubbleWorld
                   releases={releases}
                   currentSongId={player.currentSong?.id}
+                  onSignIn={auth.user ? undefined : () => setAuthPromptOpen(true)}
                 />
               </div>
             )}

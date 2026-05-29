@@ -2179,6 +2179,13 @@
   touch-action: none;
 }
 
+.bw-sign-in-btn {
+  position: absolute;
+  top: calc(var(--safe-top) + 16px);
+  right: 16px;
+  z-index: 10;
+}
+
 /* ── Desktop per-row nav ──────────────────────────────────────────────────── */
 /* top% derived from camera y=0.75, z=26, fov=50 projecting ROW_Y [6, 0, -6] */
 

@@ -84,20 +84,20 @@ function Library({
                   </h2>
                 )}
                 <div className={`home-section__body${releasesOpen ? '' : ' home-section__body--collapsed'}`}>
-                  <ul className="release-grid">
+                  <ul className="music-grid">
                     {albums.map(release => {
                       const year = release.date ? new Date(release.date).getFullYear() : null
                       const count = release.songs.length
                       const isActive = release.songs.some(s => s.id === currentSongId)
                       return (
-                        <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
-                          <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
-                            <div className="release-card__art-wrap">
-                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                        <li key={release.id} className={`music-card ${isActive ? 'music-card--active' : ''}`}>
+                          <button className="music-card__select" onClick={() => onSelectRelease(release.id)}>
+                            <div className="music-card__art-wrap">
+                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="music-card__art" />
                             </div>
-                            <div className="release-card__info">
-                              <span className="release-card__name">{release.name}</span>
-                              <span className="release-card__meta">
+                            <div className="music-card__info">
+                              <span className="music-card__name">{release.name}</span>
+                              <span className="music-card__meta">
                                 {release.releaseType === 'ep' ? 'EP · ' : ''}{year}{year ? ' · ' : ''}{count} {count === 1 ? 'track' : 'tracks'}
                               </span>
                             </div>
@@ -120,19 +120,19 @@ function Library({
                   </button>
                 </h2>
                 <div className={`home-section__body${singlesOpen ? '' : ' home-section__body--collapsed'}`}>
-                  <ul className="release-grid">
+                  <ul className="music-grid">
                     {singles.map(release => {
                       const year = release.date ? new Date(release.date).getFullYear() : null
                       const isActive = release.songs.some(s => s.id === currentSongId)
                       return (
-                        <li key={release.id} className={`release-card ${isActive ? 'release-card--active' : ''}`}>
-                          <button className="release-card__select" onClick={() => onSelectRelease(release.id)}>
-                            <div className="release-card__art-wrap">
-                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="release-card__art" />
+                        <li key={release.id} className={`music-card ${isActive ? 'music-card--active' : ''}`}>
+                          <button className="music-card__select" onClick={() => onSelectRelease(release.id)}>
+                            <div className="music-card__art-wrap">
+                              <CoverArt song={release.songs[0] ?? ({ cover: release.cover } as Song)} className="music-card__art" />
                             </div>
-                            <div className="release-card__info">
-                              <span className="release-card__name">{release.name}</span>
-                              <span className="release-card__meta">Single{year ? ` · ${year}` : ''}</span>
+                            <div className="music-card__info">
+                              <span className="music-card__name">{release.name}</span>
+                              <span className="music-card__meta">Single{year ? ` · ${year}` : ''}</span>
                             </div>
                           </button>
                         </li>
@@ -153,26 +153,26 @@ function Library({
                   </button>
                 </h2>
                 <div className={`home-section__body${collectionsOpen ? '' : ' home-section__body--collapsed'}`}>
-                  <ul className="release-grid">
+                  <ul className="music-grid">
                     {collections.map(r => {
                       const locked = r.premiumOnly && !isPremium
                       return (
-                        <li key={r.id} className="release-card">
-                          <button className="release-card__select" onClick={() => onSelectRelease(r.id)}>
-                            <div className="release-card__art-wrap">
+                        <li key={r.id} className="music-card">
+                          <button className="music-card__select" onClick={() => onSelectRelease(r.id)}>
+                            <div className="music-card__art-wrap">
                               {r.cover
-                                ? <img src={r.cover} alt={r.name} className="release-card__art" />
-                                : <CoverArt song={{ id: r.id, title: r.name, src: '' }} className="release-card__art" />
+                                ? <img src={r.cover} alt={r.name} className="music-card__art" />
+                                : <CoverArt song={{ id: r.id, title: r.name, src: '' }} className="music-card__art" />
                               }
                               {locked && (
-                                <div className="release-card__lock">
+                                <div className="music-card__lock">
                                   <LockIcon size={14} />
                                 </div>
                               )}
                             </div>
-                            <div className="release-card__info">
-                              <span className="release-card__name">{r.name}</span>
-                              <span className="release-card__meta">
+                            <div className="music-card__info">
+                              <span className="music-card__name">{r.name}</span>
+                              <span className="music-card__meta">
                                 {locked ? 'Members only' : `${r.songs.length} ${r.songs.length === 1 ? 'track' : 'tracks'}`}
                               </span>
                             </div>
@@ -182,14 +182,14 @@ function Library({
                     })}
 
                     {featuredPlaylists.map(playlist => (
-                      <li key={playlist.id} className="release-card">
-                        <button className="release-card__select" onClick={() => onSelectFeaturedPlaylist(playlist.id)}>
-                          <div className="release-card__art-wrap">
-                            <CoverArt song={{ id: playlist.id, title: playlist.name, src: '' }} className="release-card__art" />
+                      <li key={playlist.id} className="music-card">
+                        <button className="music-card__select" onClick={() => onSelectFeaturedPlaylist(playlist.id)}>
+                          <div className="music-card__art-wrap">
+                            <CoverArt song={{ id: playlist.id, title: playlist.name, src: '' }} className="music-card__art" />
                           </div>
-                          <div className="release-card__info">
-                            <span className="release-card__name">{playlist.name}</span>
-                            <span className="release-card__meta">
+                          <div className="music-card__info">
+                            <span className="music-card__name">{playlist.name}</span>
+                            <span className="music-card__meta">
                               {playlist.songIds.length} {playlist.songIds.length === 1 ? 'song' : 'songs'}
                             </span>
                           </div>

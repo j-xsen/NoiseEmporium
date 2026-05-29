@@ -83,9 +83,10 @@ interface ReleaseRouteProps {
   hasPurchased: (contentfulId: string) => boolean
   onBuyRelease: (contentfulId: string) => void
   onDownloadWav: (contentfulId: string) => void
+  downloadingReleaseId: string | null
 }
 
-function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload, hasPurchased, onBuyRelease, onDownloadWav }: ReleaseRouteProps) {
+function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload, hasPurchased, onBuyRelease, onDownloadWav, downloadingReleaseId }: ReleaseRouteProps) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const release = releases.find(r => r.slug === slug)
@@ -105,6 +106,7 @@ function ReleaseDetailRoute({ releases, player, isPremium, dlStatuses, onPlay, o
       onRemoveDownload={onRemoveDownload}
       onBuyRelease={onBuyRelease}
       onDownloadWav={onDownloadWav}
+      downloadingReleaseId={downloadingReleaseId}
     />
   )
 }
@@ -305,15 +307,36 @@ export default function App() {
     }
   }, [auth.token])
 
+  const [downloadingReleaseId, setDownloadingReleaseId] = useState<string | null>(null)
+  const [downloadToast, setDownloadToast] = useState<'ready' | 'error' | null>(null)
+  const downloadToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleDownloadWav = useCallback(async (contentfulId: string) => {
-    if (!auth.token) return
+    if (!auth.token || downloadingReleaseId) return
+    setDownloadingReleaseId(contentfulId)
     try {
       const { url } = await api.get<{ url: string }>(`/api/downloads?release=${encodeURIComponent(contentfulId)}`, auth.token)
-      if (url) window.location.href = url
+      if (url) {
+        const a = document.createElement('a')
+        a.href = url
+        a.target = '_blank'
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        if (downloadToastTimer.current) clearTimeout(downloadToastTimer.current)
+        setDownloadToast('ready')
+        downloadToastTimer.current = setTimeout(() => setDownloadToast(null), 3000)
+      }
     } catch (err) {
       console.error('WAV download failed:', err)
+      if (downloadToastTimer.current) clearTimeout(downloadToastTimer.current)
+      setDownloadToast('error')
+      downloadToastTimer.current = setTimeout(() => setDownloadToast(null), 4000)
+    } finally {
+      setDownloadingReleaseId(null)
     }
-  }, [auth.token])
+  }, [auth.token, downloadingReleaseId])
 
   // Revoke the preview Blob URL when the preview ends so the raw audio bytes
   // are no longer accessible from DevTools or direct URL access.
@@ -383,6 +406,7 @@ export default function App() {
     hasPurchased: purchases.hasPurchased,
     onBuyRelease: handleBuyRelease,
     onDownloadWav: handleDownloadWav,
+    downloadingReleaseId,
   }
 
 return (
@@ -491,6 +515,7 @@ return (
                 onRename={pm.renamePlaylist}
                 onSelectRelease={handleSelectRelease}
                 onDownloadWav={handleDownloadWav}
+                downloadingReleaseId={downloadingReleaseId}
               />
             } />
 
@@ -518,6 +543,7 @@ return (
                 releases={releases}
                 onBuyRelease={handleBuyRelease}
                 onDownloadWav={handleDownloadWav}
+                downloadingReleaseId={downloadingReleaseId}
                 onPreview={handlePlay}
                 onPause={player.togglePlay}
                 currentSongId={player.currentSong?.id}
@@ -545,6 +571,12 @@ return (
       )}
 
       <BottomNav tab={tab} onChange={changeTab} />
+
+      {downloadToast && (
+        <div className={`download-toast download-toast--${downloadToast}`}>
+          {downloadToast === 'ready' ? 'Download starting…' : 'Download failed. Try again.'}
+        </div>
+      )}
 
       {accountModalOpen && auth.user && auth.token && (
         <AccountModal

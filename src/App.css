@@ -2552,6 +2552,34 @@
   opacity: 1;
 }
 
+.download-toast {
+  position: fixed;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  animation: fade-in 0.2s ease;
+  pointer-events: none;
+}
+
+.download-toast--ready {
+  background: #1a2e20;
+  border: 1px solid #253828;
+  color: var(--accent);
+}
+
+.download-toast--error {
+  background: #2e1a1a;
+  border: 1px solid #3a2020;
+  color: var(--danger);
+}
+
 .shop-list {
   padding: 4px 16px 80px;
 }

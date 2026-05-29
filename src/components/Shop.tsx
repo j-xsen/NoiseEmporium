@@ -14,6 +14,7 @@ interface ShopProps {
   releases: Release[]
   onBuyRelease: (contentfulId: string) => Promise<void> | void
   onDownloadWav: (contentfulId: string) => Promise<void> | void
+  downloadingReleaseId?: string | null
   onPreview?: (song: Song, queue: Song[]) => void
   onPause?: () => void
   currentSongId?: string
@@ -30,7 +31,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, releases, onBuyRelease, onDownloadWav, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -232,7 +233,8 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                 </button>
                 {!collapsed['download'] && downloadableReleases.map(release => {
                   const owned = hasPurchased(release.id)
-                  const isLoading = loading === `download-${release.id}`
+                  const isDownloading = downloadingReleaseId === release.id
+                  const isBuying = loading === `download-${release.id}`
                   const fullPrice = releasePrice(release, false)
                   const price = releasePrice(release, isPremium)
                   const isDiscounted = isPremium && price < fullPrice
@@ -257,9 +259,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                           <button
                             className="shop-row__btn"
                             onClick={() => onDownloadWav(release.id)}
-                            disabled={isLoading}
+                            disabled={isDownloading}
                           >
-                            {isLoading ? '…' : 'Download'}
+                            {isDownloading ? '…' : 'Download'}
                           </button>
                         ) : (
                           <button
@@ -268,9 +270,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                               setLoading(`download-${release.id}`)
                               try { await onBuyRelease(release.id) } finally { setLoading(null) }
                             }}
-                            disabled={isLoading}
+                            disabled={isBuying}
                           >
-                            {isLoading ? '…' : 'Buy'}
+                            {isBuying ? '…' : 'Buy'}
                           </button>
                         )}
                       </div>

@@ -548,6 +548,63 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Collection upgrade banner ───────────────────────────────────────────────── */
+
+.collection-upgrade-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.collection-upgrade-banner strong { color: var(--text-bright); }
+.collection-upgrade-banner button {
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.collection-upgrade-banner button:active { opacity: 0.8; }
+
+.collection-upgrade-banner--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+.collection-upgrade-banner--empty .collection-upgrade-banner__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.collection-upgrade-banner--empty .collection-upgrade-banner__hint {
+  font-size: 13px;
+  max-width: 280px;
+}
+.collection-upgrade-banner--empty .collection-upgrade-banner__btn {
+  margin-top: 8px;
+  padding: 10px 22px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.collection-upgrade-banner--empty .collection-upgrade-banner__btn:active { opacity: 0.8; }
+
 /* Animated bars for playing indicator */
 .song-row__bars {
   display: flex;

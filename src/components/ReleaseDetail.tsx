@@ -3,6 +3,7 @@
 // Premium users see and can play everything.
 
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LockIcon, PlayIcon } from './Icons'
 import { formatPrice, releasePrice } from '../utils/format'
 import { contentfulImageUrl } from '../lib/contentful'
@@ -33,6 +34,7 @@ export default function ReleaseDetail({
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
   onBuyRelease, onDownloadWav, downloadingReleaseId,
 }: ReleaseDetailProps) {
+  const navigate = useNavigate()
   const fullPrice = releasePrice(release, false)
   const discountedPrice = releasePrice(release, true)
   const displayPrice = releasePrice(release, isPremium)
@@ -116,7 +118,7 @@ export default function ReleaseDetail({
             ].filter(Boolean).join(' · ')}
           </p>
         </div>
-        {!locked && (
+        {playableSongs.length > 0 && (
           <>
             <div className="rps2-actions-wrapper">
               <div ref={transientRef} className={`rps2-transient-actions${isScrolled ? ' rps2-transient-actions--hidden' : ''}`}>
@@ -185,14 +187,14 @@ export default function ReleaseDetail({
         )}
 
         <div className="rps2-tracks-scroll">
-          {locked ? (
-            <div className="empty-state">
-              <div className="empty-icon"><LockIcon size={32} /></div>
-              <p className="empty-title">Members Only</p>
-              <p className="empty-hint">
+          {(locked && publicSongs.length === 0) ? (
+            <div className="collection-upgrade-banner collection-upgrade-banner--empty">
+              <LockIcon size={28} />
+              <p className="collection-upgrade-banner__title">Members Only</p>
+              <p className="collection-upgrade-banner__hint">
                 {release.downloadFile
-                  ? 'Purchase this release for permanent access, or upgrade to a premium membership.'
-                  : 'Upgrade to a premium membership to access this collection.'}
+                  ? 'Purchase this release for permanent access, or become an Emporium Enthusiast.'
+                  : 'Become an Emporium Enthusiast to unlock this collection.'}
               </p>
               {release.downloadFile && (
                 <button
@@ -204,6 +206,9 @@ export default function ReleaseDetail({
                   <span>Buy {formatPrice(displayPrice)}</span>
                 </button>
               )}
+              <button className="collection-upgrade-banner__btn" onClick={() => navigate('/shop')}>
+                Become a Member
+              </button>
             </div>
           ) : release.songs.length === 0 ? (
             <div className="empty-state">
@@ -245,7 +250,13 @@ export default function ReleaseDetail({
                       onAddToPlaylist={() => onAddToPlaylist(song.id)}
                     />
                   ))}
-                  {memberSongs.length > 0 && (
+                  {locked ? (
+                    <li className="collection-upgrade-banner">
+                      <LockIcon size={14} />
+                      <span>Unlock more — become an <strong>Emporium Enthusiast</strong></span>
+                      <button onClick={() => navigate('/shop')}>Upgrade</button>
+                    </li>
+                  ) : memberSongs.length > 0 ? (
                     <>
                       <li className="song-track-section">
                         <LockIcon size={12} />
@@ -267,7 +278,7 @@ export default function ReleaseDetail({
                         />
                       ))}
                     </>
-                  )}
+                  ) : null}
                 </>
               )}
             </ul>

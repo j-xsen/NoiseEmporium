@@ -908,8 +908,8 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  background: #1e3525;
+  border-top: none;
   cursor: pointer;
   overflow: hidden;
 }

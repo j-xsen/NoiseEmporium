@@ -3,6 +3,7 @@ import { StarIcon, CheckIcon, PlayIcon, PauseIcon } from './Icons'
 import { SHOP_PRODUCTS, INSTRUMENTAL_LICENSE, type ShopCategory, type ShopProduct, type InstrumentalLicenseType } from '../shopData'
 import { formatPrice, releasePrice } from '../utils/format'
 import { api } from '../lib/api'
+import { track } from '../lib/umami'
 import type { Song, Release } from '../types'
 
 interface ShopProps {
@@ -78,6 +79,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
         mode: product.mode,
         ...(product.contentfulId ? { contentfulId: product.contentfulId } : {}),
       }, token)
+      track('purchase_start', { type: product.category, product: product.name })
       window.location.href = url
     } catch (err) {
       console.error(err)
@@ -97,6 +99,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
         songTitle: song.title,
         licenseType,
       }, token)
+      track('purchase_start', { type: 'license', licenseType, song: song.title })
       window.location.href = url
     } catch (err) {
       console.error(err)

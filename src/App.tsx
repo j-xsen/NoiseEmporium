@@ -40,6 +40,7 @@ import AccountArea from './components/AccountArea'
 import SongActionsSheet from './components/SongActionsSheet'
 import OnboardingModal from './components/OnboardingModal'
 import { api } from './lib/api'
+import { track } from './lib/umami'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release } from './types'
 
@@ -233,6 +234,7 @@ export default function App() {
 
   function changeTab(t: Tab) {
     setLyricsSong(null)
+    track('nav', { tab: t })
     navigate(t === 'home' ? '/' : `/${t}`)
   }
 
@@ -282,6 +284,7 @@ export default function App() {
     const target = resolved.find(s => s.id === song.id) ?? resolved[0]
     player.playSong(target, resolved)
     if (isPreview) player.setPreview(3)
+    track(isPreview ? 'preview' : 'play', { song: song.title, id: song.id })
   }, [dl.getLocalSrc, player.playSong, player.setPreview, isPremium, auth.user, auth.token, purchases.hasPurchased])
 
   // Stable callbacks for Library — memoized so Library/BubbleWorld don't re-render
@@ -303,7 +306,10 @@ export default function App() {
     if (!auth.token) { setAuthPromptOpen(true); return }
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', { mode: 'payment', contentfulId }, auth.token)
-      if (url) window.location.href = url
+      if (url) {
+        track('purchase_start', { type: 'release', contentfulId })
+        window.location.href = url
+      }
     } catch (err) {
       console.error('Buy release failed:', err)
     }

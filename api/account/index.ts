@@ -7,13 +7,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
 import sql from '../_db.js'
-import { requireAuth } from '../_auth.js'
+import { requireAuth, signToken } from '../_auth.js'
+import { isRateLimited } from '../_rateLimit.js'
 import { setSecurityHeaders } from '../_headers.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setSecurityHeaders(res)
   const userId = requireAuth(req, res)
   if (!userId) return
+
+  if (isRateLimited(`account:${userId}`, 10, 15 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
 
   // POST — change password
   if (req.method === 'POST') {
@@ -34,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!valid) return res.status(401).json({ error: 'Current password is incorrect' })
       const hash = await bcrypt.hash(newPassword, 10)
       await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${userId}`
-      return res.json({ ok: true })
+      return res.json({ ok: true, token: signToken(userId) })
     } catch (err) {
       console.error(err)
       return res.status(500).json({ error: 'Server error' })

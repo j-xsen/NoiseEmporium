@@ -20,6 +20,8 @@ function verificationEmailHtml(link: string): string {
           <p>This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>`
 }
 
+const DUMMY_HASH = '$2a$10$abcdefghijklmnopqrstuvuDummyHashToPreventTimingAttack'
+
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
   if (isRateLimited(`login:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
@@ -33,9 +35,8 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
       SELECT id, email, password_hash, tier, email_verified FROM users WHERE email = ${email.toLowerCase().trim()}
     `
     const user = rows[0]
-    if (!user) return res.status(401).json({ error: 'Invalid email or password' })
-    const valid = await bcrypt.compare(password, user.password_hash)
-    if (!valid) return res.status(401).json({ error: 'Invalid email or password' })
+    const valid = await bcrypt.compare(password, user?.password_hash ?? DUMMY_HASH)
+    if (!user || !valid) return res.status(401).json({ error: 'Invalid email or password' })
     if (!user.email_verified) {
       return res.status(403).json({ error: 'Please verify your email before logging in.', code: 'EMAIL_NOT_VERIFIED' })
     }

@@ -23,6 +23,7 @@ import Stripe from 'stripe'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { isRateLimited } from '../_rateLimit.js'
 import { DEFAULT_RELEASE_PRICES, INSTRUMENTAL_LICENSE_PRICES } from '../_prices.js'
 import { setSecurityHeaders } from '../_headers.js'
 
@@ -109,10 +110,11 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
 
   // Instrumental license — compute price server-side; apply member discount if tier === 'premium'
   if (mode === 'payment' && typeof songId === 'string' && songId) {
-    const prices = INSTRUMENTAL_LICENSE_PRICES[licenseType as string]
+    const normalizedLicenseType = typeof licenseType === 'string' ? licenseType.trim().toLowerCase() : ''
+    const prices = INSTRUMENTAL_LICENSE_PRICES[normalizedLicenseType]
     if (!prices) return res.status(400).json({ error: 'Invalid license type' })
     const priceCents = isPremium ? prices.member : prices.full
-    const licenseLabel = licenseType === 'commercial' ? 'Commercial' : 'Personal'
+    const licenseLabel = normalizedLicenseType === 'commercial' ? 'Commercial' : 'Personal'
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{
@@ -130,7 +132,7 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
         purchase_type: 'instrumental_license',
         song_id: String(songId),
         song_title: String(songTitle ?? ''),
-        license_type: String(licenseType ?? 'personal'),
+        license_type: normalizedLicenseType || 'personal',
       },
       ...(customerEmail && { customer_email: customerEmail }),
     })
@@ -199,6 +201,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const userId = requireAuth(req, res)
   if (!userId) return
+
+  if (isRateLimited(`checkout:${userId}`, 20, 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
 
   const { action } = req.body ?? {}
 

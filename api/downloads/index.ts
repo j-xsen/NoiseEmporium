@@ -13,6 +13,7 @@ import { head, issueSignedToken, presignUrl } from '@vercel/blob'
 import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
+import { isRateLimited, clientIp } from '../_rateLimit.js'
 import { setSecurityHeaders } from '../_headers.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,6 +22,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ?size=<contentfulId> — file size lookup, no auth required (size is non-sensitive)
   if ('size' in req.query) {
+    if (isRateLimited(`size:${clientIp(req)}`, 30, 60 * 1000)) {
+      return res.status(429).json({ error: 'Too many requests' })
+    }
     const sizeId = req.query.size
     if (typeof sizeId !== 'string' || !sizeId) return res.status(400).json({ error: 'Missing size parameter' })
     if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: 'Blob not configured' })

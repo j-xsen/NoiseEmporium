@@ -10,6 +10,7 @@
 import { createClient } from 'contentful'
 import type { Release, Song } from '../types'
 import { slugify } from '../utils/format'
+import { api } from './api'
 
 export const contentfulClient = createClient({
   space: import.meta.env.VITE_CONTENTFUL_SPACE_ID ?? '',
@@ -232,11 +233,8 @@ export async function fetchReleases(): Promise<Release[]> {
   if (needsSize.length > 0) {
     await Promise.allSettled(needsSize.map(async r => {
       try {
-        const res = await fetch(`/api/downloads?size=${encodeURIComponent(r.id)}`)
-        if (res.ok) {
-          const { size } = await res.json()
-          if (typeof size === 'number') r.downloadFileSize = size
-        }
+        const { size } = await api.get<{ size: number }>(`/api/downloads?size=${encodeURIComponent(r.id)}`)
+        if (typeof size === 'number') r.downloadFileSize = size
       } catch {
         // size stays undefined — not critical
       }

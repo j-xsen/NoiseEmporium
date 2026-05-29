@@ -25,6 +25,8 @@ const AUDIO_FETCH_BYTES = 600 * 1024
 // 350 KB is enough for any M4A moov atom.
 const MOOV_FETCH_BYTES = 350 * 1024
 
+const DEBUG_PREVIEW = process.env.DEBUG_PREVIEW === '1'
+
 // Walk fully-contained MP4 boxes in buf[start..end).
 // cb receives (type, dataStart, dataEnd); return true to stop walking.
 function walkBoxes(
@@ -191,7 +193,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
   if (!startRes.ok && startRes.status !== 206) return null
 
   const startBuf = Buffer.from(await startRes.arrayBuffer())
-  console.log('[preview] startBuf=%d bytes', startBuf.length)
+  if (DEBUG_PREVIEW) console.log('[preview] startBuf=%d bytes', startBuf.length)
 
   // Walk top-level boxes to locate ftyp, moov (faststart), and mdat.
   // Because the fetch starts at byte 0, the buffer offset equals the file offset for
@@ -226,7 +228,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
     }
   }
 
-  console.log('[preview] ftypEnd=%d moovInStart=%s mdatStart=%d inStartBuf=%s', ftypEnd, moovBuf ? 'yes' : 'no', mdatStart, mdatInStartBuf)
+  if (DEBUG_PREVIEW) console.log('[preview] ftypEnd=%d moovInStart=%s mdatStart=%d inStartBuf=%s', ftypEnd, moovBuf ? 'yes' : 'no', mdatStart, mdatInStartBuf)
 
   if (ftypEnd === 0 || mdatStart < 0) return null
 
@@ -241,10 +243,10 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
     if (!mdatRes.ok && mdatRes.status !== 206) return null
     mdatBuf = Buffer.from(await mdatRes.arrayBuffer())
     mdatBufOff = 0
-    console.log('[preview] mdatBuf=%d bytes starting at file byte %d', mdatBuf.length, mdatStart)
+    if (DEBUG_PREVIEW) console.log('[preview] mdatBuf=%d bytes starting at file byte %d', mdatBuf.length, mdatStart)
     // Verify the box really is mdat
     if (mdatBuf.length < 8 || mdatBuf.toString('ascii', 4, 8) !== 'mdat') {
-      console.log('[preview] expected mdat at file offset %d, got %s', mdatStart, mdatBuf.toString('ascii', 4, 8))
+      if (DEBUG_PREVIEW) console.log('[preview] expected mdat at file offset %d, got %s', mdatStart, mdatBuf.toString('ascii', 4, 8))
       return null
     }
   }
@@ -255,7 +257,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
   if (!moovBuf) {
     const mdatDeclaredSize = mdatBuf.readUInt32BE(mdatBufOff)
     const moovStartInFile = mdatStart + mdatDeclaredSize
-    console.log('[preview] mdatDeclaredSize=%d moovStartInFile=%d fileSize=%d', mdatDeclaredSize, moovStartInFile, fileSize)
+    if (DEBUG_PREVIEW) console.log('[preview] mdatDeclaredSize=%d moovStartInFile=%d fileSize=%d', mdatDeclaredSize, moovStartInFile, fileSize)
 
     if (moovStartInFile >= fileSize) return null
 
@@ -263,7 +265,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
     if (!endRes.ok && endRes.status !== 206) return null
 
     const endBuf = Buffer.from(await endRes.arrayBuffer())
-    console.log('[preview] endBuf=%d bytes starting at file byte %d', endBuf.length, moovStartInFile)
+    if (DEBUG_PREVIEW) console.log('[preview] endBuf=%d bytes starting at file byte %d', endBuf.length, moovStartInFile)
 
     if (endBuf.length >= 8) {
       const moovSize = endBuf.readUInt32BE(0)
@@ -273,8 +275,8 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
       }
     }
 
-    if (!moovBuf) { console.log('[preview] moov not found at computed offset'); return null }
-    console.log('[preview] moov found, size=%d', moovBuf.length)
+    if (!moovBuf) { if (DEBUG_PREVIEW) console.log('[preview] moov not found at computed offset'); return null }
+    if (DEBUG_PREVIEW) console.log('[preview] moov found, size=%d', moovBuf.length)
   }
 
   // Audio data: everything in mdatBuf after the mdat header (8 bytes).
@@ -289,7 +291,7 @@ async function buildPreview(audioUrl: string, fileSize: number): Promise<Buffer 
   const stcoOffset = ftypEnd + moovBuf.length - mdatStart
   const previewSize = ftypEnd + moovBuf.length + 8 + audioDataBuf.length
 
-  console.log('[preview] stcoOffset=%d previewSize=%d', stcoOffset, previewSize)
+  if (DEBUG_PREVIEW) console.log('[preview] stcoOffset=%d previewSize=%d', stcoOffset, previewSize)
 
   patchPreviewMoov(moovBuf, stcoOffset, previewSize - 1)
 
@@ -316,6 +318,10 @@ async function streamHandler(req: VercelRequest, res: VercelResponse) {
 
   const userId = verifyToken(token)
   if (!userId) return res.status(401).json({ error: 'Invalid or expired token' })
+
+  if (isRateLimited(`stream-user:${userId}`, 120, 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
 
   const rows = await sql`SELECT tier FROM users WHERE id = ${userId}`
   if (!rows[0]) return res.status(403).json({ error: 'Unauthorized' })
@@ -386,8 +392,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!songId || typeof songId !== 'string') {
     return res.status(400).json({ error: 'songId required' })
   }
+  if (!/^[a-zA-Z0-9]{10,30}$/.test(songId)) {
+    return res.status(400).json({ error: 'Invalid songId' })
+  }
 
-  await sql`INSERT INTO song_plays (user_id, song_id) VALUES (${userId}, ${songId})`
-
-  return res.status(201).end()
+  try {
+    await sql`INSERT INTO song_plays (user_id, song_id) VALUES (${userId}, ${songId})`
+    return res.status(201).end()
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
+  }
 }

@@ -10,12 +10,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const SECRET = process.env.JWT_SECRET!
 
 export function signToken(userId: string): string {
-  return jwt.sign({ sub: userId }, SECRET, { expiresIn: '30d' })
+  return jwt.sign({ sub: userId }, SECRET, { expiresIn: '30d', algorithm: 'HS256' })
 }
 
 export function verifyToken(token: string): string | null {
   try {
-    const payload = jwt.verify(token, SECRET) as { sub: string }
+    const payload = jwt.verify(token, SECRET, { algorithms: ['HS256'] }) as { sub: string }
     return payload.sub
   } catch {
     return null

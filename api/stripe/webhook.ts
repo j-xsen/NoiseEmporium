@@ -129,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (event.type === 'customer.subscription.updated') {
     const sub = event.data.object as Stripe.Subscription
-    if (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled') {
+    if (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || sub.status === 'paused') {
       const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
       try {
         await sql`UPDATE users SET tier = 'free' WHERE stripe_customer_id = ${stripeCustomerId}`

@@ -58,7 +58,7 @@ function Library({
     <div className="screen-layout">
       <div className="screen-header">
         <div className="screen-header__center">
-          <h1 className="screen-title">Noise Emporium</h1>
+          <h1 className="screen-title">Home</h1>
         </div>
         <AccountArea email={userEmail} onClick={onOpenAccount} />
       </div>

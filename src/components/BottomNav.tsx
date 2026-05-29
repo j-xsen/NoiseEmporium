@@ -4,18 +4,20 @@ import type { Tab } from '../types'
 interface BottomNavProps {
   tab: Tab
   onChange: (tab: Tab) => void
+  isLoggedIn: boolean
 }
 
-const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number; className?: string }>; authRequired?: boolean }[] = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
-  { id: 'library', label: 'Library', Icon: LibraryIcon },
+  { id: 'library', label: 'Library', Icon: LibraryIcon, authRequired: true },
   { id: 'shop', label: 'Shop', Icon: ShopIcon },
 ]
 
-export default function BottomNav({ tab, onChange }: BottomNavProps) {
+export default function BottomNav({ tab, onChange, isLoggedIn }: BottomNavProps) {
+  const visibleTabs = tabs.filter(t => !t.authRequired || isLoggedIn)
   return (
     <nav className="bottom-nav">
-      {tabs.map(({ id, label, Icon }) => (
+      {visibleTabs.map(({ id, label, Icon }) => (
         <button
           key={id}
           className={`nav-tab ${tab === id ? 'nav-tab--active' : ''}`}

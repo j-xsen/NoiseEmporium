@@ -11,6 +11,7 @@ interface ShopProps {
   token: string | null
   hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
+  onSignIn: () => void
   songs: Song[]
   releases: Release[]
   onBuyRelease: (contentfulId: string) => Promise<void> | void
@@ -32,7 +33,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
+export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, onSignIn, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -70,8 +71,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   }, [onUpgradeSuccess, token])
 
   async function handleBuy(product: ShopProduct) {
+    if (!token) { onSignIn(); return }
     const priceId = product.mode === 'subscription' ? membershipPriceId : product.priceId
-    if (!token || !priceId) return
+    if (!priceId) return
     setLoading(product.id)
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
@@ -90,7 +92,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   }
 
   async function handleLicense(song: Song) {
-    if (!token) return
+    if (!token) { onSignIn(); return }
     setLoading(`license-${song.id}`)
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {

@@ -542,6 +542,7 @@ return (
                 token={auth.token}
                 hasPurchased={purchases.hasPurchased}
                 onUpgradeSuccess={() => { auth.refreshUser(); purchases.refresh() }}
+                onSignIn={() => setAuthPromptOpen(true)}
                 songs={songs}
                 releases={releases}
                 onBuyRelease={handleBuyRelease}
@@ -573,7 +574,7 @@ return (
         />
       )}
 
-      <BottomNav tab={tab} onChange={changeTab} />
+      <BottomNav tab={tab} onChange={changeTab} isLoggedIn={!!auth.user} />
 
       {downloadToast && (
         <div className={`download-toast download-toast--${downloadToast}`}>

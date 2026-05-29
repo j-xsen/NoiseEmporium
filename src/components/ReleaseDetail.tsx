@@ -25,12 +25,13 @@ interface ReleaseDetailProps {
   onRemoveDownload: (songId: string) => void
   onBuyRelease: (contentfulId: string) => void
   onDownloadWav: (contentfulId: string) => void
+  downloadingReleaseId?: string | null
 }
 
 export default function ReleaseDetail({
   release, player, isPremium, hasPurchasedRelease, dlStatuses,
   onPlay, onBack, onAddToPlaylist, onDownload, onDownloadAll, onRemoveDownload,
-  onBuyRelease, onDownloadWav,
+  onBuyRelease, onDownloadWav, downloadingReleaseId,
 }: ReleaseDetailProps) {
   const fullPrice = releasePrice(release, false)
   const discountedPrice = releasePrice(release, true)
@@ -128,10 +129,13 @@ export default function ReleaseDetail({
                   <button
                     className="release-hero__wav-dl"
                     onClick={() => onDownloadWav(release.id)}
+                    disabled={downloadingReleaseId === release.id}
                     aria-label="Download release files (best quality)"
                   >
-                    <DownloadIcon size={16} />
-                    <span>Download Files</span>
+                    {downloadingReleaseId === release.id
+                      ? <><span className="dl-spinner" /><span>Preparing…</span></>
+                      : <><DownloadIcon size={16} /><span>Download Files</span></>
+                    }
                   </button>
                 )}
                 {!hasPurchasedRelease && release.downloadFile && (

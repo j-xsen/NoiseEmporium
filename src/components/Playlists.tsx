@@ -16,6 +16,7 @@ interface PlaylistsProps {
   onRename: (id: string, name: string) => void
   onSelectRelease: (contentfulId: string) => void
   onDownloadWav: (contentfulId: string) => void
+  downloadingReleaseId?: string | null
 }
 
 type LibraryFilter = 'all' | 'playlists' | 'downloads' | 'licenses'
@@ -25,7 +26,7 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-export default function Playlists({ playlists, songs, purchases, licenses, releases, onCreate, onSelect, onDelete, onRename, onSelectRelease, onDownloadWav }: PlaylistsProps) {
+export default function Playlists({ playlists, songs, purchases, licenses, releases, onCreate, onSelect, onDelete, onRename, onSelectRelease, onDownloadWav, downloadingReleaseId }: PlaylistsProps) {
   const [filter, setFilter] = useState<LibraryFilter>('all')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [creating, setCreating] = useState(false)
@@ -247,10 +248,11 @@ export default function Playlists({ playlists, songs, purchases, licenses, relea
                               <button
                                 className="playlist-row__action"
                                 onClick={e => { e.stopPropagation(); onDownloadWav(p.contentful_id) }}
+                                disabled={downloadingReleaseId === p.contentful_id}
                                 aria-label="Download Files"
                                 title="Download Files"
                               >
-                                ↓
+                                {downloadingReleaseId === p.contentful_id ? '…' : '↓'}
                               </button>
                             </div>
                           )}

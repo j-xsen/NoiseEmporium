@@ -1,4 +1,4 @@
-// api/stripe/checkout.ts — POST /api/stripe/checkout
+// api/stripe/checkout.ts — GET + POST /api/stripe/checkout
 //
 // Two actions, selected by `action` in the request body:
 //
@@ -197,6 +197,12 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setSecurityHeaders(res)
+
+  if (req.method === 'GET') {
+    const [membershipPriceId] = [...ALLOWED_PRICE_IDS]
+    return res.json({ membershipPriceId: membershipPriceId ?? null })
+  }
+
   if (req.method !== 'POST') return res.status(405).end()
 
   const userId = requireAuth(req, res)

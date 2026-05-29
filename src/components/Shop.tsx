@@ -38,6 +38,13 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [selectedInstrumentalId, setSelectedInstrumentalId] = useState('')
   const [licenseType, setLicenseType] = useState<InstrumentalLicenseType>('personal')
+  const [membershipPriceId, setMembershipPriceId] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.get<{ membershipPriceId: string | null }>('/api/stripe/checkout')
+      .then(data => setMembershipPriceId(data.membershipPriceId))
+      .catch(() => {})
+  }, [])
 
   function toggleSection(key: string) {
     setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
@@ -62,11 +69,12 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   }, [onUpgradeSuccess, token])
 
   async function handleBuy(product: ShopProduct) {
-    if (!token || !product.priceId) return
+    const priceId = product.mode === 'subscription' ? membershipPriceId : product.priceId
+    if (!token || !priceId) return
     setLoading(product.id)
     try {
       const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
-        priceId: product.priceId,
+        priceId,
         mode: product.mode,
         ...(product.contentfulId ? { contentfulId: product.contentfulId } : {}),
       }, token)

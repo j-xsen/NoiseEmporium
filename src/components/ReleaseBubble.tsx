@@ -255,7 +255,7 @@ function ReleaseBubble({
       bobSpeed: 0.30 + r() * 0.35,
       bobAmp:   0.10 + r() * 0.14,
       rotSpeed: 0.04 + r() * 0.08,
-      micro: Array.from({ length: isMobile ? 2 : 4 }, () => ({
+      micro: Array.from({ length: 4 }, () => ({
         phase:  r() * Math.PI * 2,
         orbitR: 0.90 + r() * 0.55,
         speed:  0.22 + r() * 0.35,

@@ -182,8 +182,8 @@ function CarouselRow({ items, page, rowY, spacing, phaseBase, apiRef, rowFocused
     groupRef.current.position.x = currentX.current
   })
 
-  // Show 3 neighbours on desktop, 1 on mobile to limit draw calls
-  const visRange = isMobile ? 1 : 2
+  // Show 5 neighbours on desktop, 3 on mobile
+  const visRange = isMobile ? 2 : 2
 
   return (
     <group ref={groupRef}>

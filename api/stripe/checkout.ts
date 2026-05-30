@@ -99,6 +99,7 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
           product_data: { name: releaseName },
         },
       }],
+      allow_promotion_codes: true,
       success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
       client_reference_id: userId,
@@ -125,6 +126,7 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
           product_data: { name: `${licenseLabel} Instrumental License — ${songTitle ?? songId}` },
         },
       }],
+      allow_promotion_codes: true,
       success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
       client_reference_id: userId,
@@ -146,6 +148,7 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
+    allow_promotion_codes: true,
     success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
     client_reference_id: userId,

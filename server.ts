@@ -59,6 +59,7 @@ app.delete('/api/playlists/:id/songs/:songId',  (req, res) => handle('./api/play
 app.get('/api/downloads', (req, res) => handle('./api/downloads/index.ts', {}, req, res))
 
 // ── Stripe ────────────────────────────────────────────────────────────────────
+app.get( '/api/stripe/checkout', (req, res) => handle('./api/stripe/checkout.ts', {}, req, res))
 app.post('/api/stripe/checkout', (req, res) => handle('./api/stripe/checkout.ts', {}, req, res))
 // webhook route is registered above (needs raw body)
 

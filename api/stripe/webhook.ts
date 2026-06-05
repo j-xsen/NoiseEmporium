@@ -72,6 +72,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (userId && session.mode === 'payment' && session.metadata?.purchase_type === 'cd_purchase') {
+      const cdId = session.metadata.cd_id
+      const amountTotal = session.amount_total ?? 0
+      try {
+        await sql`
+          INSERT INTO cd_orders (user_id, cd_id, stripe_session_id, amount_total)
+          VALUES (${userId}, ${cdId}, ${session.id}, ${amountTotal})
+          ON CONFLICT (stripe_session_id) DO NOTHING
+        `
+      } catch (err) {
+        console.error('Failed to fulfill cd_purchase:', err)
+        return res.status(500).end()
+      }
+    }
+
     if (userId && session.mode === 'payment' && session.metadata?.purchase_type === 'release_download') {
       const contentfulId = session.metadata.contentful_id
       const amountTotal = session.amount_total ?? 0

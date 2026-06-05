@@ -146,6 +146,21 @@ CREATE TABLE instrumental_licenses (
 CREATE INDEX instrumental_licenses_user_id_idx ON instrumental_licenses (user_id);
 ```
 
+```sql
+-- Add physical CD purchase table (one-of-one inventory)
+-- UNIQUE(cd_id) enforces the one-sale-per-CD limit at the DB level.
+CREATE TABLE cd_orders (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  cd_id             TEXT        NOT NULL UNIQUE,  -- shopData product ID (e.g. 'cd-oo-1')
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX cd_orders_user_id_idx ON cd_orders (user_id);
+```
+
 ### Featuring a playlist (no admin UI yet)
 
 ```sql
@@ -205,8 +220,8 @@ CREATE TABLE memberships (
 );
 ```
 
-### Music Store (future — CD orders and name-your-price downloads)
-The `orders` table (already created above) covers permanent download purchases. When CD sales and name-your-price guest downloads are implemented, a separate `cd_orders` table and a guest download flow will be needed — those don't require a user account and have different fulfillment logic (physical shipping vs. single-use email link).
+### Music Store (future — name-your-price downloads)
+The `orders` table covers permanent download purchases; `cd_orders` covers physical CD sales (implemented). When name-your-price guest downloads are added, a separate guest download flow will be needed — those don't require a user account and deliver a single-use email link rather than physical fulfillment.
 
 ### Revenue distribution (future)
 ```sql

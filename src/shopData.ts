@@ -11,6 +11,8 @@ export interface ShopProduct {
   description: string
   /** Price in cents (e.g. 500 = $5.00). Omit for negotiable/contact products. */
   price?: number
+  /** Member (Enthusiast) price in cents — shown as a discounted rate for premium users. */
+  memberPrice?: number
   /** Stripe Price ID — from your Stripe dashboard. Omit for contact-only products. */
   priceId?: string
   mode: 'payment' | 'subscription'
@@ -20,6 +22,8 @@ export interface ShopProduct {
   /** Contentful release entry ID — required for 'download' category products. Links
    *  the shop product to a release for purchase gating and WAV delivery. */
   contentfulId?: string
+  /** Maximum units available. Server enforces this; UI shows "Sold Out" when reached. */
+  maxQuantity?: number
 }
 
 /** Per-song instrumental licenses — prices computed server-side from api/_prices.ts. */
@@ -65,17 +69,41 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
   //   mode: 'subscription',
   // },
   // ── CDs ───────────────────────────────────────────────────────────────────
-  // Add one entry per physical CD you sell. Set priceId to the Stripe Price ID.
-  // {
-  //   id: 'cd-album-name',
-  //   category: 'cd',
-  //   name: 'Album Name — CD',
-  //   description: 'Physical CD with full artwork and liner notes.',
-  //   price: 1200,
-  //   priceId: 'price_REPLACE_CD',
-  //   mode: 'payment',
-  //   image: '/covers/album.jpg',
-  // },
+  // One-of-one physical CDs. Prices and maxQuantity are enforced server-side in api/_prices.ts.
+  // Place CD photos in public/images/ and update the image paths below.
+  {
+    id: 'cd-oo-1',
+    category: 'cd',
+    name: 'Snowball Edition',
+    description: 'One-of-one physical CD. Once sold, it\'s gone forever.',
+    price: 2000,
+    memberPrice: 1200,
+    mode: 'payment',
+    maxQuantity: 1,
+    image: '/images/cd-oo-1.jpg',
+  },
+  {
+    id: 'cd-oo-2',
+    category: 'cd',
+    name: 'Daydream Edition',
+    description: 'One-of-one physical CD. Once sold, it\'s gone forever.',
+    price: 2000,
+    memberPrice: 1200,
+    mode: 'payment',
+    maxQuantity: 1,
+    image: '/images/cd-oo-2.jpg',
+  },
+  {
+    id: 'cd-oo-3',
+    category: 'cd',
+    name: 'Gray Edition',
+    description: 'One-of-one physical CD. Once sold, it\'s gone forever.',
+    price: 2000,
+    memberPrice: 1200,
+    mode: 'payment',
+    maxQuantity: 1,
+    image: '/images/cd-oo-3.jpg',
+  },
   // ── Downloads ─────────────────────────────────────────────────────────────
   // Release download products are driven entirely by Contentful — no entry
   // needed here. To make a release purchasable:

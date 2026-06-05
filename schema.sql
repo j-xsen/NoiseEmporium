@@ -104,3 +104,18 @@ CREATE TABLE instrumental_licenses (
 );
 
 CREATE INDEX instrumental_licenses_user_id_idx ON instrumental_licenses (user_id);
+
+-- ─── Physical CD purchases ────────────────────────────────────────────────────
+
+-- UNIQUE(cd_id) enforces the one-sale-per-CD inventory limit at the DB level.
+-- ON CONFLICT DO NOTHING in the fulfill path handles duplicate webhook/redirect deliveries safely.
+CREATE TABLE cd_orders (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  cd_id             TEXT        NOT NULL UNIQUE,  -- shopData product ID
+  stripe_session_id TEXT        NOT NULL UNIQUE,
+  amount_total      INTEGER     NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX cd_orders_user_id_idx ON cd_orders (user_id);

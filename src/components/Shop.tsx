@@ -41,10 +41,14 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   const [selectedInstrumentalId, setSelectedInstrumentalId] = useState('')
   const [licenseType, setLicenseType] = useState<InstrumentalLicenseType>('personal')
   const [membershipPriceId, setMembershipPriceId] = useState<string | null>(null)
+  const [cdSoldIds, setCdSoldIds] = useState<string[]>([])
 
   useEffect(() => {
-    api.get<{ membershipPriceId: string | null }>('/api/stripe/checkout')
-      .then(data => setMembershipPriceId(data.membershipPriceId))
+    api.get<{ membershipPriceId: string | null; cdSoldIds: string[] }>('/api/stripe/checkout')
+      .then(data => {
+        setMembershipPriceId(data.membershipPriceId)
+        setCdSoldIds(data.cdSoldIds ?? [])
+      })
       .catch(() => {})
   }, [])
 
@@ -72,6 +76,26 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
 
   async function handleBuy(product: ShopProduct) {
     if (!token) { onSignIn(); return }
+
+    if (product.category === 'cd') {
+      setLoading(product.id)
+      try {
+        const { url } = await api.post<{ url: string }>('/api/stripe/checkout', {
+          mode: 'payment',
+          cdId: product.id,
+        }, token)
+        track('purchase_start', { type: 'cd', product: product.name })
+        window.location.href = url
+      } catch (err: unknown) {
+        console.error(err)
+        const msg = err instanceof Error ? err.message : ''
+        alert(msg.includes('Sold out') ? 'Sorry — this CD just sold out.' : 'Something went wrong. Please try again.')
+      } finally {
+        setLoading(null)
+      }
+      return
+    }
+
     const priceId = product.mode === 'subscription' ? membershipPriceId : product.priceId
     if (!priceId) return
     setLoading(product.id)
@@ -213,19 +237,30 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                   <span className={`shop-section__chevron${collapsed['cd'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
                 {!collapsed['cd'] && cdProducts.map(product => {
-                  const owned = !!product.contentfulId && hasPurchased(product.contentfulId)
+                  const isSoldOut = cdSoldIds.includes(product.id)
                   const isLoading = loading === product.id
+                  const memberPrice = product.memberPrice
+                  const displayPrice = isPremium && memberPrice != null ? memberPrice : (product.price ?? 0)
+                  const isDiscounted = isPremium && memberPrice != null && product.price != null && memberPrice < product.price
                   return (
                     <div key={product.id} className="shop-row">
-                      <div className="shop-row__icon">💿</div>
+                      {product.image
+                        ? <img src={product.image} alt={product.name} className="shop-row__cover" />
+                        : <div className="shop-row__icon">💿</div>
+                      }
                       <div className="shop-row__info">
                         <div className="shop-row__name">{product.name}</div>
                         <div className="shop-row__desc">{product.description}</div>
                       </div>
                       <div className="shop-row__right">
-                        <span className="shop-row__price">{product.price != null ? formatPrice(product.price) : '—'}</span>
-                        {owned ? (
-                          <span className="shop-row__active"><CheckIcon size={12} />Owned</span>
+                        {!isSoldOut && (
+                          <span className="shop-row__price">
+                            {isDiscounted && <span className="shop-row__price-original">{formatPrice(product.price!)}</span>}
+                            <span className={isDiscounted ? 'shop-row__price-discounted' : ''}>{formatPrice(displayPrice)}</span>
+                          </span>
+                        )}
+                        {isSoldOut ? (
+                          <span className="shop-row__sold-out">Sold Out</span>
                         ) : (
                           <button className="shop-row__btn" onClick={() => handleBuy(product)} disabled={isLoading}>
                             {isLoading ? '…' : 'Buy'}

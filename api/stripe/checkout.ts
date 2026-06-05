@@ -24,7 +24,7 @@ import { createClient } from 'contentful'
 import sql from '../_db.js'
 import { requireAuth } from '../_auth.js'
 import { isRateLimited } from '../_rateLimit.js'
-import { DEFAULT_RELEASE_PRICES, INSTRUMENTAL_LICENSE_PRICES } from '../_prices.js'
+import { DEFAULT_RELEASE_PRICES, INSTRUMENTAL_LICENSE_PRICES, CD_PRICES } from '../_prices.js'
 import { setSecurityHeaders } from '../_headers.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -62,7 +62,7 @@ function appOrigin(req: VercelRequest): string {
 }
 
 async function createCheckout(req: VercelRequest, res: VercelResponse, userId: string) {
-  const { priceId, mode, contentfulId, songId, songTitle, licenseType } = req.body ?? {}
+  const { priceId, mode, contentfulId, songId, songTitle, licenseType, cdId } = req.body ?? {}
   if (!mode) return res.status(400).json({ error: 'Missing required fields' })
   if (mode !== 'payment' && mode !== 'subscription') {
     return res.status(400).json({ error: 'Invalid mode' })
@@ -141,6 +141,37 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
     return res.json({ url: session.url })
   }
 
+  // Physical CD purchase — inventory check + inline pricing based on user tier
+  if (mode === 'payment' && typeof cdId === 'string' && cdId) {
+    const cdConfig = CD_PRICES[cdId]
+    if (!cdConfig) return res.status(400).json({ error: 'Invalid CD' })
+
+    const [soldRow] = await sql`SELECT COUNT(*) AS cnt FROM cd_orders WHERE cd_id = ${cdId}`
+    if (Number(soldRow.cnt) >= cdConfig.maxQuantity) {
+      return res.status(409).json({ error: 'Sold out' })
+    }
+
+    const priceCents = isPremium ? cdConfig.member : cdConfig.full
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: priceCents,
+          product_data: { name: `${cdConfig.name} — Physical CD` },
+        },
+      }],
+      allow_promotion_codes: true,
+      success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,
+      client_reference_id: userId,
+      metadata: { purchase_type: 'cd_purchase', cd_id: cdId },
+      ...(customerEmail && { customer_email: customerEmail }),
+    })
+    return res.json({ url: session.url })
+  }
+
   // Subscription (membership): validate priceId against allowlist
   if (!priceId) return res.status(400).json({ error: 'Missing priceId' })
   if (!ALLOWED_PRICE_IDS.has(priceId)) return res.status(400).json({ error: 'Invalid price' })
@@ -184,6 +215,16 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
     `
   }
 
+  if (session.mode === 'payment' && session.metadata?.purchase_type === 'cd_purchase') {
+    const cdId = session.metadata.cd_id
+    const amountTotal = session.amount_total ?? 0
+    await sql`
+      INSERT INTO cd_orders (user_id, cd_id, stripe_session_id, amount_total)
+      VALUES (${userId}, ${cdId}, ${session.id}, ${amountTotal})
+      ON CONFLICT (stripe_session_id) DO NOTHING
+    `
+  }
+
   if (session.mode === 'payment' && session.metadata?.purchase_type === 'instrumental_license') {
     const songId = session.metadata.song_id
     const songTitle = session.metadata.song_title ?? ''
@@ -203,7 +244,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     const [membershipPriceId] = [...ALLOWED_PRICE_IDS]
-    return res.json({ membershipPriceId: membershipPriceId ?? null })
+    const soldRows = await sql`SELECT cd_id FROM cd_orders`
+    const cdSoldIds = soldRows.map(r => r.cd_id as string)
+    return res.json({ membershipPriceId: membershipPriceId ?? null, cdSoldIds })
   }
 
   if (req.method !== 'POST') return res.status(405).end()

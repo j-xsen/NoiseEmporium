@@ -80,7 +80,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     memberPrice: 1200,
     mode: 'payment',
     maxQuantity: 1,
-    image: '/images/cd-oo-1.jpg',
+    image: '/images/cd-oo-1.avif',
   },
   {
     id: 'cd-oo-2',
@@ -91,7 +91,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     memberPrice: 1200,
     mode: 'payment',
     maxQuantity: 1,
-    image: '/images/cd-oo-2.jpg',
+    image: '/images/cd-oo-2.avif',
   },
   {
     id: 'cd-oo-3',
@@ -102,7 +102,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     memberPrice: 1200,
     mode: 'payment',
     maxQuantity: 1,
-    image: '/images/cd-oo-3.jpg',
+    image: '/images/cd-oo-3.avif',
   },
   // ── Downloads ─────────────────────────────────────────────────────────────
   // Release download products are driven entirely by Contentful — no entry

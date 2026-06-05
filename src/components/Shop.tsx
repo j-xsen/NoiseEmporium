@@ -43,13 +43,17 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   const [membershipPriceId, setMembershipPriceId] = useState<string | null>(null)
   const [cdSoldIds, setCdSoldIds] = useState<string[]>([])
 
-  useEffect(() => {
-    api.get<{ membershipPriceId: string | null; cdSoldIds: string[] }>('/api/stripe/checkout')
+  function fetchShopInfo() {
+    return api.get<{ membershipPriceId: string | null; cdSoldIds: string[] }>('/api/stripe/checkout')
       .then(data => {
         setMembershipPriceId(data.membershipPriceId)
         setCdSoldIds(data.cdSoldIds ?? [])
       })
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchShopInfo()
   }, [])
 
   function toggleSection(key: string) {
@@ -64,7 +68,10 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
       const sessionId = params.get('session_id')
       if (sessionId && token) {
         api.post('/api/stripe/checkout', { action: 'fulfill', sessionId }, token)
-          .finally(() => onUpgradeSuccess())
+          .finally(() => {
+            onUpgradeSuccess()
+            fetchShopInfo()
+          })
       } else {
         onUpgradeSuccess()
       }

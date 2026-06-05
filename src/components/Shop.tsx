@@ -243,6 +243,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                   CDs
                   <span className={`shop-section__chevron${collapsed['cd'] ? '' : ' shop-section__chevron--open'}`}>›</span>
                 </button>
+                {!collapsed['cd'] && <p className="shop-contact-hint">Free shipping in the US · $20 international</p>}
                 {!collapsed['cd'] && cdProducts.map(product => {
                   const isSoldOut = cdSoldIds.includes(product.id)
                   const isLoading = loading === product.id

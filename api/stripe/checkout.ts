@@ -162,6 +162,40 @@ async function createCheckout(req: VercelRequest, res: VercelResponse, userId: s
           product_data: { name: `${cdConfig.name} — Physical CD` },
         },
       }],
+      shipping_address_collection: {
+        allowed_countries: [
+          'US', 'CA', 'MX',
+          'GB', 'IE', 'FR', 'DE', 'IT', 'ES', 'PT', 'NL', 'BE', 'LU', 'AT', 'CH',
+          'SE', 'NO', 'DK', 'FI', 'IS', 'PL', 'CZ', 'SK', 'HU', 'RO', 'BG', 'HR',
+          'SI', 'EE', 'LV', 'LT', 'GR', 'CY', 'MT',
+          'AU', 'NZ', 'JP', 'KR', 'SG', 'HK', 'TW', 'MY', 'TH', 'PH', 'IN',
+          'ZA', 'BR', 'AR', 'CL', 'CO', 'PE', 'IL', 'TR', 'AE', 'SA',
+        ],
+      },
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 0, currency: 'usd' },
+            display_name: 'US Shipping',
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 3 },
+              maximum: { unit: 'business_day', value: 7 },
+            },
+          },
+        },
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 2000, currency: 'usd' },
+            display_name: 'International Shipping',
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 7 },
+              maximum: { unit: 'business_day', value: 21 },
+            },
+          },
+        },
+      ],
       allow_promotion_codes: true,
       success_url: `${origin}/?checkout=success&tab=shop&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${origin}/?checkout=cancelled&tab=shop`,

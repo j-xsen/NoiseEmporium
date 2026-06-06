@@ -283,18 +283,17 @@ function ScrollingClouds({ isMobile }: { isMobile: boolean }) {
 }
 
 // ── Scene ready probe ─────────────────────────────────────────────────────────
-// Fires onReady on the first frame where useProgress.active is false, meaning
-// the loading manager has no more pending items (fonts, env map, initial textures).
+// Fires onReady the first time useProgress.active transitions to false (no
+// pending loads). Uses useEffect so it runs after render, avoiding Zustand's
+// synchronous store updates triggering setState-during-render warnings.
 function ReadyProbe({ onReady }: { onReady: () => void }) {
   const { active } = useProgress()
-  const activeRef = useRef(active)
   const firedRef = useRef(false)
-  useEffect(() => { activeRef.current = active }, [active])
-  useFrame(() => {
-    if (firedRef.current || activeRef.current) return
+  useEffect(() => {
+    if (active || firedRef.current) return
     firedRef.current = true
     onReady()
-  })
+  }, [active, onReady])
   return null
 }
 
@@ -475,16 +474,28 @@ function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
     return y < 0.36 ? 0 : y < 0.67 ? 1 : 2
   }
 
-  function handleWheel(e: React.WheelEvent) {
-    if (isMobile) return
+  // Wheel handler stored in a ref so the native listener (registered once) always
+  // calls the current closure without needing to re-add/remove on every render.
+  const handleWheelRef = useRef<(e: WheelEvent) => void>(() => {})
+  handleWheelRef.current = (e: WheelEvent) => {
     e.preventDefault()
     wheelAccumRef.current += e.deltaY
     if (Math.abs(wheelAccumRef.current) >= 80) {
       const dir = wheelAccumRef.current > 0 ? 1 : -1
       wheelAccumRef.current = 0
-      advanceRow(rowFromMouseY(mouseYRef.current), dir)
+      // Single-row mode: wheel scrolls within the focused row
+      // Multi-row mode: wheel scrolls the row under the cursor
+      advanceRow(isMobile ? focusedRowRef.current : rowFromMouseY(mouseYRef.current), dir)
     }
   }
+
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => handleWheelRef.current(e)
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function switchRow(newRow: 0 | 1 | 2) {
     focusedRowRef.current = newRow
@@ -587,7 +598,6 @@ function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
         ref={canvasRef}
         className="bubble-world__canvas"
         aria-hidden="true"
-        onWheel={handleWheel}
         onMouseMove={(e) => {
           const rect = canvasRef.current?.getBoundingClientRect()
           if (rect) mouseYRef.current = (e.clientY - rect.top) / rect.height
@@ -602,7 +612,7 @@ function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
         >
           <CameraController targetY={isMobile ? MOBILE_ROW_Y[0] : 0.75} targetZ={isMobile ? 13 : 26} />
           <WorldScaleProbe scaleRef={worldScaleRef} />
-          <ReadyProbe onReady={handleSceneReady} />
+          {!sceneReady && <ReadyProbe onReady={handleSceneReady} />}
 
           <mesh position={[0, 0, -30]} scale={[220, 60, 1]}>
             <planeGeometry />

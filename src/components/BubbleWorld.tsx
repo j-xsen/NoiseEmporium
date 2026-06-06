@@ -14,6 +14,7 @@ const ROW_Y: [number, number, number] = [6.0, 0.0, -6.0]
 
 // Mobile layout: stacked rows scrolled via ScrollGroup, camera at z=13
 const MOBILE_BREAKPOINT = 640
+const SHORT_VIEWPORT = 850   // px — activates single-row layout on landscape phones / short windows
 const MOBILE_ROW_Y: [number, number, number] = [1.2, -8.0, -17.2]
 const MOBILE_SPACING = 5.5
 const MOBILE_DRAG_SENSITIVITY = 2.0  // amplifies pixel→world so a short swipe snaps to next bubble
@@ -339,7 +340,7 @@ function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
       return idx >= 0 ? idx : 0
     } catch { return 0 }
   })
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT || window.innerHeight < SHORT_VIEWPORT)
   const [focusedRow, setFocusedRow] = useState(() => {
     const fromHash = rowForHash(window.location.hash)
     if (fromHash !== 0) return fromHash
@@ -364,7 +365,7 @@ function BubbleWorld({ releases, currentSongId, onSignIn }: BubbleWorldProps) {
   }, [focusedRow])
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT || window.innerHeight < SHORT_VIEWPORT)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])

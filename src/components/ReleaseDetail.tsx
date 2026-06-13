@@ -39,6 +39,7 @@ export default function ReleaseDetail({
   const discountedPrice = releasePrice(release, true)
   const displayPrice = releasePrice(release, isPremium)
   const hasDiscount = isPremium && fullPrice > discountedPrice
+  const showEnthusiastHint = !isPremium && fullPrice > discountedPrice
 
   const formattedDate = release.date
     ? new Date(release.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).replace(/(\w+) (\d+), (\d+)/, '$1. $2, $3')
@@ -147,14 +148,19 @@ export default function ReleaseDetail({
                   </button>
                 )}
                 {!hasPurchasedRelease && release.downloadFile && (
-                  <button
-                    className="release-hero__buy"
-                    onClick={() => onBuyRelease(release.id)}
-                    aria-label="Buy permanent download"
-                  >
-                    {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
-                    <span>Buy {formatPrice(displayPrice)}</span>
-                  </button>
+                  <>
+                    <button
+                      className="release-hero__buy"
+                      onClick={() => onBuyRelease(release.id)}
+                      aria-label="Buy permanent download"
+                    >
+                      {hasDiscount && <span className="release-hero__buy-was">{formatPrice(fullPrice)}</span>}
+                      <span>Buy {formatPrice(displayPrice)}</span>
+                    </button>
+                    {showEnthusiastHint && (
+                      <span className="release-hero__buy-enthusiast">Enthusiast {formatPrice(discountedPrice)}</span>
+                    )}
+                  </>
                 )}
               </div>
               {playableSongs.length > 0 && (

@@ -1764,6 +1764,12 @@
   font-weight: 400;
 }
 
+.release-hero__buy-enthusiast {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
 .release-hero__wav-dl {
   display: flex;
   align-items: center;
@@ -2889,7 +2895,7 @@
 .shop-row__price {
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 85%, var(--text-bright));
   white-space: nowrap;
 }
 
@@ -2928,6 +2934,14 @@
   color: #071018;
   white-space: nowrap;
   transition: opacity 0.15s;
+}
+
+.shop-row__price-enthusiast {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 
 .shop-row__btn--featured {

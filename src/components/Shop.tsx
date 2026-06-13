@@ -265,6 +265,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                           <span className="shop-row__price">
                             {isDiscounted && <span className="shop-row__price-original">{formatPrice(product.price!)}</span>}
                             <span className={isDiscounted ? 'shop-row__price-discounted' : ''}>{formatPrice(displayPrice)}</span>
+                            {!isPremium && memberPrice != null && memberPrice < (product.price ?? 0) && (
+                              <span className="shop-row__price-enthusiast">Enthusiast {formatPrice(memberPrice)}</span>
+                            )}
                           </span>
                         )}
                         {isSoldOut ? (
@@ -309,6 +312,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                           <span className="shop-row__price">
                             {isDiscounted && <span className="shop-row__price-original">{formatPrice(fullPrice)}</span>}
                             <span className={isDiscounted ? 'shop-row__price-discounted' : ''}>{formatPrice(price)}</span>
+                            {!isPremium && fullPrice > releasePrice(release, true) && (
+                              <span className="shop-row__price-enthusiast">Enthusiast {formatPrice(releasePrice(release, true))}</span>
+                            )}
                           </span>
                         )}
                         {owned ? (
@@ -407,6 +413,9 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                         {formatPrice(isPremium
                           ? Math.floor(INSTRUMENTAL_LICENSE[licenseType].priceCents / 2)
                           : INSTRUMENTAL_LICENSE[licenseType].priceCents
+                        )}
+                        {!isPremium && (
+                          <span className="shop-row__price-enthusiast">Enthusiast {formatPrice(Math.floor(INSTRUMENTAL_LICENSE[licenseType].priceCents / 2))}</span>
                         )}
                       </span>
                       {(() => {

@@ -539,9 +539,12 @@ return (
             <Route path="/shop" element={
               <Shop
                 isPremium={isPremium}
+                cancelAtPeriodEnd={auth.user?.cancel_at_period_end}
+                subscriptionEndsAt={auth.user?.subscription_ends_at}
                 token={auth.token}
                 hasPurchased={purchases.hasPurchased}
                 onUpgradeSuccess={() => { auth.refreshUser(); purchases.refresh() }}
+                onCancelSubscription={auth.token ? () => auth.cancelSubscription(auth.token!) : undefined}
                 onSignIn={() => setAuthPromptOpen(true)}
                 songs={songs}
                 releases={releases}
@@ -589,6 +592,7 @@ return (
           onClose={() => setAccountModalOpen(false)}
           onLogout={() => { setAccountModalOpen(false); auth.logout() }}
           onGoToShop={() => { setAccountModalOpen(false); changeTab('shop') }}
+          onCancelSubscription={() => auth.cancelSubscription(auth.token!)}
         />
       )}
 

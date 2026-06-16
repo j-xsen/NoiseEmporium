@@ -11,7 +11,10 @@ CREATE TABLE users (
   tier          TEXT        NOT NULL DEFAULT 'free',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  stripe_customer_id TEXT,
+  stripe_customer_id     TEXT,
+  stripe_subscription_id TEXT,
+  cancel_at_period_end   BOOLEAN     NOT NULL DEFAULT false,
+  subscription_ends_at   TIMESTAMPTZ,
 
   email_verified                BOOLEAN     NOT NULL DEFAULT false,
   email_verification_token      TEXT,

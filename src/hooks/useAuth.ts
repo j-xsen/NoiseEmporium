@@ -15,6 +15,8 @@ export interface AuthUser {
   id: string
   email: string
   tier: 'free' | 'premium'
+  cancel_at_period_end?: boolean
+  subscription_ends_at?: string | null
 }
 
 export function useAuth() {
@@ -124,5 +126,18 @@ export function useAuth() {
     } catch { /* ignore */ }
   }, [])
 
-  return { user, token, loading, verificationError, login, register, resendVerification, logout, refreshUser }
+  const cancelSubscription = useCallback(async (currentToken: string): Promise<string> => {
+    const r = await fetch('/api/account', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
+      body: JSON.stringify({ action: 'cancel_subscription' }),
+    })
+    const data = await r.json() as Record<string, unknown>
+    if (!r.ok) throw new Error((data.error as string) ?? 'Failed to cancel subscription')
+    const endsAt = data.subscription_ends_at as string | null
+    setUser(u => u ? { ...u, cancel_at_period_end: true, subscription_ends_at: endsAt } : u)
+    return endsAt ?? ''
+  }, [])
+
+  return { user, token, loading, verificationError, login, register, resendVerification, logout, refreshUser, cancelSubscription }
 }

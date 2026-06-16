@@ -8,9 +8,12 @@ import type { Song, Release } from '../types'
 
 interface ShopProps {
   isPremium: boolean
+  cancelAtPeriodEnd?: boolean
+  subscriptionEndsAt?: string | null
   token: string | null
   hasPurchased: (contentfulId: string) => boolean
   onUpgradeSuccess: () => void
+  onCancelSubscription?: () => Promise<string>
   onSignIn: () => void
   songs: Song[]
   releases: Release[]
@@ -33,7 +36,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess, onSignIn, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
+export default function Shop({ isPremium, cancelAtPeriodEnd, subscriptionEndsAt, token, hasPurchased, onUpgradeSuccess, onCancelSubscription, onSignIn, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)
@@ -42,6 +45,7 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
   const [licenseType, setLicenseType] = useState<InstrumentalLicenseType>('personal')
   const [membershipPriceId, setMembershipPriceId] = useState<string | null>(null)
   const [cdSoldIds, setCdSoldIds] = useState<string[]>([])
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   function fetchShopInfo() {
     return api.get<{ membershipPriceId: string | null; cdSoldIds: string[] }>('/api/stripe/checkout')
@@ -217,10 +221,28 @@ export default function Shop({ isPremium, token, hasPurchased, onUpgradeSuccess,
                           <span className="shop-row__period">/mo</span>
                         </span>
                         {owned ? (
-                          <span className="shop-row__active">
-                            <CheckIcon size={12} />
-                            Active
-                          </span>
+                          <div className="shop-row__active-col">
+                            <span className="shop-row__active">
+                              <CheckIcon size={12} />
+                              Active
+                            </span>
+                            {cancelAtPeriodEnd ? (
+                              <span className="shop-row__cancels">Cancelled</span>
+                            ) : onCancelSubscription && (
+                              <button
+                                className="shop-row__cancel-btn"
+                                onClick={async () => {
+                                  if (!confirm('Cancel your membership? Access stays active until the end of the billing period.')) return
+                                  setCancelLoading(true)
+                                  try { await onCancelSubscription() } catch { /* handled upstream */ }
+                                  finally { setCancelLoading(false) }
+                                }}
+                                disabled={cancelLoading}
+                              >
+                                {cancelLoading ? '…' : 'Cancel'}
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <button
                             className="shop-row__btn shop-row__btn--featured"

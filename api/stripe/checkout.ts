@@ -232,9 +232,14 @@ async function fulfillCheckout(req: VercelRequest, res: VercelResponse, userId: 
 
   if (session.mode === 'subscription') {
     const stripeCustomerId = typeof session.customer === 'string' ? session.customer : null
+    const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : null
     await sql`
       UPDATE users
-      SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
+      SET tier = 'premium',
+          stripe_customer_id = ${stripeCustomerId},
+          stripe_subscription_id = ${stripeSubscriptionId},
+          cancel_at_period_end = false,
+          subscription_ends_at = NULL
       WHERE id = ${userId}
     `
   }

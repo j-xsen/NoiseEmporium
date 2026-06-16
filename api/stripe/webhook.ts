@@ -43,12 +43,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (userId && session.mode === 'subscription') {
       const stripeCustomerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? null
+      const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : null
       try {
-        // WHERE clause makes duplicate webhook deliveries explicit no-ops.
         await sql`
           UPDATE users
-          SET tier = 'premium', stripe_customer_id = ${stripeCustomerId}
-          WHERE id = ${userId} AND tier != 'premium'
+          SET tier = 'premium',
+              stripe_customer_id = ${stripeCustomerId},
+              stripe_subscription_id = ${stripeSubscriptionId},
+              cancel_at_period_end = false,
+              subscription_ends_at = NULL
+          WHERE id = ${userId}
         `
       } catch (err) {
         console.error('Failed to upgrade user tier:', err)
@@ -135,7 +139,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sub = event.data.object as Stripe.Subscription
     const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
     try {
-      await sql`UPDATE users SET tier = 'free' WHERE stripe_customer_id = ${stripeCustomerId}`
+      await sql`
+        UPDATE users
+        SET tier = 'free', stripe_subscription_id = NULL,
+            cancel_at_period_end = false, subscription_ends_at = NULL
+        WHERE stripe_customer_id = ${stripeCustomerId}
+      `
     } catch (err) {
       console.error('Failed to downgrade user tier on subscription deletion:', err)
       return res.status(500).end()
@@ -144,12 +153,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (event.type === 'customer.subscription.updated') {
     const sub = event.data.object as Stripe.Subscription
+    const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
+
     if (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || sub.status === 'paused') {
-      const stripeCustomerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer as Stripe.Customer).id
       try {
-        await sql`UPDATE users SET tier = 'free' WHERE stripe_customer_id = ${stripeCustomerId}`
+        await sql`
+          UPDATE users
+          SET tier = 'free', stripe_subscription_id = NULL,
+              cancel_at_period_end = false, subscription_ends_at = NULL
+          WHERE stripe_customer_id = ${stripeCustomerId}
+        `
       } catch (err) {
         console.error('Failed to downgrade user tier on subscription update:', err)
+        return res.status(500).end()
+      }
+    } else if (sub.cancel_at_period_end && sub.status === 'active') {
+      const periodEnd = sub.current_period_end
+      const endsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
+      try {
+        await sql`
+          UPDATE users
+          SET cancel_at_period_end = true, subscription_ends_at = ${endsAt}
+          WHERE stripe_customer_id = ${stripeCustomerId}
+        `
+      } catch (err) {
+        console.error('Failed to record cancel_at_period_end:', err)
+        return res.status(500).end()
+      }
+    } else if (!sub.cancel_at_period_end && sub.status === 'active') {
+      try {
+        await sql`
+          UPDATE users
+          SET cancel_at_period_end = false, subscription_ends_at = NULL
+          WHERE stripe_customer_id = ${stripeCustomerId}
+        `
+      } catch (err) {
+        console.error('Failed to clear cancel_at_period_end:', err)
         return res.status(500).end()
       }
     }

@@ -89,7 +89,7 @@ async function handleMe(req: VercelRequest, res: VercelResponse) {
   const userId = requireAuth(req, res)
   if (!userId) return
   try {
-    const rows = await sql`SELECT id, email, tier FROM users WHERE id = ${userId}`
+    const rows = await sql`SELECT id, email, tier, cancel_at_period_end, subscription_ends_at FROM users WHERE id = ${userId}`
     if (!rows[0]) return res.status(401).json({ error: 'User not found' })
     res.json({ user: rows[0] })
   } catch (err) {

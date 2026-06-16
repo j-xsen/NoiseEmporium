@@ -9,11 +9,12 @@ interface AccountModalProps {
   onClose: () => void
   onLogout: () => void
   onGoToShop: () => void
+  onCancelSubscription: () => Promise<string>
 }
 
-type Section = 'main' | 'change-password' | 'delete-confirm'
+type Section = 'main' | 'change-password' | 'delete-confirm' | 'cancel-confirm'
 
-export default function AccountModal({ user, token, onClose, onLogout, onGoToShop }: AccountModalProps) {
+export default function AccountModal({ user, token, onClose, onLogout, onGoToShop, onCancelSubscription }: AccountModalProps) {
   const [section, setSection] = useState<Section>('main')
 
   // Change password state
@@ -28,6 +29,10 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Cancel subscription state
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   async function handleChangePassword() {
     if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
@@ -56,6 +61,18 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
     }
   }
 
+  async function handleCancelSubscription() {
+    setCancelLoading(true); setCancelError(null)
+    try {
+      await onCancelSubscription()
+      setSection('main')
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="account-modal" onClick={e => e.stopPropagation()}>
@@ -79,9 +96,25 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
               <div className="account-section">
                 <span className="account-label">Membership</span>
                 {user.tier === 'premium' ? (
-                  <div className="account-tier account-tier--premium">
-                    <StarIcon size={13} />
-                    <span>Premium</span>
+                  <div className="account-tier-col">
+                    <div className="account-tier account-tier--premium">
+                      <StarIcon size={13} />
+                      <span>Premium</span>
+                    </div>
+                    {user.cancel_at_period_end ? (
+                      <span className="account-cancel-note">
+                        {user.subscription_ends_at
+                          ? `Cancels ${new Date(user.subscription_ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                          : 'Cancelled'}
+                      </span>
+                    ) : (
+                      <button
+                        className="account-cancel-btn"
+                        onClick={() => { setCancelError(null); setSection('cancel-confirm') }}
+                      >
+                        Cancel membership
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="account-tier-row">
@@ -203,6 +236,36 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
                 disabled={deleteLoading || !deletePassword}
               >
                 {deleteLoading ? 'Deleting…' : 'Permanently Delete Account'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {section === 'cancel-confirm' && (
+          <>
+            <div className="sheet-header">
+              <button className="account-back" onClick={() => setSection('main')}>← Back</button>
+              <h3 className="sheet-title">Cancel Membership</h3>
+              <button className="sheet-close" onClick={onClose} aria-label="Close"><XIcon size={18} /></button>
+            </div>
+            <div className="account-body">
+              <p className="account-cancel-warning">
+                Your access stays active until the end of the current billing period. After that, member-only tracks will be locked.
+              </p>
+              {cancelError && <p className="account-error">{cancelError}</p>}
+              <button
+                className="account-delete-btn"
+                onClick={handleCancelSubscription}
+                disabled={cancelLoading}
+              >
+                {cancelLoading ? 'Cancelling…' : 'Confirm Cancellation'}
+              </button>
+              <button
+                className="account-action"
+                onClick={() => setSection('main')}
+                disabled={cancelLoading}
+              >
+                Keep membership
               </button>
             </div>
           </>

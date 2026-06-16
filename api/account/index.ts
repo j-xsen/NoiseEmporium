@@ -6,10 +6,13 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
+import Stripe from 'stripe'
 import sql from '../_db.js'
 import { requireAuth, signToken } from '../_auth.js'
 import { isRateLimited } from '../_rateLimit.js'
 import { setSecurityHeaders } from '../_headers.js'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setSecurityHeaders(res)
@@ -67,6 +70,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error(err)
       return res.status(500).json({ error: 'Server error' })
     }
+  }
+
+  // PATCH — subscription actions
+  if (req.method === 'PATCH') {
+    const { action } = req.body ?? {}
+
+    if (action === 'cancel_subscription') {
+      try {
+        const rows = await sql`SELECT stripe_customer_id, stripe_subscription_id FROM users WHERE id = ${userId}`
+        let subscriptionId = rows[0]?.stripe_subscription_id as string | null
+        const customerId = rows[0]?.stripe_customer_id as string | null
+
+        // Existing premium users subscribed before stripe_subscription_id was stored —
+        // look it up from Stripe by customer ID and backfill the column.
+        if (!subscriptionId && customerId) {
+          const list = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 })
+          const found = list.data[0]
+          if (found) {
+            subscriptionId = found.id
+            await sql`UPDATE users SET stripe_subscription_id = ${subscriptionId} WHERE id = ${userId}`
+          }
+        }
+
+        if (!subscriptionId) return res.status(400).json({ error: 'No active subscription found' })
+
+        const sub = await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true })
+        const periodEnd = sub.current_period_end
+        const endsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
+
+        await sql`
+          UPDATE users
+          SET cancel_at_period_end = true, subscription_ends_at = ${endsAt}
+          WHERE id = ${userId}
+        `
+
+        return res.json({ ok: true, cancel_at_period_end: true, subscription_ends_at: endsAt })
+      } catch (err) {
+        console.error(err)
+        return res.status(500).json({ error: 'Server error' })
+      }
+    }
+
+    return res.status(400).json({ error: 'Unknown action' })
   }
 
   res.status(405).end()

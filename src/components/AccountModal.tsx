@@ -108,12 +108,19 @@ export default function AccountModal({ user, token, onClose, onLogout, onGoToSho
                           : 'Cancelled'}
                       </span>
                     ) : (
-                      <button
-                        className="account-cancel-btn"
-                        onClick={() => { setCancelError(null); setSection('cancel-confirm') }}
-                      >
-                        Cancel membership
-                      </button>
+                      <>
+                        {user.subscription_ends_at && (
+                          <span className="account-renews-note">
+                            {`Renews ${new Date(user.subscription_ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          </span>
+                        )}
+                        <button
+                          className="account-cancel-btn"
+                          onClick={() => { setCancelError(null); setSection('cancel-confirm') }}
+                        >
+                          Cancel membership
+                        </button>
+                      </>
                     )}
                   </div>
                 ) : (

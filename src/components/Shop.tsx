@@ -36,7 +36,7 @@ const FILTER_LABELS: { id: Filter; label: string }[] = [
   { id: 'license', label: 'Licenses' },
 ]
 
-export default function Shop({ isPremium, cancelAtPeriodEnd, subscriptionEndsAt, token, hasPurchased, onUpgradeSuccess, onCancelSubscription, onSignIn, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
+export default function Shop({ isPremium, cancelAtPeriodEnd, subscriptionEndsAt: _subscriptionEndsAt, token, hasPurchased, onUpgradeSuccess, onCancelSubscription, onSignIn, songs, releases, onBuyRelease, onDownloadWav, downloadingReleaseId, onPreview, onPause, currentSongId, isPlaying }: ShopProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState<string | null>(null)
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancelled' | null>(null)

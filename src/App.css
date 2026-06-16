@@ -2094,6 +2094,11 @@
   color: var(--text-muted);
 }
 
+.account-renews-note {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .account-cancel-warning {
   font-size: 14px;
   color: var(--text-dim);

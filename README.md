@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/j-xsen/NoiseEmporium/main/public/wordmark-black.webp" alt="Noise Emporium" width="320" />
 </p>
 
-A browser-based music platform — streaming + store — built for Jaxsen Honeycutt's music. Part of the [Jaxsenville](https://clinic.jaxsenville.com) universe at `noise.jaxsenville.com`.
+A browser-based music platform — streaming + store — built for Jaxsen Honeycutt's music. Part of the [Jaxsenville](https://jaxsenville.com) universe at `noise.jaxsenville.com`.
 
 > Spotify meets Bandcamp — but for Jaxsenville.
 

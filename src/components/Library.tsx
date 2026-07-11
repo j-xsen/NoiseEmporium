@@ -7,6 +7,7 @@ import { memo, useEffect, useState } from 'react'
 import CoverArt from './CoverArt'
 import AccountArea from './AccountArea'
 import { ChevronDownIcon, LockIcon } from './Icons'
+import { contentfulImageUrl } from '../lib/contentful'
 import type { Playlist, Release, Song } from '../types'
 
 function useSectionOpen(key: string, defaultOpen = true) {
@@ -174,7 +175,13 @@ function Library({
                           <button className="music-card__select" onClick={() => onSelectRelease(r.id)}>
                             <div className="music-card__art-wrap">
                               {r.cover
-                                ? <img src={r.cover} alt={r.name} className="music-card__art" />
+                                ? <img
+                                    src={contentfulImageUrl(r.cover, 300)}
+                                    alt={r.name}
+                                    className="music-card__art"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
                                 : <CoverArt song={{ id: r.id, title: r.name, src: '' }} className="music-card__art" />
                               }
                               {locked && (

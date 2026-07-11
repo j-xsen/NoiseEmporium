@@ -14,7 +14,7 @@
 //
 // LyricsView remains state-based (full-screen overlay, not a distinct page).
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import { useSongs } from './hooks/useSongs'
@@ -25,7 +25,6 @@ import { useDownloads } from './hooks/useDownloads'
 import { useAuth } from './hooks/useAuth'
 import { usePurchases } from './hooks/usePurchases'
 import AuthScreen from './components/AuthScreen'
-import BubbleWorld from './components/BubbleWorld'
 import Library from './components/Library'
 import NowPlaying from './components/NowPlaying'
 import Playlists from './components/Playlists'
@@ -43,6 +42,8 @@ import { api } from './lib/api'
 import { track } from './lib/umami'
 import type { DlStatus } from './hooks/useDownloads'
 import type { Song, Tab, Playlist, Release } from './types'
+
+const BubbleWorld = lazy(() => import('./components/BubbleWorld'))
 
 // ── Loading / Error screens ───────────────────────────────────────────────────
 
@@ -205,7 +206,7 @@ export default function App() {
   const [authPromptOpen, setAuthPromptOpen] = useState(false)
   const [songSheet, setSongSheet] = useState<SongSheet>(null)
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(() =>
-    (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '3d'
+    (localStorage.getItem('noise-view-mode') as '3d' | '2d') ?? '2d'
   )
   const [showOnboarding, setShowOnboarding] = useState(
     () => localStorage.getItem('noise-onboarding-v1') !== 'true'
@@ -450,11 +451,21 @@ return (
                 aria-hidden={location.pathname !== '/'}
                 style={location.pathname !== '/' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
               >
-                <BubbleWorld
-                  releases={releases}
-                  currentSongId={player.currentSong?.id}
-                  onSignIn={auth.user ? undefined : () => setAuthPromptOpen(true)}
-                />
+                <Suspense fallback={
+                  <div className="bw-loading" aria-hidden="true">
+                    <div className="bw-loading__dots">
+                      <div className="bw-loading__dot" />
+                      <div className="bw-loading__dot" />
+                      <div className="bw-loading__dot" />
+                    </div>
+                  </div>
+                }>
+                  <BubbleWorld
+                    releases={releases}
+                    currentSongId={player.currentSong?.id}
+                    onSignIn={auth.user ? undefined : () => setAuthPromptOpen(true)}
+                  />
+                </Suspense>
               </div>
             )}
             {/* Persistent 2D home screen — kept mounted so scroll position survives back-navigation.

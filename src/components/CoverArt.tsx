@@ -1,4 +1,5 @@
 import { songGradient } from '../utils/format'
+import { contentfulImageUrl } from '../lib/contentful'
 import type { Song } from '../types'
 
 interface CoverArtProps {
@@ -14,11 +15,13 @@ export default function CoverArt({ song, size, className, style }: CoverArtProps
   if (song.cover) {
     return (
       <img
-        src={song.cover}
+        src={contentfulImageUrl(song.cover, 300)}
         alt={song.album ?? song.title}
         className={className}
         style={{ objectFit: 'cover', ...sizeStyle, ...style }}
         draggable={false}
+        loading="lazy"
+        decoding="async"
       />
     )
   }
